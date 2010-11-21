@@ -1,0 +1,118 @@
+URDB -> FReD transition and redesign.
+
+Here are some ideas and points to think about, in no particular order. Please
+feel free to change, add, or otherwise modify anything in this document.
+
+1) We should re-organize the FReD code into several logical layers. Here are
+   some suggestions:
+
+     * Monitor: Handles all DMTCP related things. For example, management
+       of checkpoint files/synchronization logs, talking to DMTCP via
+       'dmtcp_command', etc.
+
+     * FReD-IO: Handles low-level I/O (See section 3 for more discussion on
+       this.)
+
+     * FReD-App: User interface and high-level reversible-debugger code.
+
+     * FReD-Util: Common utility code (commonly used string-manipulation
+       functions, etc.)
+
+     * Personality: debugger-specific information and functions.
+
+   All of these layers should be as self-contained as possible, and only export
+   a specific public interface. Python does not provide many facilities for
+   this: it lacks concepts like private fields. Thus, we should adopt and stick
+   to a specific naming convention to indicate which fields should not be used
+   outside of the module (see section 4 for more discussion on that).
+
+2) We should collect key components of functionality into an object-oriented
+   design. Prime candidates for object-orientied abstraction:
+
+     * FReD generic debugger commands vs. debugger-specifc commands: In the
+       current state there's a lot of confusion in the code about this. A
+       command is sometimes a string, sometimes a list, and is usually
+       impossible to tell which. We should abstract this away into a class,
+       FredCommand, so a command is always an instance of this class. Then,
+       this class can internally perform FReD->personality translations.
+       
+     * Personalities: We should have one parent 'Personality' class which every
+       personality must subclass. Since Python does not provide any notion of
+       required fields in class inheritance, we should create a check tool
+       which scans any personality implementation for a pre-defined list of
+       'required' items.
+         - Furthermore, I would like to relegate regular expressions to as low
+           a level as possible. Ideally, top-level FReD code should never deal
+           in regular expressions. Personalities should provide wrapper
+           functions like 'getBacktrace()' which uses personality-specific
+           regexps to return a backtrace. There are a lot of good opportunities
+           for abstraction here.
+
+     * Debugger control: We could have a class which abstracts all debugger
+       control. A brief example:
+
+       class Debugger:
+       	     Personality p;
+	     def next(n):
+	     	 p->next(n);
+	     def current_line():
+	     	 p->current_pos()->top()->line;
+
+       This way, no more 'executeUrdbCommandSynchronously(['n', '50'])' to
+       execute 50 next commands. Just 'Debugger.next(50)'.
+
+     * Building on the Debugger class, we could have a ReversibleDebugger class:
+
+       class ReversibleDebugger:
+       	     Debugger d;
+	     def reverse_finish():
+	     	 while d->state() == DEEPER:
+		     reverse_next();
+	     def reverse_continue():
+	         ORIG = d->state();
+	         mon.restart();
+		 while d->state() != ORIG:
+		     d->continue();
+		     num_breakpoints++;
+		 mon.restart();
+		 for i in range(0, num_breakpoints - 1):
+		     d->continue();
+
+       Then FReD-App would have one global instance of ReversibleDebugger and
+       use it to dispatch reversible commands.
+
+3) Redesign the I/O system to use 'readline'. FReD uses readline for all
+   command line interaction (maintaining a history, special characters like ^A,
+   ^K, etc). There are two special cases:
+
+   * User presses TAB. We need the TAB to go through to gdb to let gdb handle
+     the tab completion. Fortunately, readline lets you define your own hook
+     function for when the user presses TAB. We could have that hook function
+     pass the tab to gdb, and read the output.
+
+   * User presses RETURN. We need to parse the command line for special
+     reversible commands. Currently we try to do this before passing the
+     command to gdb, but we think it would be sufficient to pass the command
+     along anyway, and just hide the gdb error message (unknown command) for
+     aesthetic reasons.
+
+4) We should decide and agree upon a more specific naming convention. This one
+   is important because of the confusion that can often arise in Python due to
+   dynamic typing. Examples:
+     - All global variables prefixed by "g_"
+     - Strings prefixed by "s_"
+     - Lists prefixed by "l_"
+     - Regular expressions by "re_"
+     - Things that never change (constants) in all caps.
+     - Private class fields prefixed by "_p_"
+
+   Etc. Then, a global string might be: 'gs_log_path_name'. A global regular
+   expression (we should avoid those wherever possible, though) which is never
+   modified might be 'gre_BREAKPOINT_HEADER_LINE'. A list field private to a
+   class might be '_pl_checkpoints'.
+
+   This is just an example of a possible scheme. If there's one which would be
+   more convenient for people but communicate the same information, we can
+   certainly adopt that one over this one.
+
+5) Rename "mon-*" commands to something more sensible like "fred-*".
