@@ -25,6 +25,8 @@ import fcntl
 import os
 import pty
 import readline
+import select
+import subprocess
 import sys
 import threading
 import time
@@ -39,46 +41,96 @@ n_         |   numeric
 s_         |   string
 l_         |   list
 b_         |   boolean
+f_         |   Python file object
+
+All other non-basic types do not require a prefix other than scope-related.
+For example, a mutex or thread object does not have a specific prefix.
+However, the name of the variable should be descriptive enough to tell what
+type it is meant to be.
+
+Constants should be in all caps, including the prefix.
 '''
 
+GB_USE_SUBPROCESS = False
+
 gn_child_pid = -1
-gn_child_fd = -1
+gf_child = None
 gs_prompt = "(gdb) "
 gb_prompt_ready = False
+g_output_thread = None
+g_output_lock = threading.Lock()
 
-def output_loop():
-    class ThreadedOutput(threading.Thread):
-        def run(self):
-            global gb_prompt_ready
-            while 1:
-                output = get_child_output(1000)
-                if output != None:
-                    sys.stdout.write(output)
-                    sys.stdout.flush()
-                    gb_prompt_ready = output.endswith(gs_prompt)
-    o = ThreadedOutput()
-    o.daemon = True
-    o.start()
+GS_CHILD_STDIN_PATH = "/tmp/fred.child.stdin"
+GS_CHILD_STDOUT_PATH = "/tmp/fred.child.stdout"
+gf_child_stdin = None
+gf_child_stdout = None
+g_child_p = None
 
-def send_child_input(c):
-    global gn_child_fd
-    os.write(gn_child_fd, c)
+class ThreadedOutput(threading.Thread):
+    def __init__(self):
+        threading.Thread.__init__(self)            
+        self.should_exit = False
 
-def get_child_output(n):
-    global gn_child_fd
-    try:
-        output = os.read(gn_child_fd, n)
-    except:
-        return None
-    return output
+    def run(self):
+        global gb_prompt_ready, g_output_lock
+        while 1:
+            g_output_lock.acquire()
+            if self.should_exit:
+                g_output_lock.release()
+                break
+            output = get_child_output()
+            if output != None:
+                sys.stdout.write(output)
+                sys.stdout.flush()
+                # Always keep this up-to-date:
+                gb_prompt_ready = output.endswith(gs_prompt)
+            g_output_lock.release()
+    
+def stop_output_thread():
+    global g_output_thread, gf_child
+    gf_child.flush()
+    g_output_thread.should_exit = True
+    g_output_thread.join()
+
+def start_output_thread():
+    global g_output_thread
+    g_output_thread = ThreadedOutput()
+    g_output_thread.daemon = True
+    g_output_thread.start()
+
+def send_child_input(input):
+    global gf_child, GB_USE_SUBPROCESS, gf_child_stdin
+    if GB_USE_SUBPROCESS:
+        g_child_stdin.write(input)
+    else:
+        gf_child.write(input)
+        gf_child.flush()
+        
+def get_child_output():
+    global gf_child, GB_USE_SUBPROCESS, gf_child_stdout
+    if GB_USE_SUBPROCESS:
+        output = gf_child_stdout.read(100)
+        return output
+    else:
+        n = 1000
+        try:
+            output = gf_child.read(n)
+        except:
+            return None
+        return output
 
 def wait_for_prompt():
     global gb_prompt_ready
     while not gb_prompt_ready:
         pass
+    # Reset for next time
     gb_prompt_ready = False
 
 def input_loop():
+    wait_for_prompt()
+    res = get_child_response("bt\n")
+    sys.stdout.write("$"+res+"$")
+    sys.stdout.flush()
     while 1:
         wait_for_prompt()
         s = get_input()
@@ -87,34 +139,60 @@ def input_loop():
 def get_input():
     s = raw_input()
     s = s.strip()
-    readline.insert_text('\b'*len(s))
-    readline.redisplay()
     return s
+
+def get_child_response(input):
+    ''' Sends requested input to child, and returns any response made. '''
+    global g_output_lock
+    g_output_lock.acquire()
+    send_child_input(input)
+    response = ''
+    output_chunk = get_child_output()
+    while output_chunk != None:
+        response += output_chunk
+        output_chunk = get_child_output()
+    g_output_lock.release()
+    return response
 
 def fred_completer(text, state):
     current_cmd = readline.get_line_buffer()
     sys.stdout.write('\b'*len(current_cmd))
     # Write partial command+\t to gdb so it can do the completion.
-    os.write(child_fd, current_cmd)
-    os.write(child_fd, '\t')
+    result = get_child_response(current_cmd + '\t')
+    result = result.replace(current_cmd, "")
+    readline.insert_text(result)
 
 def spawn_child(argv):
     ''' Spawns a child process using the given command array. '''
-    global gn_child_pid, gn_child_fd
-    (gn_child_pid, gn_child_fd) = pty.fork()
-    if gn_child_pid == 0:
-        os.execvp(argv[0], argv)
+    global gn_child_pid, gf_child, GB_USE_SUBPROCESS, g_child_p
+    if GB_USE_SUBPROCESS:
+        g_child_p = subprocess.Popen(argv, stdin=gf_child_stdin,
+                                     stdout=gf_child_stdout,
+                                     stderr=gf_child_stdout, close_fds=True)
     else:
-        fcntl.fcntl(gn_child_fd, fcntl.F_SETFL, os.O_NONBLOCK)
+        (gn_child_pid, child_fd) = pty.fork()
+        if gn_child_pid == 0:
+            os.execvp(argv[0], argv)
+        else:
+            gf_child = os.fdopen(child_fd, "wr", 0)
+            fcntl.fcntl(child_fd, fcntl.F_SETFL, os.O_NONBLOCK)
 
 def main():
     ''' Program execution starts here. '''
+    global gf_child_stdin, gf_child_stdout
+    try:
+        os.unlink(GS_CHILD_STDIN_PATH)
+        os.unlink(GS_CHILD_STDOUT_PATH)
+    except OSError:
+        pass
+    gf_child_stdout = os.mkfifo(GS_CHILD_STDOUT_PATH)
+    gf_child_stdin = os.mkfifo(GS_CHILD_STDIN_PATH)
     # Enable tab completion (with our own 'completer' function)
     readline.parse_and_bind('tab: complete')
     readline.set_completer(fred_completer)
     cmd = ["gdb"]
     spawn_child(cmd)
-    output_loop()
+    start_output_thread()
     input_loop()
     
 if __name__ == '__main__':
