@@ -26,7 +26,6 @@ import os
 import pty
 import readline
 import select
-import subprocess
 import sys
 import threading
 import time
@@ -51,46 +50,58 @@ type it is meant to be.
 Constants should be in all caps, including the prefix.
 '''
 
-GB_USE_SUBPROCESS = False
-
 gn_child_pid = -1
 gf_child = None
 gs_prompt = "(gdb) "
 gb_prompt_ready = False
+gb_hide_output = False
+gb_capture_output = False
+gs_captured_output = ""
+g_capture_output_event = threading.Event()
 g_output_thread = None
-g_output_lock = threading.Lock()
 
-GS_CHILD_STDIN_PATH = "/tmp/fred.child.stdin"
-GS_CHILD_STDOUT_PATH = "/tmp/fred.child.stdout"
 gf_child_stdin = None
 gf_child_stdout = None
-g_child_p = None
+
+def last_n(s, source, n):
+    '''
+    Returns the last n characters of the concatenation of s+source.  This is
+    used by the output loop to keep track of the last n characters read from
+    the child.
+    
+    Examples/Tests:
+    assert(last_n("abc", "efghijklmno", 5) == "klmno")
+    assert(last_n("abcde", "fgh", 5) == "defgh")
+    assert(last_n("abcde", "fghijkl", 5) == "hijkl")
+    assert(last_n("abcdefghi", "wxyz", 5) == "iwxyz")
+    '''
+    return (s+source)[-n:]
+
+assert(last_n("abc", "efghijklmno", 5) == "klmno")
+assert(last_n("abcde", "fgh", 5) == "defgh")
+assert(last_n("abcde", "fghijkl", 5) == "hijkl")
+assert(last_n("abcdefghi", "wxyz", 5) == "iwxyz")
 
 class ThreadedOutput(threading.Thread):
-    def __init__(self):
-        threading.Thread.__init__(self)            
-        self.should_exit = False
-
     def run(self):
-        global gb_prompt_ready, g_output_lock
+        global gb_prompt_ready, g_output_lock, gb_capture_output, \
+               gs_captured_output, g_capture_output_event, gb_hide_output
+        # Last printed will be the last 'n' characters printed from child,
+        # where n == len(gs_prompt). This is so we can know when the debugger
+        # prompt has been printed to screen.
+        last_printed = ""
         while 1:
-            g_output_lock.acquire()
-            if self.should_exit:
-                g_output_lock.release()
-                break
             output = get_child_output()
             if output != None:
-                sys.stdout.write(output)
-                sys.stdout.flush()
-                # Always keep this up-to-date:
-                gb_prompt_ready = output.endswith(gs_prompt)
-            g_output_lock.release()
-    
-def stop_output_thread():
-    global g_output_thread, gf_child
-    gf_child.flush()
-    g_output_thread.should_exit = True
-    g_output_thread.join()
+                if not gb_hide_output:
+                    sys.stdout.write(output)
+                    sys.stdout.flush()
+                if gb_capture_output:
+                    gs_captured_output += output
+                    g_capture_output_event.set()
+                last_printed = last_n(last_printed, output, len(gs_prompt))
+            # Always keep this up-to-date:
+            gb_prompt_ready = last_printed == gs_prompt
 
 def start_output_thread():
     global g_output_thread
@@ -99,38 +110,25 @@ def start_output_thread():
     g_output_thread.start()
 
 def send_child_input(input):
-    global gf_child, GB_USE_SUBPROCESS, gf_child_stdin
-    if GB_USE_SUBPROCESS:
-        g_child_stdin.write(input)
-    else:
-        gf_child.write(input)
-        gf_child.flush()
+    global gf_child
+    os.write(gf_child.fileno(), input)
         
 def get_child_output():
-    global gf_child, GB_USE_SUBPROCESS, gf_child_stdout
-    if GB_USE_SUBPROCESS:
-        output = gf_child_stdout.read(100)
-        return output
-    else:
-        n = 1000
-        try:
-            output = gf_child.read(n)
-        except:
-            return None
-        return output
+    global gf_child
+    n = 1000
+    # Don't use gf_child.read(n) here because it seems that will block until
+    # it reads exactly n bytes.
+    output = os.read(gf_child.fileno(), n)
+    return output
 
 def wait_for_prompt():
-    global gb_prompt_ready
+    global gb_prompt_ready, gf_child
     while not gb_prompt_ready:
         pass
     # Reset for next time
     gb_prompt_ready = False
 
 def input_loop():
-    wait_for_prompt()
-    res = get_child_response("bt\n")
-    sys.stdout.write("$"+res+"$")
-    sys.stdout.flush()
     while 1:
         wait_for_prompt()
         s = get_input()
@@ -141,22 +139,34 @@ def get_input():
     s = s.strip()
     return s
 
-def get_child_response(input):
-    ''' Sends requested input to child, and returns any response made. '''
-    global g_output_lock
-    g_output_lock.acquire()
+def start_output_capture():
+    global gb_capture_output, gs_captured_output, g_capture_output_event
+    gb_capture_output = True
+    g_capture_output_event.clear()
+
+def wait_for_captured_output():
+    global gb_capture_output, gs_captured_output, g_capture_output_event
+    g_capture_output_event.wait()
+    output = gs_captured_output
+    gs_captured_output = ""
+    gb_capture_output = False
+    return output
+
+def get_child_response(input, hide=True):
+    ''' Sends requested input to child, and returns any response made.
+    If hide flag is True (default), suppresses echoing from child.'''
+    global gb_hide_output
+    orig_hide_state = gb_hide_output
+    gb_hide_output = hide
+    # The output thread should be blocked on an os.read() call right now.
+    start_output_capture()
     send_child_input(input)
-    response = ''
-    output_chunk = get_child_output()
-    while output_chunk != None:
-        response += output_chunk
-        output_chunk = get_child_output()
-    g_output_lock.release()
+    response = wait_for_captured_output()
+    gb_hide_output = orig_hide_state
     return response
 
 def fred_completer(text, state):
     current_cmd = readline.get_line_buffer()
-    sys.stdout.write('\b'*len(current_cmd))
     # Write partial command+\t to gdb so it can do the completion.
     result = get_child_response(current_cmd + '\t')
     result = result.replace(current_cmd, "")
@@ -164,29 +174,16 @@ def fred_completer(text, state):
 
 def spawn_child(argv):
     ''' Spawns a child process using the given command array. '''
-    global gn_child_pid, gf_child, GB_USE_SUBPROCESS, g_child_p
-    if GB_USE_SUBPROCESS:
-        g_child_p = subprocess.Popen(argv, stdin=gf_child_stdin,
-                                     stdout=gf_child_stdout,
-                                     stderr=gf_child_stdout, close_fds=True)
+    global gn_child_pid, gf_child
+    (gn_child_pid, child_fd) = pty.fork()
+    if gn_child_pid == 0:
+        os.execvp(argv[0], argv)
     else:
-        (gn_child_pid, child_fd) = pty.fork()
-        if gn_child_pid == 0:
-            os.execvp(argv[0], argv)
-        else:
-            gf_child = os.fdopen(child_fd, "wr", 0)
-            fcntl.fcntl(child_fd, fcntl.F_SETFL, os.O_NONBLOCK)
+        gf_child = os.fdopen(child_fd, "wr", 0)
+        #fcntl.fcntl(child_fd, fcntl.F_SETFL, os.O_NONBLOCK)
 
 def main():
     ''' Program execution starts here. '''
-    global gf_child_stdin, gf_child_stdout
-    try:
-        os.unlink(GS_CHILD_STDIN_PATH)
-        os.unlink(GS_CHILD_STDOUT_PATH)
-    except OSError:
-        pass
-    gf_child_stdout = os.mkfifo(GS_CHILD_STDOUT_PATH)
-    gf_child_stdin = os.mkfifo(GS_CHILD_STDIN_PATH)
     # Enable tab completion (with our own 'completer' function)
     readline.parse_and_bind('tab: complete')
     readline.set_completer(fred_completer)
