@@ -30,6 +30,8 @@ import sys
 import threading
 import time
 
+import fredutil
+
 '''
 STYLE CONVENTIONS
 -----------------
@@ -84,24 +86,6 @@ gb_capture_output_til_prompt = False
 gs_captured_output = ""
 g_capture_output_event = threading.Event()
 
-def last_n(s, source, n):
-    """ Return the last n characters of the concatenation of s+source.
-    This is used by the output loop to keep track of the last n characters read
-    from the child.
-    
-    Examples/Tests:
-    assert(last_n("abc", "efghijklmno", 5) == "klmno")
-    assert(last_n("abcde", "fgh", 5) == "defgh")
-    assert(last_n("abcde", "fghijkl", 5) == "hijkl")
-    assert(last_n("abcdefghi", "wxyz", 5) == "iwxyz")
-    """
-    return (s+source)[-n:]
-
-assert(last_n("abc", "efghijklmno", 5) == "klmno")
-assert(last_n("abcde", "fgh", 5) == "defgh")
-assert(last_n("abcde", "fghijkl", 5) == "hijkl")
-assert(last_n("abcdefghi", "wxyz", 5) == "iwxyz")
-
 class ThreadedOutput(threading.Thread):
     def run(self):
         global gb_prompt_ready, gb_capture_output, gs_captured_output, \
@@ -114,7 +98,8 @@ class ThreadedOutput(threading.Thread):
         while 1:
             output = get_child_output()
             if output != None:
-                last_printed = last_n(last_printed, output, len(gs_prompt))
+                last_printed = fredutil.last_n(last_printed, output,
+                                               len(gs_prompt))
                 if not gb_hide_output:
                     sys.stdout.write(output)
                     sys.stdout.flush()
@@ -203,25 +188,23 @@ def fred_completer(text, state):
     readline.insert_text(result)
 
 def spawn_child(argv):
-    """Spawns a child process using the given command array."""
+    """Spawn a child process using the given command array."""
     global gn_child_pid, gn_child_fd
     (gn_child_pid, gn_child_fd) = pty.fork()
     if gn_child_pid == 0:
         os.execvp(argv[0], argv)
 
-def main():
-    """Program execution starts here."""
+def get_command():
+    """Get a command from the user using raw_input."""
+    return raw_input().strip()
+
+def send_command(command):
+    """Send a command to the child process."""
+    send_child_input(command+'\n')
+
+def setup(argv):
+    """Perform any setup needed to do i/o with the child process."""
     # Enable tab completion (with our own 'completer' function)
     readline.parse_and_bind('tab: complete')
     readline.set_completer(fred_completer)
-    cmd = ["gdb"]
-    spawn_child(cmd)
-    start_output_thread()
-    # Enter main input loop:
-    while 1:
-        wait_for_prompt()
-        s = raw_input().strip()
-        send_child_input(s+'\n')
-    
-if __name__ == '__main__':
-    main()
+    spawn_child(argv)
