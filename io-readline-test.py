@@ -31,50 +31,70 @@ import threading
 import time
 
 '''
-First pass at defining a practical naming scheme.
+STYLE CONVENTIONS
+-----------------
+
+We should follow the style conventions in PEP-8, with some additions:
+  <http://www.python.org/dev/peps/pep-0008/>
+
+The most obvious ones are:
+
+ - No "camelCase" style should be used. Use the lower_case_with_underscore
+   style for functions and variables.
+ - Max line length 79 characters.
+ - Indentation is 4 spaces (NOT literal tab (\t) characters)
+ - Avoid extraneous whitespace such as:
+     Yes: spam(ham[1], {eggs: 2})
+     No:  spam( ham[ 1 ], { eggs: 2 } )
+
+In addition, all global variables should have a prefix to indicate their
+scope and type. The following prefixes will be used:
 
 Prefix     |    Meaning
 -----------+------------
-g_         |   global
+g?_        |   global
 n_         |   numeric
 s_         |   string
 l_         |   list
 b_         |   boolean
 f_         |   Python file object
 
+The ? after g_ is used to indicate the presence of an additional type
+indicator.  For example a global integer should be name like:
+  gn_a_global_number
+To indicate global scope, and numeric type.
+
 All other non-basic types do not require a prefix other than scope-related.
 For example, a mutex or thread object does not have a specific prefix.
 However, the name of the variable should be descriptive enough to tell what
 type it is meant to be.
 
-Constants should be in all caps, including the prefix.
+Please make it a goal to document every putlic function with a docstring. It
+only takes a few seconds, and saves a lot of time for future programmers. For
+docstring conventions, you can see PEP-257.
 '''
 
 gn_child_pid = -1
-gf_child = None
+gn_child_fd = None
 gs_prompt = "(gdb) "
 gb_prompt_ready = False
 gb_hide_output = False
 gb_capture_output = False
+gb_capture_output_til_prompt = False
 gs_captured_output = ""
 g_capture_output_event = threading.Event()
-g_output_thread = None
-
-gf_child_stdin = None
-gf_child_stdout = None
 
 def last_n(s, source, n):
-    '''
-    Returns the last n characters of the concatenation of s+source.  This is
-    used by the output loop to keep track of the last n characters read from
-    the child.
+    """ Return the last n characters of the concatenation of s+source.
+    This is used by the output loop to keep track of the last n characters read
+    from the child.
     
     Examples/Tests:
     assert(last_n("abc", "efghijklmno", 5) == "klmno")
     assert(last_n("abcde", "fgh", 5) == "defgh")
     assert(last_n("abcde", "fghijkl", 5) == "hijkl")
     assert(last_n("abcdefghi", "wxyz", 5) == "iwxyz")
-    '''
+    """
     return (s+source)[-n:]
 
 assert(last_n("abc", "efghijklmno", 5) == "klmno")
@@ -84,8 +104,9 @@ assert(last_n("abcdefghi", "wxyz", 5) == "iwxyz")
 
 class ThreadedOutput(threading.Thread):
     def run(self):
-        global gb_prompt_ready, g_output_lock, gb_capture_output, \
-               gs_captured_output, g_capture_output_event, gb_hide_output
+        global gb_prompt_ready, gb_capture_output, gs_captured_output, \
+               g_capture_output_event, gb_capture_output_til_prompt, \
+               gb_hide_output
         # Last printed will be the last 'n' characters printed from child,
         # where n == len(gs_prompt). This is so we can know when the debugger
         # prompt has been printed to screen.
@@ -93,104 +114,114 @@ class ThreadedOutput(threading.Thread):
         while 1:
             output = get_child_output()
             if output != None:
+                last_printed = last_n(last_printed, output, len(gs_prompt))
                 if not gb_hide_output:
                     sys.stdout.write(output)
                     sys.stdout.flush()
                 if gb_capture_output:
                     gs_captured_output += output
-                    g_capture_output_event.set()
-                last_printed = last_n(last_printed, output, len(gs_prompt))
+                    if gb_capture_output_til_prompt:
+                        if last_printed == gs_prompt:
+                            g_capture_output_event.set()
+                    else:
+                        g_capture_output_event.set()
             # Always keep this up-to-date:
             gb_prompt_ready = last_printed == gs_prompt
 
 def start_output_thread():
-    global g_output_thread
-    g_output_thread = ThreadedOutput()
-    g_output_thread.daemon = True
-    g_output_thread.start()
+    """Start the output thread in daemon mode.
+    A thread in daemon mode will not be joined upon program exit."""
+    o = ThreadedOutput()
+    o.daemon = True
+    o.start()
 
 def send_child_input(input):
-    global gf_child
-    os.write(gf_child.fileno(), input)
+    """Write the given input string to the child process."""
+    global gn_child_fd
+    os.write(gn_child_fd, input)
         
 def get_child_output():
-    global gf_child
-    n = 1000
-    # Don't use gf_child.read(n) here because it seems that will block until
-    # it reads exactly n bytes.
-    output = os.read(gf_child.fileno(), n)
+    """Read and return a string of output from the child process."""
+    global gn_child_fd
+    output = os.read(gn_child_fd, 1000)
     return output
 
 def wait_for_prompt():
-    global gb_prompt_ready, gf_child
+    """Spin until the global gb_prompt_ready flag has been set to True.
+    gb_prompt_ready is set by the output thread."""
+    global gb_prompt_ready
     while not gb_prompt_ready:
         pass
     # Reset for next time
     gb_prompt_ready = False
 
-def input_loop():
-    while 1:
-        wait_for_prompt()
-        s = get_input()
-        send_child_input(s+'\n')
-
-def get_input():
-    s = raw_input()
-    s = s.strip()
-    return s
-
-def start_output_capture():
-    global gb_capture_output, gs_captured_output, g_capture_output_event
+def start_output_capture(wait_for_prompt):
+    """Start recording output from child into global gs_captured_output.
+    wait_for_prompt flag will cause all output until the next debugger prompt
+    to be saved."""
+    global gb_capture_output, gs_captured_output, g_capture_output_event, \
+           gb_capture_output_til_prompt
+    gb_capture_output_til_prompt = wait_for_prompt
     gb_capture_output = True
     g_capture_output_event.clear()
 
-def wait_for_captured_output():
-    global gb_capture_output, gs_captured_output, g_capture_output_event
+def wait_for_captured_output(wait_for_prompt):
+    """Wait until output capture is done, and return captured output.
+    The actual output capture is done by the output thread, and placed into
+    global gs_captured_output. This function resets that global string when
+    finished."""
+    global gb_capture_output, gs_captured_output, g_capture_output_event, \
+           gb_capture_output_til_prompt
+    gb_capture_output_til_prompt = wait_for_prompt
     g_capture_output_event.wait()
     output = gs_captured_output
     gs_captured_output = ""
     gb_capture_output = False
     return output
 
-def get_child_response(input, hide=True):
-    ''' Sends requested input to child, and returns any response made.
-    If hide flag is True (default), suppresses echoing from child.'''
+def get_child_response(input, hide=True, wait_for_prompt=False):
+    """Sends requested input to child, and returns any response made.
+    If hide flag is True (default), suppresses echoing from child.  If
+    wait_for_prompt flag is True, collects output until the debugger prompt is
+    ready."""
     global gb_hide_output
     orig_hide_state = gb_hide_output
     gb_hide_output = hide
-    # The output thread should be blocked on an os.read() call right now.
-    start_output_capture()
+    start_output_capture(wait_for_prompt)
     send_child_input(input)
-    response = wait_for_captured_output()
+    response = wait_for_captured_output(wait_for_prompt)
     gb_hide_output = orig_hide_state
     return response
 
 def fred_completer(text, state):
+    """Custom completer function called when the user presses TAB."""
     current_cmd = readline.get_line_buffer()
-    # Write partial command+\t to gdb so it can do the completion.
+    # Write partial command+\t to debuggerso it can do the completion.
     result = get_child_response(current_cmd + '\t')
+    # Erase what text we already have:
     result = result.replace(current_cmd, "")
     readline.insert_text(result)
 
 def spawn_child(argv):
-    ''' Spawns a child process using the given command array. '''
-    global gn_child_pid, gf_child
-    (gn_child_pid, child_fd) = pty.fork()
+    """Spawns a child process using the given command array."""
+    global gn_child_pid, gn_child_fd
+    (gn_child_pid, gn_child_fd) = pty.fork()
     if gn_child_pid == 0:
         os.execvp(argv[0], argv)
-    else:
-        gf_child = os.fdopen(child_fd, "wr", 0)
-        #fcntl.fcntl(child_fd, fcntl.F_SETFL, os.O_NONBLOCK)
 
 def main():
-    ''' Program execution starts here. '''
+    """Program execution starts here."""
     # Enable tab completion (with our own 'completer' function)
     readline.parse_and_bind('tab: complete')
     readline.set_completer(fred_completer)
     cmd = ["gdb"]
     spawn_child(cmd)
     start_output_thread()
-    input_loop()
+    # Enter main input loop:
+    while 1:
+        wait_for_prompt()
+        s = raw_input().strip()
+        send_child_input(s+'\n')
     
 if __name__ == '__main__':
     main()
