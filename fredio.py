@@ -128,7 +128,10 @@ def send_child_input(input):
 def get_child_output():
     """Read and return a string of output from the child process."""
     global gn_child_fd
-    output = os.read(gn_child_fd, 1000)
+    try:
+        output = os.read(gn_child_fd, 1000)
+    except:
+        return None
     return output
 
 def wait_for_prompt():
@@ -194,6 +197,19 @@ def spawn_child(argv):
     if gn_child_pid == 0:
         os.execvp(argv[0], argv)
 
+def signal(signum):
+    """Send the signal to the child process."""
+    global gn_child_pid
+    os.kill(gn_child_pid, signum)
+
+def child_is_alive():
+    """Return True if the child process is still alive; False if not."""
+    try:
+        signal(0)
+    except:
+        return False
+    return True
+
 def get_command():
     """Get a command from the user using raw_input."""
     return raw_input().strip()
@@ -208,3 +224,4 @@ def setup(argv):
     readline.parse_and_bind('tab: complete')
     readline.set_completer(fred_completer)
     spawn_child(argv)
+    start_output_thread()
