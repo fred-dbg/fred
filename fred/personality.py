@@ -16,3 +16,11 @@ class Personality:
     def where(self):
         """Return stack trace from debugger."""
         assert False, "Must be implemented in subclass."
+
+    def list_breakpoints(self):
+        """Return output of 'info breakpoints' command."""
+        assert False, "Must be implemented in subclass."
+
+    def contains_prompt_str(self, string):
+        """Return True if given string matches the prompt string."""
+        assert False, "Must be implemented in subclass."

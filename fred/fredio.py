@@ -32,86 +32,45 @@ import time
 
 import fredutil
 
-'''
-STYLE CONVENTIONS
------------------
-
-We should follow the style conventions in PEP-8, with some additions:
-  <http://www.python.org/dev/peps/pep-0008/>
-
-The most obvious ones are:
-
- - No "camelCase" style should be used. Use the lower_case_with_underscore
-   style for functions and variables.
- - Max line length 79 characters.
- - Indentation is 4 spaces (NOT literal tab (\t) characters)
- - Avoid extraneous whitespace such as:
-     Yes: spam(ham[1], {eggs: 2})
-     No:  spam( ham[ 1 ], { eggs: 2 } )
-
-In addition, all global variables should have a prefix to indicate their
-scope and type. The following prefixes will be used:
-
-Prefix     |    Meaning
------------+------------
-g?_        |   global
-n_         |   numeric
-s_         |   string
-l_         |   list
-b_         |   boolean
-f_         |   Python file object
-
-The ? after g_ is used to indicate the presence of an additional type
-indicator.  For example a global integer should be name like:
-  gn_a_global_number
-To indicate global scope, and numeric type.
-
-All other non-basic types do not require a prefix other than scope-related.
-For example, a mutex or thread object does not have a specific prefix.
-However, the name of the variable should be descriptive enough to tell what
-type it is meant to be.
-
-Please make it a goal to document every putlic function with a docstring. It
-only takes a few seconds, and saves a lot of time for future programmers. For
-docstring conventions, you can see PEP-257.
-'''
+# Maximum length of a prompt string (from any debugger)
+GN_MAX_PROMPT_LENGTH = 32
 
 gn_child_pid = -1
 gn_child_fd = None
-gs_prompt = "(gdb) "
 gb_prompt_ready = False
 gb_hide_output = False
 gb_capture_output = False
 gb_capture_output_til_prompt = False
 gs_captured_output = ""
 g_capture_output_event = threading.Event()
+g_find_prompt_function = None
 
 class ThreadedOutput(threading.Thread):
     def run(self):
         global gb_prompt_ready, gb_capture_output, gs_captured_output, \
                g_capture_output_event, gb_capture_output_til_prompt, \
                gb_hide_output
-        # Last printed will be the last 'n' characters printed from child,
-        # where n == len(gs_prompt). This is so we can know when the debugger
-        # prompt has been printed to screen.
+        # Last printed will be the last 'n' characters printed from child. This
+        # is so we can know when the debugger prompt has been printed to
+        # screen.
         last_printed = ""
         while 1:
             output = get_child_output()
             if output != None:
                 last_printed = fredutil.last_n(last_printed, output,
-                                               len(gs_prompt))
+                                               GN_MAX_PROMPT_LENGTH)
                 if not gb_hide_output:
                     sys.stdout.write(output)
                     sys.stdout.flush()
                 if gb_capture_output:
                     gs_captured_output += output
                     if gb_capture_output_til_prompt:
-                        if last_printed == gs_prompt:
+                        if g_find_prompt_function(last_printed):
                             g_capture_output_event.set()
                     else:
                         g_capture_output_event.set()
             # Always keep this up-to-date:
-            gb_prompt_ready = last_printed == gs_prompt
+            gb_prompt_ready = g_find_prompt_function(last_printed)
 
 def start_output_thread():
     """Start the output thread in daemon mode.
@@ -218,8 +177,10 @@ def send_command(command):
     """Send a command to the child process."""
     send_child_input(command+'\n')
 
-def setup(argv):
+def setup(find_prompt_fnc, argv):
     """Perform any setup needed to do i/o with the child process."""
+    global g_find_prompt_function
+    g_find_prompt_function = find_prompt_fnc
     # Enable tab completion (with our own 'completer' function)
     readline.parse_and_bind('tab: complete')
     readline.set_completer(fred_completer)

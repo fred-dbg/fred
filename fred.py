@@ -28,39 +28,110 @@ import sys
 
 from fred import fredio
 from fred import freddebugger
+from fred import fredutil
 
+'''
+STYLE CONVENTIONS
+-----------------
+
+We should follow the style conventions in PEP-8, with some additions:
+  <http://www.python.org/dev/peps/pep-0008/>
+
+The most obvious ones are:
+
+ - No "camelCase" style should be used. Use the lower_case_with_underscore
+   style for functions and variables.
+ - Max line length 79 characters.
+ - Indentation is 4 spaces (NOT literal tab (\t) characters)
+ - Avoid extraneous whitespace such as:
+     Yes: spam(ham[1], {eggs: 2})
+     No:  spam( ham[ 1 ], { eggs: 2 } )
+
+In addition, all global variables should have a prefix to indicate their
+scope and type. The following prefixes will be used:
+
+Prefix     |    Meaning
+-----------+------------
+g?_        |   global
+n_         |   numeric
+s_         |   string
+l_         |   list
+b_         |   boolean
+f_         |   Python file object
+
+The ? after g_ is used to indicate the presence of an additional type
+indicator.  For example a global integer should be name like:
+  gn_a_global_number
+To indicate global scope, and numeric type.
+
+Whereever possible, local variables should also use a type prefix. Local scope
+does not have or need a specific prefix.
+
+All other non-basic types do not require a prefix other than scope-related.
+For example, a mutex or thread object does not have a specific prefix.
+However, the name of the variable should be descriptive enough to tell what
+type it is meant to be.
+
+Please make it a goal to document every putlic function with a docstring. It
+only takes a few seconds, and saves a lot of time for future programmers. For
+docstring conventions, you can see PEP-257.
+'''
+
+
+######################## Global Constants #####################################
 GS_FRED_USAGE="USAGE: %prog [options] xdb [ARGS] a.out [A.OUT-ARGS]\n" + \
                "Replace `xdb' with the name of the target debugger"
 GS_FRED_VERSION="Version: %prog 0.99-r277 (Nov. 12 2010)"
+GS_FRED_COMMAND_PREFIX="fred-"
+######################## End Global Constants #################################
 
-# The global Debugger instance.
+######################## Global Variables #####################################
+# The global ReversibleDebugger instance.
 g_debugger = None
+######################## End Global Variables #################################
 
-def is_quit_command(command):
-    return command in ["q", "quit"]
+def is_quit_command(s_command):
+    """Return True if s_command is a debugger 'quit' command."""
+    return s_command in ["q", "quit"]
 
-def handle_special_command(command):
+def handle_special_command(s_command):
     """Performs handling of 'special' (non-debugger) commands."""
-    if is_quit_command(command):
+    global g_debugger
+    (s_command_name, sep, s_command_args) = s_command.partition(' ')
+    if is_quit_command(s_command_name):
         fred_quit(0)
+    elif s_command_name == "history":
+        print g_debugger.history()
+    elif s_command_name == "reverse-next" or s_command_name == "rn":
+        count = int(s_command_args) if s_command_args != '' else 1
+        g_debugger.reverse_next(count)
+    else:
+        fredutil.fred_error("Unhandled FReD command '%s'" % s_command_name)
 
-def is_special_command(command):
+def is_special_command(s_command):
     """Return True if the given command needs special handling."""
-    return command.startswith("fred-") or is_quit_command(command)
+    global GS_FRED_COMMAND_PREFIX
+    return s_command.startswith(GS_FRED_COMMAND_PREFIX) or \
+           is_quit_command(s_command)
 
-def set_up_debugger():
-    """Import the correct personality and initialize g_debugger."""
-    global g_debugger, gs_debugger_name
-    if gs_debugger_name == "gdb":
-        import personalityGdb
-        g_debugger = freddebugger.Debugger(personalityGdb.PersonalityGdb())
+def set_up_debugger(s_debugger_name):
+    """Initialize global ReversibleDebugger instance g_debugger.
+    Return the personality's find prompt function to pass to fredio."""
+    global g_debugger
+    if s_debugger_name == "gdb":
+        from fred import personalityGdb
+        dbg = freddebugger.Debugger(personalityGdb.PersonalityGdb())
+        g_debugger = freddebugger.ReversibleDebugger(dbg)
         del personalityGdb
     else:
-        assert False, "Unimplemented."
+        fredutil.fred_error("Unimplemented debugger '%s'" % s_debugger_name)
+        fred_quit(1)
+    return g_debugger.get_prompt_str_function()
 
 
 def parse_program_args():
-    global GS_FRED_USAGE, gs_debugger_name
+    """Add command line options, parse them, and return the string to exec."""
+    global GS_FRED_USAGE
     parser = OptionParser(usage=GS_FRED_USAGE, version=GS_FRED_VERSION)
     parser.disable_interspersed_args()
     # Note that '-h' and '--help' are supported automatically.
@@ -70,21 +141,20 @@ def parse_program_args():
     parser.add_option("-x", "--source", dest="source_script",
                       help="Execute batch file FILE", metavar="FILE")
     (options, args) = parser.parse_args()
-    if options.source_script != None:
-        assert False, "Unimplemented."
-    os.environ['DMTCP_PORT'] = str(options.dmtcp_port)
-    # args is the 'gdb ARGS ./a.out' list
+    # 'args' is the 'gdb ARGS ./a.out' list
     if len(args) == 0:
         parser.print_help()
         fred_quit(1)
-    gs_debugger_name = args[0]
+    if options.source_script != None:
+        assert False, "Unimplemented."
+    os.environ['DMTCP_PORT'] = str(options.dmtcp_port)
     return args
 
 def main():
     """Program execution starts here."""
     cmd = parse_program_args()
-    set_up_debugger()
-    fredio.setup(cmd)
+    find_prompt_fnc = set_up_debugger(cmd[0])
+    fredio.setup(find_prompt_fnc, cmd)
 
     # Enter main input loop:
     while 1:

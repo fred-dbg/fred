@@ -1,3 +1,34 @@
+class ReversibleDebugger():
+    def __init__(self, debugger):
+        self._d                 = debugger
+        self.l_checkpoints      = []
+        self.current_checkpoint = Checkpoint()
+        
+    def history(self):
+        """Returns the history of the current Checkpoint."""
+        return self.current_checkpoint.history
+
+    def next(self, n):
+        """Perform n 'next' commands."""
+        self._d.next(n)
+
+    def reverse_next(self, n):
+        """Perform n 'reverse-next' commands."""
+        assert False, "Unimplemented."
+
+    def state(self):
+        """Return the DebuggerState representing the current state of
+        the debugger."""
+        return self._d.state()
+
+    def update_state(self):
+        """Update the underlying DebuggerState."""
+        self._d.update_state()
+
+    def get_prompt_str_function(self):
+        """Returns the 'contains_prompt_str' function from the personality."""
+        return self._d.get_prompt_str_function()
+
 class Debugger():
     def __init__(self, personality):
         self._p = personality
@@ -5,10 +36,6 @@ class Debugger():
     def next(self, n):
         """Perform n 'next' commands."""
         self._p.next(n)
-
-    def current_line(self):
-        """Return the current line number."""
-        return self._p.line_number()
 
     def state(self):
         """Return the DebuggerState representing the current state of
@@ -18,6 +45,10 @@ class Debugger():
     def update_state(self):
         """Update the underlying DebuggerState."""
         self._p.update_state()
+
+    def get_prompt_str_function(self):
+        """Returns the 'contains_prompt_str' function from the personality."""
+        return self._p.contains_prompt_str
 
 class DebuggerState():
     """Represents the current state of a debugger.
@@ -106,3 +137,14 @@ class BacktraceFrame():
                self.s_args == other.s_args and \
                self.s_file == other.s_file and \
                self.n_line == other.n_line
+
+class Checkpoint():
+    """ This class will represent a linked list of checkpoints.  A
+    checkpoint has an index number and a command history."""
+    def __init__(self):
+        self.previous   = None # Pointer to the previous Checkpoint
+        self.next       = None # Pointer to next Checkpoint
+        self.n_index    = -1   # Index number
+        # The history is a list of the commands sent to the debugger
+        # from the beginning of this checkpoint.
+        self.l_history  = []

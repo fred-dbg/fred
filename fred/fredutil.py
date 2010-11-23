@@ -20,6 +20,7 @@
 ###############################################################################
 
 import re
+import sys
 
 # Legal characters for a file path
 gs_file_path_re = "[/a-zA-Z0-9_\-\.]+"
@@ -37,3 +38,7 @@ def last_n(s, source, n):
     """
     return (s+source)[-n:]
 
+def fred_error(message):
+    """Print an error message to the screen with a fred-specific prefix."""
+    sys.stdout.write("FReD: %s\n" % message)
+    sys.stdout.flush()
