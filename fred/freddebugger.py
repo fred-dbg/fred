@@ -1,12 +1,12 @@
 class ReversibleDebugger():
-    def __init__(self, debugger):
-        self._d                 = debugger
+    def __init__(self, personality):
+        self._d                 = Debugger(personality)
         self.l_checkpoints      = []
         self.current_checkpoint = Checkpoint()
         
     def history(self):
         """Returns the history of the current Checkpoint."""
-        return self.current_checkpoint.history
+        return self.current_checkpoint.l_history
 
     def next(self, n):
         """Perform n 'next' commands."""
@@ -26,8 +26,12 @@ class ReversibleDebugger():
         self._d.update_state()
 
     def get_prompt_str_function(self):
-        """Returns the 'contains_prompt_str' function from the personality."""
+        """Return the 'contains_prompt_str' function from the personality."""
         return self._d.get_prompt_str_function()
+
+    def prompt(self):
+        """Bring user back to debugger prompt."""
+        self._d.prompt()
 
 class Debugger():
     def __init__(self, personality):
@@ -49,6 +53,10 @@ class Debugger():
     def get_prompt_str_function(self):
         """Returns the 'contains_prompt_str' function from the personality."""
         return self._p.contains_prompt_str
+
+    def prompt(self):
+        """Bring user back to debugger prompt."""
+        self._p.prompt()
 
 class DebuggerState():
     """Represents the current state of a debugger.

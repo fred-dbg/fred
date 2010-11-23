@@ -90,16 +90,36 @@ GS_FRED_COMMAND_PREFIX="fred-"
 g_debugger = None
 ######################## End Global Variables #################################
 
+def fred_command_help():
+   print """FReD commands:
+(all optional 'count' arguments default to 1)
+  fred-undo [n]:         Undo last n debugger commands.
+  fred-reverse-next [n], fred-rn [n]:  Reverse-next n times.
+  fred-reverse-step [n], fred-rs [n]:  Reverse-step n times.
+  fred-checkpoint, fred-ckpt: Request a new checkpoint to be made.
+  fred-restart:               Restart from last checkpoint.
+  fred-reverse-watch <EXPR>, fred-rw <EXPR>:
+                              Reverse execute until expression EXPR changes.
+  fred-source <FILE>:         Read commands from source file.
+  fred-list:                  List the available checkpoint files.
+  fred-help:                  Display this help message.
+  fred-history:               Display your command history up to this point.
+  fred-quit, fred-exit:       Quit URDB."""
+   sys.stdout.flush()
+
 def is_quit_command(s_command):
     """Return True if s_command is a debugger 'quit' command."""
     return s_command in ["q", "quit"]
 
 def handle_special_command(s_command):
     """Performs handling of 'special' (non-debugger) commands."""
-    global g_debugger
+    global g_debugger, GS_FRED_COMMAND_PREFIX
+    s_command = s_command.replace(GS_FRED_COMMAND_PREFIX, "")
     (s_command_name, sep, s_command_args) = s_command.partition(' ')
     if is_quit_command(s_command_name):
         fred_quit(0)
+    elif s_command_name == "help":
+        fred_command_help()
     elif s_command_name == "history":
         print g_debugger.history()
     elif s_command_name == "reverse-next" or s_command_name == "rn":
@@ -119,10 +139,9 @@ def set_up_debugger(s_debugger_name):
     Return the personality's find prompt function to pass to fredio."""
     global g_debugger
     if s_debugger_name == "gdb":
-        from fred import personalityGdb
-        dbg = freddebugger.Debugger(personalityGdb.PersonalityGdb())
-        g_debugger = freddebugger.ReversibleDebugger(dbg)
-        del personalityGdb
+        from fred.personalityGdb import PersonalityGdb
+        g_debugger = freddebugger.ReversibleDebugger(PersonalityGdb())
+        del PersonalityGdb
     else:
         fredutil.fred_error("Unimplemented debugger '%s'" % s_debugger_name)
         fred_quit(1)
@@ -152,19 +171,28 @@ def parse_program_args():
 
 def main():
     """Program execution starts here."""
-    cmd = parse_program_args()
-    find_prompt_fnc = set_up_debugger(cmd[0])
-    fredio.setup(find_prompt_fnc, cmd)
+    global g_debugger
+    l_cmd = parse_program_args()
+    find_prompt_fnc = set_up_debugger(l_cmd[0])
+    fredio.setup(find_prompt_fnc, l_cmd)
 
+    wait_for_prompt = True
     # Enter main input loop:
     while 1:
         try:
-            fredio.wait_for_prompt()
-            s = fredio.get_command()
-            if is_special_command(s):
-                handle_special_command(s)
+            if wait_for_prompt:
+                fredio.wait_for_prompt()
             else:
-                fredio.send_command(s)
+                # Reset
+                wait_for_prompt = True
+            s_command = fredio.get_command()
+            if is_special_command(s_command):
+                handle_special_command(s_command)
+                # Skip wait_for_prompt() next iteration:
+                wait_for_prompt = False
+                g_debugger.prompt()
+            else:
+                fredio.send_command(s_command)
         except KeyboardInterrupt:
             fredio.signal(signal.SIGINT)
     fred_quit(0)

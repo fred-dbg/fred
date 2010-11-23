@@ -1,5 +1,6 @@
 import personality
 import re
+import sys
 
 import freddebugger
 import fredio
@@ -7,6 +8,8 @@ import fredutil
 
 GS_INFO_BREAKPOINTS_COMMAND = "info breakpoints"
 GS_WHERE_COMMAND = "where"
+
+GS_PROMPT = "(gdb) "
 gre_prompt = re.compile("\(gdb\) ")
 # Basic stack trace format, matches this kind:
 # "#0  *__GI___libc_malloc (bytes=8) at malloc.c:3551"
@@ -37,6 +40,10 @@ class PersonalityGdb(personality.Personality):
     def contains_prompt_str(self, string):
         """Return True if given string matches the prompt string."""
         return re.search(gre_prompt, string) != None
+
+    def prompt(self):
+        """Bring user back to debugger prompt."""
+        display_prompt()
 
 def _parse_backtrace(where_str):
     """Return a Backtrace instance parsed from output of 'where' cmd."""
@@ -85,3 +92,8 @@ def _parse_one_breakpoint(match_obj):
     breakpoint.n_line     = match_obj.group(7)
     breakpoint.n_count    = match_obj.group(8)
     return breakpoint
+
+def display_prompt():
+    """Prints the prompt to the screen."""
+    sys.stdout.write(GS_PROMPT)
+    sys.stdout.flush()
