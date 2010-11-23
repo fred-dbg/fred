@@ -41,10 +41,10 @@ class DebuggerState():
         self._updateBreakpoints()
 
     def _updateBacktrace(self):
-        assert(False, "Unimplemented.")
+        assert False, "Unimplemented."
 
     def _updateBreakpoints(self):
-        assert(False, "Unimplemented.")
+        assert False, "Unimplemented."
 
 class Breakpoint():
     """Represents one breakpoint in the debugger.

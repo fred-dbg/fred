@@ -1,8 +1,4 @@
 #!/usr/bin/python
-from optparse import OptionParser
-import os
-import signal
-import sys
 
 ###############################################################################
 # Copyright (C) 2009, 2010, 2011, 2012 by Kapil Arya, Gene Cooperman,         #
@@ -25,9 +21,13 @@ import sys
 # along with FReD.  If not, see <http://www.gnu.org/licenses/>.               #
 ###############################################################################
 
+from optparse import OptionParser
+import os
+import signal
+import sys
 
-import fredio
-import freddebugger
+from fred import fredio
+from fred import freddebugger
 
 GS_FRED_USAGE="USAGE: %prog [options] xdb [ARGS] a.out [A.OUT-ARGS]\n" + \
                "Replace `xdb' with the name of the target debugger"
