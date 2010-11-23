@@ -19,6 +19,11 @@
 # along with FReD.  If not, see <http://www.gnu.org/licenses/>.               #
 ###############################################################################
 
+import re
+
+# Legal characters for a file path
+gs_file_path_re = "[/a-zA-Z0-9_\-\.]+"
+
 def last_n(s, source, n):
     """ Return the last n characters of the concatenation of s+source.
     This is used by the output loop to keep track of the last n characters read

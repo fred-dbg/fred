@@ -33,6 +33,9 @@ GS_FRED_USAGE="USAGE: %prog [options] xdb [ARGS] a.out [A.OUT-ARGS]\n" + \
                "Replace `xdb' with the name of the target debugger"
 GS_FRED_VERSION="Version: %prog 0.99-r277 (Nov. 12 2010)"
 
+# The global Debugger instance.
+g_debugger = None
+
 def is_quit_command(command):
     return command in ["q", "quit"]
 
@@ -45,8 +48,19 @@ def is_special_command(command):
     """Return True if the given command needs special handling."""
     return command.startswith("fred-") or is_quit_command(command)
 
+def set_up_debugger():
+    """Import the correct personality and initialize g_debugger."""
+    global g_debugger, gs_debugger_name
+    if gs_debugger_name == "gdb":
+        import personalityGdb
+        g_debugger = freddebugger.Debugger(personalityGdb.PersonalityGdb())
+        del personalityGdb
+    else:
+        assert False, "Unimplemented."
+
+
 def parse_program_args():
-    global GS_FRED_USAGE
+    global GS_FRED_USAGE, gs_debugger_name
     parser = OptionParser(usage=GS_FRED_USAGE, version=GS_FRED_VERSION)
     parser.disable_interspersed_args()
     # Note that '-h' and '--help' are supported automatically.
@@ -57,18 +71,21 @@ def parse_program_args():
                       help="Execute batch file FILE", metavar="FILE")
     (options, args) = parser.parse_args()
     if options.source_script != None:
-        print "Unimplemented."
+        assert False, "Unimplemented."
     os.environ['DMTCP_PORT'] = str(options.dmtcp_port)
     # args is the 'gdb ARGS ./a.out' list
     if len(args) == 0:
         parser.print_help()
         fred_quit(1)
+    gs_debugger_name = args[0]
     return args
 
 def main():
     """Program execution starts here."""
     cmd = parse_program_args()
+    set_up_debugger()
     fredio.setup(cmd)
+
     # Enter main input loop:
     while 1:
         try:
