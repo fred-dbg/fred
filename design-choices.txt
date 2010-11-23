@@ -108,7 +108,7 @@ feel free to change, add, or otherwise modify anything in this document.
 
    Etc. Then, a global string might be: 'gs_log_path_name'. A global regular
    expression (we should avoid those wherever possible, though) which is never
-   modified might be 'gre_BREAKPOINT_HEADER_LINE'. A list field private to a
+   modified might be 'GRE_BREAKPOINT_HEADER_LINE'. A list field private to a
    class might be '_pl_checkpoints'.
 
    This is just an example of a possible scheme. If there's one which would be

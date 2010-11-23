@@ -27,6 +27,7 @@ import sys
 
 
 import fredio
+import freddebugger
 
 GS_FRED_USAGE="USAGE: %prog [options] xdb [ARGS] a.out [A.OUT-ARGS]\n" + \
                "Replace `xdb' with the name of the target debugger"
@@ -38,7 +39,7 @@ def is_quit_command(command):
 def handle_special_command(command):
     """Performs handling of 'special' (non-debugger) commands."""
     if is_quit_command(command):
-        fred_quit()
+        fred_quit(0)
 
 def is_special_command(command):
     """Return True if the given command needs special handling."""
@@ -58,7 +59,10 @@ def parse_program_args():
     if options.source_script != None:
         print "Unimplemented."
     os.environ['DMTCP_PORT'] = str(options.dmtcp_port)
-    # args will be the 'gdb ARGS ./a.out' list
+    # args is the 'gdb ARGS ./a.out' list
+    if len(args) == 0:
+        parser.print_help()
+        fred_quit(1)
     return args
 
 def main():
@@ -76,11 +80,11 @@ def main():
                 fredio.send_command(s)
         except KeyboardInterrupt:
             fredio.signal(signal.SIGINT)
-    fred_quit()
+    fred_quit(0)
 
-def fred_quit():
+def fred_quit(exit_code):
     """Performs any necessary cleanup and quits FReD."""
-    exit(0)
+    exit(exit_code)
     
 if __name__ == '__main__':
     main()
