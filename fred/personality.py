@@ -12,12 +12,32 @@ class Personality:
         """Return a list of Breakpoint objects of the current breakpoints."""
         assert False, "Must be implemented in subclass."
 
-    def where(self):
-        """Return stack trace from debugger."""
+    def do_next(self, n):
+        """Perform n 'next' commands. Returns output."""
+        assert False, "Must be implemented in subclass."
+        
+    def do_step(self, n):
+        """Perform n 'step' commands. Returns output."""
+        assert False, "Must be implemented in subclass."
+        
+    def do_continue(self, n):
+        """Perform n 'continue' commands. Returns output."""
+        assert False, "Must be implemented in subclass."
+        
+    def do_breakpoint(self, expr):
+        """Perform 'break expr' command. Returns output."""
         assert False, "Must be implemented in subclass."
 
-    def list_breakpoints(self):
-        """Return output of 'info breakpoints' command."""
+    def do_where(self):
+        """Perform 'where' command. Returns output."""
+        assert False, "Must be implemented in subclass."
+
+    def do_info_breakpoints(self):
+        """Perform 'info_breakpoints' command. Returns output."""
+        assert False, "Must be implemented in subclass."
+
+    def do_print(self, expr):
+        """Perform 'print expr' command. Returns output."""
         assert False, "Must be implemented in subclass."
 
     def contains_prompt_str(self, string):

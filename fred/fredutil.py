@@ -42,3 +42,25 @@ def fred_error(message):
     """Print an error message to the screen with a fred-specific prefix."""
     sys.stdout.write("FReD: %s\n" % message)
     sys.stdout.flush()
+
+def getRE(str, idx=0):
+    """Return a regular expression string matching the given string with a
+    specified number of characters required.
+    Examples:
+    getRE("testing") => "^t(e(s(t(i(n(g)?)?)?)?)?)?\b"
+    getRE("testing", 4) => "^testi(n(g)?)?\b"
+    """
+    # TODO: The second example above makes it seem like the requirement
+    # number isn't properly respected.
+    if len(str) < 1:
+        return str
+    return '^' + str[:idx] + getREWork(str[idx:]) + r'\b'
+
+def getREWork(str):
+    """Helper function for getRE(): wraps the string in recursive (x(...)?)?
+    layers."""
+    if len(str) < 1:
+        return str
+    if len(str) == 1:
+        return str
+    return str[0] + '(' + getREWork(str[1:]) + ')?'

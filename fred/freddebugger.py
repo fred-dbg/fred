@@ -1,8 +1,6 @@
-GS_NEXT_COMMAND  = "next"
-GS_REVERSE_NEXT_COMMAND  = "reverse-next"
 
 class Debugger():
-    """Class which represents control and management of the actual debugger.
+    """Represents control and management of an actual debugger.
 
     This provides a consistent interface to different debuggers, based on the
     particular Personality instance. Each Personality instance has a
@@ -14,9 +12,33 @@ class Debugger():
         self._p = personality
         self._state = DebuggerState()
 
-    def next(self, n):
-        """Perform n 'next' commands."""
-        self._p.next(n)
+    def do_next(self, n):
+        """Perform n 'next' commands. Returns output."""
+        return self._p.do_next(n)
+        
+    def do_step(self, n):
+        """Perform n 'step' commands. Returns output."""
+        return self._p.do_step(n)
+        
+    def do_continue(self, n):
+        """Perform n 'continue' commands. Returns output."""
+        return self._p.do_continue(n)
+        
+    def do_breakpoint(self, expr):
+        """Perform 'break expr' command. Returns output."""
+        return self._p.do_breakpoint(expr)
+
+    def do_where(self):
+        """Perform 'where' command. Returns output."""
+        return self._p.do_where()
+
+    def do_info_breakpoints(self):
+        """Perform 'info_breakpoints' command. Returns output."""
+        return self._p.do_info_breakpoints()
+
+    def do_print(self, expr):
+        """Perform 'print expr' command. Returns output."""
+        return self._p.do_print(expr)
 
     def state(self):
         """Return the DebuggerState representing the current state of
@@ -37,7 +59,7 @@ class Debugger():
         self._p.prompt()
 
 class ReversibleDebugger(Debugger):
-    """Class which represents control and management of a reversible Debugger.
+    """Represents control and management of a reversible Debugger.
 
     This class knows about checkpoints, command histories, and reversible
     debugger commands.
@@ -137,15 +159,11 @@ class BacktraceFrame():
                self.s_file == other.s_file and \
                self.n_line == other.n_line
 
-'''
 class FredCommand():
-    def __init__(self, name, args="", native_repr, alias=""):
-        self.s_name         = name
-        self.s_args         = args
-        self.s_native_repr  = native_repr
-        self.s_native_alias = alias
-'''
-
+    def __init__(self, name, args=""):
+        self.s_name = name
+        self.s_args = args
+        
 class Checkpoint():
     """ This class will represent a linked list of checkpoints.  A
     checkpoint has an index number and a command history."""
@@ -160,3 +178,12 @@ class Checkpoint():
     def log_command(self, cmd):
         """Adds the given FredCommand to the history."""
         self.l_history.append(cmd)
+
+g_fred_next_cmd = FredCommand("next")
+g_fred_step_cmd = FredCommand("step")
+g_fred_continue_cmd = FredCommand("continue")
+g_fred_breakpoint_cmd = FredCommand("breakpoint")
+g_fred_where_cmd = FredCommand("where")
+g_fred_info_breakpoints_cmd = FredCommand("info_breakpoints")
+g_fred_print_cmd = FredCommand("print")
+g_fred_unknown_cmd = FredCommand("unknown")
