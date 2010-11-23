@@ -79,9 +79,9 @@ docstring conventions, you can see PEP-257.
 
 
 ######################## Global Constants #####################################
+GS_FRED_VERSION="Version: %prog 0.99-r277 (Nov. 12 2010)"
 GS_FRED_USAGE="USAGE: %prog [options] xdb [ARGS] a.out [A.OUT-ARGS]\n" + \
                "Replace `xdb' with the name of the target debugger"
-GS_FRED_VERSION="Version: %prog 0.99-r277 (Nov. 12 2010)"
 GS_FRED_COMMAND_PREFIX="fred-"
 ######################## End Global Constants #################################
 
@@ -104,7 +104,7 @@ def fred_command_help():
   fred-list:                  List the available checkpoint files.
   fred-help:                  Display this help message.
   fred-history:               Display your command history up to this point.
-  fred-quit, fred-exit:       Quit URDB."""
+"""
    sys.stdout.flush()
 
 def is_quit_command(s_command):
@@ -118,13 +118,28 @@ def handle_special_command(s_command):
     (s_command_name, sep, s_command_args) = s_command.partition(' ')
     if is_quit_command(s_command_name):
         fred_quit(0)
+    elif s_command_name == "undo":
+        fredutil.fred_error("Unimplemented command '%s'" % s_command_name)
+    elif s_command_name in ["reverse-next", "rn"]:
+        fredutil.fred_error("Unimplemented command '%s'" % s_command_name)
+        count = int(s_command_args) if s_command_args != '' else 1
+        g_debugger.reverse_next(count)
+    elif s_command_name in ["reverse-step", "rs"]:
+        fredutil.fred_error("Unimplemented command '%s'" % s_command_name)
+    elif s_command_name in ["checkpoint", "ckpt"]:
+        fredutil.fred_error("Unimplemented command '%s'" % s_command_name)
+    elif s_command_name == "restart":
+        fredutil.fred_error("Unimplemented command '%s'" % s_command_name)
+    elif s_command_name in ["reverse-watch", "rw"]:
+        fredutil.fred_error("Unimplemented command '%s'" % s_command_name)
+    elif s_command_name == "source":
+        fredutil.fred_error("Unimplemented command '%s'" % s_command_name)
+    elif s_command_name == "list":
+        fredutil.fred_error("Unimplemented command '%s'" % s_command_name)
     elif s_command_name == "help":
         fred_command_help()
     elif s_command_name == "history":
         print g_debugger.history()
-    elif s_command_name == "reverse-next" or s_command_name == "rn":
-        count = int(s_command_args) if s_command_args != '' else 1
-        g_debugger.reverse_next(count)
     else:
         fredutil.fred_error("Unhandled FReD command '%s'" % s_command_name)
 

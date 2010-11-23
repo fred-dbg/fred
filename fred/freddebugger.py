@@ -1,41 +1,18 @@
-class ReversibleDebugger():
-    def __init__(self, personality):
-        self._d                 = Debugger(personality)
-        self.l_checkpoints      = []
-        self.current_checkpoint = Checkpoint()
-        
-    def history(self):
-        """Returns the history of the current Checkpoint."""
-        return self.current_checkpoint.l_history
-
-    def next(self, n):
-        """Perform n 'next' commands."""
-        self._d.next(n)
-
-    def reverse_next(self, n):
-        """Perform n 'reverse-next' commands."""
-        assert False, "Unimplemented."
-
-    def state(self):
-        """Return the DebuggerState representing the current state of
-        the debugger."""
-        return self._d.state()
-
-    def update_state(self):
-        """Update the underlying DebuggerState."""
-        self._d.update_state()
-
-    def get_prompt_str_function(self):
-        """Return the 'contains_prompt_str' function from the personality."""
-        return self._d.get_prompt_str_function()
-
-    def prompt(self):
-        """Bring user back to debugger prompt."""
-        self._d.prompt()
+GS_NEXT_COMMAND  = "next"
+GS_REVERSE_NEXT_COMMAND  = "reverse-next"
 
 class Debugger():
+    """Class which represents control and management of the actual debugger.
+
+    This provides a consistent interface to different debuggers, based on the
+    particular Personality instance. Each Personality instance has a
+    well-defined set of required functions, and this class calls those.
+
+    If the semantics of personality-specific things change, we may change the
+    usage here, and keep the interface unchanged."""
     def __init__(self, personality):
         self._p = personality
+        self._state = DebuggerState()
 
     def next(self, n):
         """Perform n 'next' commands."""
@@ -44,11 +21,12 @@ class Debugger():
     def state(self):
         """Return the DebuggerState representing the current state of
         the debugger."""
-        return self._p.state()
+        return self._state
 
     def update_state(self):
         """Update the underlying DebuggerState."""
-        self._p.update_state()
+        self.state().backtrace     = self._p.get_backtrace()
+        self.state().l_breakpoints = self._p.get_breakpoints()
 
     def get_prompt_str_function(self):
         """Returns the 'contains_prompt_str' function from the personality."""
@@ -57,6 +35,30 @@ class Debugger():
     def prompt(self):
         """Bring user back to debugger prompt."""
         self._p.prompt()
+
+class ReversibleDebugger(Debugger):
+    """Class which represents control and management of a reversible Debugger.
+
+    This class knows about checkpoints, command histories, and reversible
+    debugger commands.
+
+    It contains an instance of Checkpoint which should always represent the
+    current checkpoint.  A Checkpoint contains pointers to the previous and
+    next checkpoints for navigation through time (doubly-linked list).
+    """
+    def __init__(self, personality):
+        Debugger.__init__(self, personality)
+        self.checkpoint = Checkpoint()
+        
+    def history(self):
+        """Returns the history of the current Checkpoint."""
+        return self.checkpoint.l_history
+
+    def reverse_next(self, n):
+        """Perform n 'reverse-next' commands."""
+        #cmd = FredCommand(GS_REVERSE_NEXT_COMMAND, str(n))
+        self.log_command(cmd)
+        assert False, "Unimplemented."
 
 class DebuggerState():
     """Represents the current state of a debugger.
@@ -73,17 +75,6 @@ class DebuggerState():
     def __eq__(self, other):
         return self.backtrace == other.backtrace and \
                self.l_breakpoints == other.l_breakpoints
-
-    def update(self):
-        """Updates the debugger state to the current time."""
-        self._updateBacktrace()
-        self._updateBreakpoints()
-
-    def _updateBacktrace(self):
-        assert False, "Unimplemented."
-
-    def _updateBreakpoints(self):
-        assert False, "Unimplemented."
 
 class Breakpoint():
     """Represents one breakpoint in the debugger.
@@ -146,6 +137,15 @@ class BacktraceFrame():
                self.s_file == other.s_file and \
                self.n_line == other.n_line
 
+'''
+class FredCommand():
+    def __init__(self, name, args="", native_repr, alias=""):
+        self.s_name         = name
+        self.s_args         = args
+        self.s_native_repr  = native_repr
+        self.s_native_alias = alias
+'''
+
 class Checkpoint():
     """ This class will represent a linked list of checkpoints.  A
     checkpoint has an index number and a command history."""
@@ -156,3 +156,7 @@ class Checkpoint():
         # The history is a list of the commands sent to the debugger
         # from the beginning of this checkpoint.
         self.l_history  = []
+
+    def log_command(self, cmd):
+        """Adds the given FredCommand to the history."""
+        self.l_history.append(cmd)

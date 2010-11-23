@@ -2,15 +2,14 @@ import freddebugger
 
 class Personality:
     def __init__(self):
-        self._state = freddebugger.DebuggerState()
-        self.s_name = "Abstract debugger"
+        self.s_name = "Abstract personality"
 
-    def state(self):
-        """Return the DebuggerState representing current state of debugger."""
-        return self._state
+    def get_backtrace(self):
+        """Return a Backtrace object representing the current backtrace."""
+        assert False, "Must be implemented in subclass."
 
-    def update_state(self):
-        """Update the DebuggerState to the current time."""
+    def get_breakpoints(self):
+        """Return a list of Breakpoint objects of the current breakpoints."""
         assert False, "Must be implemented in subclass."
 
     def where(self):

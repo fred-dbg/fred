@@ -2,12 +2,25 @@ import personality
 import re
 import sys
 
+#from freddebugger import FredCommand
 import freddebugger
 import fredio
 import fredutil
 
 GS_INFO_BREAKPOINTS_COMMAND = "info breakpoints"
 GS_WHERE_COMMAND = "where"
+GS_NEXT_COMMAND = "next"
+GS_STEP_COMMAND = "step"
+GS_CONTINUE_COMMAND = "continue"
+GS_FINISH_COMMAND = "finish"
+GS_PRINT_COMMAND = "print"
+GS_RUN_COMMAND = "run"
+GS_BREAKPOINT_COMMAND = "break"
+
+#where_command = FredCommand(freddebugger.GS_WHERE_COMMAND,
+#                            "where")
+#info_breakpoints_command = FredCommand(freddebugger.GS_INFO_BREAKPOINTS_COMMAND,
+#                                       "info breakpoints")
 
 GS_PROMPT = "(gdb) "
 gre_prompt = re.compile("\(gdb\) ")
@@ -24,10 +37,13 @@ class PersonalityGdb(personality.Personality):
         personality.Personality.__init__(self)
         self.s_name = "gdb"
 
-    def update_state(self):
-        """Update the DebuggerState to the current time."""
-        self.state().backtrace     = _parse_backtrace(self.where())
-        self.state().l_breakpoints = _parse_breakpoints(self.list_breakpoints())
+    def get_backtrace(self):
+        """Return a Backtrace object representing the current backtrace."""
+        return _parse_backtrace(self.where())
+
+    def get_breakpoints(self):
+        """Return a list of Breakpoint objects of the current breakpoints."""
+        return _parse_breakpoints(self.list_breakpoints())
         
     def where(self):
         """Return output of 'where' command."""
