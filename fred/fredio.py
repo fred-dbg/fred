@@ -25,10 +25,8 @@ import fcntl
 import os
 import pty
 import readline
-import select
 import sys
 import threading
-import time
 
 import fredutil
 

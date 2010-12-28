@@ -51,13 +51,15 @@ In addition, all global variables should have a prefix to indicate their
 scope and type. The following prefixes will be used:
 
 Prefix     |    Meaning
------------+------------
+-----------+----------------------
 g?_        |   global
+-----------+----------------------
+b_         |   boolean
+d_         |   dictionary
+f_         |   Python file object
+l_         |   list
 n_         |   numeric
 s_         |   string
-l_         |   list
-b_         |   boolean
-f_         |   Python file object
 
 The ? after g_ is used to indicate the presence of an additional type
 indicator.  For example a global integer should be name like:
@@ -80,7 +82,7 @@ docstring conventions, you can see PEP-257.
 
 ######################## Global Constants #####################################
 GS_FRED_VERSION="Version: %prog 0.99-r277 (Nov. 12 2010)"
-GS_FRED_USAGE="USAGE: %prog [options] xdb [ARGS] a.out [A.OUT-ARGS]\n" + \
+GS_FRED_USAGE="USAGE: %prog [options] xdb [ARGS] a.out [A.OUT ARGS]\n" + \
                "Replace `xdb' with the name of the target debugger"
 GS_FRED_COMMAND_PREFIX="fred-"
 ######################## End Global Constants #################################
@@ -111,31 +113,30 @@ def is_quit_command(s_command):
     """Return True if s_command is a debugger 'quit' command."""
     return s_command in ["q", "quit"]
 
-def handle_special_command(s_command):
+def handle_fred_command(s_command):
     """Performs handling of 'special' (non-debugger) commands."""
     global g_debugger, GS_FRED_COMMAND_PREFIX
     s_command = s_command.replace(GS_FRED_COMMAND_PREFIX, "")
     (s_command_name, sep, s_command_args) = s_command.partition(' ')
+    n_count = fredutil.to_int(s_command_args)
     if is_quit_command(s_command_name):
         fred_quit(0)
     elif s_command_name == "undo":
-        fredutil.fred_error("Unimplemented command '%s'" % s_command_name)
+        g_debugger.undo(n_count)
     elif s_command_name in ["reverse-next", "rn"]:
-        fredutil.fred_error("Unimplemented command '%s'" % s_command_name)
-        count = int(s_command_args) if s_command_args != '' else 1
-        g_debugger.reverse_next(count)
+        g_debugger.reverse_next(n_count)
     elif s_command_name in ["reverse-step", "rs"]:
-        fredutil.fred_error("Unimplemented command '%s'" % s_command_name)
+        g_debugger.reverse_step(n_count)
     elif s_command_name in ["checkpoint", "ckpt"]:
-        fredutil.fred_error("Unimplemented command '%s'" % s_command_name)
+        fredutil.fred_error("Checkpoint is unimplemented.")
     elif s_command_name == "restart":
-        fredutil.fred_error("Unimplemented command '%s'" % s_command_name)
+        fredutil.fred_error("Restart is unimplemented.")
     elif s_command_name in ["reverse-watch", "rw"]:
-        fredutil.fred_error("Unimplemented command '%s'" % s_command_name)
+        g_debugger.reverse_watch(s_command_args)
     elif s_command_name == "source":
-        fredutil.fred_error("Unimplemented command '%s'" % s_command_name)
+        g_debugger.source(s_command_args)
     elif s_command_name == "list":
-        fredutil.fred_error("Unimplemented command '%s'" % s_command_name)
+        print g_debugger.list_checkpoints()
     elif s_command_name == "help":
         fred_command_help()
     elif s_command_name == "history":
@@ -143,7 +144,7 @@ def handle_special_command(s_command):
     else:
         fredutil.fred_error("Unhandled FReD command '%s'" % s_command_name)
 
-def is_special_command(s_command):
+def is_fred_command(s_command):
     """Return True if the given command needs special handling."""
     global GS_FRED_COMMAND_PREFIX
     return s_command.startswith(GS_FRED_COMMAND_PREFIX) or \
@@ -160,11 +161,11 @@ def set_up_debugger(s_debugger_name):
     else:
         fredutil.fred_error("Unimplemented debugger '%s'" % s_debugger_name)
         fred_quit(1)
-    return g_debugger.get_prompt_str_function()
-
+    return g_debugger.get_prompt_str_function()   
 
 def parse_program_args():
-    """Add command line options, parse them, and return the string to exec."""
+    """Initialize command line options, and parse them.
+    Return the user's inferior to execute as a list."""
     global GS_FRED_USAGE
     parser = OptionParser(usage=GS_FRED_USAGE, version=GS_FRED_VERSION)
     parser.disable_interspersed_args()
@@ -174,21 +175,24 @@ def parse_program_args():
                       metavar="PORT")
     parser.add_option("-x", "--source", dest="source_script",
                       help="Execute batch file FILE", metavar="FILE")
-    (options, args) = parser.parse_args()
-    # 'args' is the 'gdb ARGS ./a.out' list
-    if len(args) == 0:
+    (options, l_args) = parser.parse_args()
+    # 'l_args' is the 'gdb ARGS ./a.out' list
+    if len(l_args) == 0:
         parser.print_help()
         fred_quit(1)
     if options.source_script != None:
-        assert False, "Unimplemented."
+        assert False, "Sourcing from file unimplemented."
     os.environ['DMTCP_PORT'] = str(options.dmtcp_port)
-    return args
+    return l_args
 
 def main():
     """Program execution starts here."""
     global g_debugger
+    # Parse arguments
     l_cmd = parse_program_args()
+    # Set up the FReD global debugger
     find_prompt_fnc = set_up_debugger(l_cmd[0])
+    # Set up I/O handling (with appropriate find_prompt())
     fredio.setup(find_prompt_fnc, l_cmd)
 
     wait_for_prompt = True
@@ -200,14 +204,16 @@ def main():
             else:
                 # Reset
                 wait_for_prompt = True
+            # Get one user command (blocking):
             s_command = fredio.get_command()
-            if is_special_command(s_command):
-                handle_special_command(s_command)
+            if is_fred_command(s_command):
+                handle_fred_command(s_command)
                 # Skip wait_for_prompt() next iteration:
                 wait_for_prompt = False
                 g_debugger.prompt()
             else:
                 fredio.send_command(s_command)
+                g_debugger.log_command(s_command)
         except KeyboardInterrupt:
             fredio.signal(signal.SIGINT)
     fred_quit(0)

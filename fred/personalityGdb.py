@@ -2,7 +2,6 @@ import personality
 import re
 import sys
 
-#from freddebugger import FredCommand
 import freddebugger
 import fredio
 import fredutil
@@ -15,23 +14,23 @@ GS_WHERE = "where"
 GS_INFO_BREAKPOINTS = "info breakpoints"
 GS_PRINT = "print"
 
-gs_next_re = fredutil.getRE(GS_NEXT, 4) + "|n"
-gs_step_re = fredutil.getRE(GS_STEP, 4) + "|s"
-gs_continue_re = fredutil.getRE(GS_CONTINUE, 4) + "|c"
+gs_next_re = fredutil.getRE(GS_NEXT, 4) + "|^n"
+gs_step_re = fredutil.getRE(GS_STEP, 4) + "|^s"
+gs_continue_re = fredutil.getRE(GS_CONTINUE, 4) + "|^c"
 gs_breakpoint_re = fredutil.getRE(GS_BREAKPOINT)
-gs_where_re = fredutil.getRE(GS_WHERE, 3) + "|bt"
-gs_info_breakpoints_re = fredutil.getRE(GS_INFO_BREAKPOINTS, 5)
-gs_print_re = fredutil.getRE(GS_PRINT, 5) + "|p(/\w)?"
+gs_where_re = fredutil.getRE(GS_WHERE, 3) + "|^bt"
+gs_info_breakpoints_re = fredutil.getRE(GS_INFO_BREAKPOINTS, 5) + "|^i b"
+gs_print_re = fredutil.getRE(GS_PRINT, 5) + "|^p(/\w)?"
 
 GS_PROMPT = "(gdb) "
 gre_prompt = re.compile("\(gdb\) ")
 # Basic stack trace format, matches this kind:
 # "#0  *__GI___libc_malloc (bytes=8) at malloc.c:3551"
 gre_backtrace_frame = re.compile("#(\d+)\s+(.+?)\s+\((.*)\)\s+at\s+(" +
-                                 fredutil.gs_file_path_re + "):(\d+)")
+                                 fredutil.GS_FILE_PATH_RE + "):(\d+)")
 gre_breakpoint = re.compile("(\d+)\s*(\w+)\s*(\w+)\s*(\w+)\s*(0x[0-9A-Fa-f]+)" +
-                            "in ([a-zA-Z0-9_]+)\s+at (" + fredutil.gs_file_path_re +
-                            "):(\d+)\s+(?:breakpoint already hit (\d+) time)?")
+                            "in ([a-zA-Z0-9_]+)\s+at (" + fredutil.GS_FILE_PATH_RE +
+                            "):(\D+)\s+(?:breakpoint already hit (\d+) time)?")
 
 class PersonalityGdb(personality.Personality):
     def __init__(self):
@@ -60,7 +59,7 @@ class PersonalityGdb(personality.Personality):
         
     def do_breakpoint(self, expr):
         """Perform 'break expr' command. Returns output."""
-        assert False, "Unimplemented."
+        return fredio.get_child_response(GS_BREAKPOINT + " " + str(expr))
 
     def do_where(self):
         """Perform 'where' command. Returns output."""
@@ -68,29 +67,29 @@ class PersonalityGdb(personality.Personality):
 
     def do_info_breakpoints(self):
         """Perform 'info_breakpoints' command. Returns output."""
-        assert False, "Unimplemented."
+        return fredio.get_child_response(GS_INFO_BREAKPOINTS)
 
     def do_print(self, expr):
         """Perform 'print expr' command. Returns output."""
-        assert False, "Unimplemented."
+        return fredio.get_child_response(GS_PRINT + " " + str(expr))
 
     def identify_command(self, s_command):
         """Returns a FredCommand representing given personality command."""
         if re.search(gs_next_re, s_command) != None:
-            return freddebugger.g_fred_next_cmd
+            return freddebugger.fred_next_cmd()
         if re.search(gs_step_re, s_command) != None:
-            return freddebugger.g_fred_step_cmd
+            return freddebugger.fred_step_cmd()
         if re.search(gs_continue_re, s_command) != None:
-            return freddebugger.g_fred_continue_cmd
+            return freddebugger.fred_continue_cmd()
         if re.search(gs_breakpoint_re, s_command) != None:
-            return freddebugger.g_fred_breakpoint_cmd
+            return freddebugger.fred_breakpoint_cmd()
         if re.search(gs_where_re, s_command) != None:
-            return freddebugger.g_fred_where_cmd
+            return freddebugger.fred_where_cmd()
         if re.search(gs_info_breakpoints_re, s_command) != None:
-            return freddebugger.g_fred_info_breakpoints_cmd
+            return freddebugger.fred_info_breakpoints_cmd()
         if re.search(gs_print_re, s_command) != None:
-            return freddebugger.g_fred_print_cmd
-        return freddebugger.g_fred_unknown_command
+            return freddebugger.fred_print_cmd()
+        return freddebugger.fred_unknown_cmd()
 
     def contains_prompt_str(self, string):
         """Return True if given string matches the prompt string."""

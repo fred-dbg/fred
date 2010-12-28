@@ -47,3 +47,7 @@ class Personality:
     def prompt(self):
         """Bring user back to debugger prompt."""
         assert False, "Must be implemented in subclass."
+
+    def identify_command(self, s_command):
+        """Returns a FredCommand representing given personality command."""
+        assert False, "Must be implemented in subclass."

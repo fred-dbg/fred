@@ -23,7 +23,7 @@ import re
 import sys
 
 # Legal characters for a file path
-gs_file_path_re = "[/a-zA-Z0-9_\-\.]+"
+GS_FILE_PATH_RE = "[/a-zA-Z0-9_\-\.]+"
 
 def last_n(s, source, n):
     """ Return the last n characters of the concatenation of s+source.
@@ -40,9 +40,15 @@ def last_n(s, source, n):
 
 def fred_error(message):
     """Print an error message to the screen with a fred-specific prefix."""
-    sys.stdout.write("FReD: %s\n" % message)
-    sys.stdout.flush()
+    sys.stderr.write("FReD: %s\n" % message)
+    sys.stderr.flush()
 
+def fred_fatal(message):
+    """Kill FReD with given message."""
+    sys.stderr.write("FReD fatal error: %s\n" % message)
+    sys.stderr.flush()
+    sys.exit(1)
+    
 def getRE(str, idx=0):
     """Return a regular expression string matching the given string with a
     specified number of characters required.
@@ -64,3 +70,12 @@ def getREWork(str):
     if len(str) == 1:
         return str
     return str[0] + '(' + getREWork(str[1:]) + ')?'
+
+def to_int(str):
+    """Return the integer representation of the given string, or 0."""
+    try:
+        retval = int(str)
+        return retval
+    except ValueError:
+        return 0
+        
