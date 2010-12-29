@@ -26,6 +26,7 @@ import os
 import signal
 import sys
 
+from fred import dmtcpmanager
 from fred import fredio
 from fred import freddebugger
 from fred import fredutil
@@ -85,6 +86,7 @@ GS_FRED_VERSION="Version: %prog 0.99-r277 (Nov. 12 2010)"
 GS_FRED_USAGE="USAGE: %prog [options] xdb [ARGS] a.out [A.OUT ARGS]\n" + \
                "Replace `xdb' with the name of the target debugger"
 GS_FRED_COMMAND_PREFIX="fred-"
+GS_FRED_TMPDIR = '/tmp/fred.' + os.environ['USER']
 ######################## End Global Constants #################################
 
 ######################## Global Variables #####################################
@@ -128,9 +130,9 @@ def handle_fred_command(s_command):
     elif s_command_name in ["reverse-step", "rs"]:
         g_debugger.reverse_step(n_count)
     elif s_command_name in ["checkpoint", "ckpt"]:
-        fredutil.fred_error("Checkpoint is unimplemented.")
+        g_debugger.do_checkpoint()
     elif s_command_name == "restart":
-        fredutil.fred_error("Restart is unimplemented.")
+        g_debugger.do_restart()
     elif s_command_name in ["reverse-watch", "rw"]:
         g_debugger.reverse_watch(s_command_args)
     elif s_command_name == "source":
@@ -142,7 +144,7 @@ def handle_fred_command(s_command):
     elif s_command_name == "history":
         print g_debugger.history()
     else:
-        fredutil.fred_error("Unhandled FReD command '%s'" % s_command_name)
+        fredutil.fred_error("Unknown FReD command '%s'" % s_command_name)
 
 def is_fred_command(s_command):
     """Return True if the given command needs special handling."""
@@ -183,6 +185,8 @@ def parse_program_args():
     if options.source_script != None:
         assert False, "Sourcing from file unimplemented."
     os.environ['DMTCP_PORT'] = str(options.dmtcp_port)
+    os.environ['DMTCP_TMPDIR'] = GS_FRED_TMPDIR
+
     return l_args
 
 def main():
@@ -194,7 +198,9 @@ def main():
     find_prompt_fnc = set_up_debugger(l_cmd[0])
     # Set up I/O handling (with appropriate find_prompt())
     fredio.setup(find_prompt_fnc, l_cmd)
-
+    # Set up DMTCP manager
+    dmtcpmanager.start(l_cmd, int(os.environ['DMTCP_PORT']))
+    
     wait_for_prompt = True
     # Enter main input loop:
     while 1:
@@ -206,14 +212,29 @@ def main():
                 wait_for_prompt = True
             # Get one user command (blocking):
             s_command = fredio.get_command()
-            if is_fred_command(s_command):
-                handle_fred_command(s_command)
-                # Skip wait_for_prompt() next iteration:
-                wait_for_prompt = False
-                g_debugger.prompt()
+            # Special case: user just entered '\n', meaning execute last
+            # command again. We want to preserve that functionality for fred
+            # commands too.
+            if s_command == '':
+               if is_fred_command(s_last_command):
+                  handle_fred_command(s_last_command)
+                  # Skip wait_for_prompt() next iteration:
+                  wait_for_prompt = False
+                  g_debugger.prompt()
+               else:
+                  fredio.send_command(s_last_command)
+                  g_debugger.log_command(s_last_command)
             else:
-                fredio.send_command(s_command)
-                g_debugger.log_command(s_command)
+               if is_fred_command(s_command):
+                  s_last_command = s_command
+                  handle_fred_command(s_command)
+                  # Skip wait_for_prompt() next iteration:
+                  wait_for_prompt = False
+                  g_debugger.prompt()
+               else:
+                  fredio.send_command(s_command)
+                  g_debugger.log_command(s_command)
+               s_last_command = s_command
         except KeyboardInterrupt:
             fredio.signal(signal.SIGINT)
     fred_quit(0)

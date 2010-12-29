@@ -175,6 +175,10 @@ def send_command(command):
     """Send a command to the child process."""
     send_child_input(command+'\n')
 
+def reexec(argv):
+    """Replace the current child process with the new given one."""
+    spawn_child(argv)
+
 def setup(find_prompt_fnc, argv):
     """Perform any setup needed to do i/o with the child process."""
     global g_find_prompt_function
@@ -182,5 +186,5 @@ def setup(find_prompt_fnc, argv):
     # Enable tab completion (with our own 'completer' function)
     readline.parse_and_bind('tab: complete')
     readline.set_completer(fred_completer)
-    spawn_child(argv)
+    spawn_child(["dmtcp_checkpoint"] + argv)
     start_output_thread()

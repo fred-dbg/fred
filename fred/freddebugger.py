@@ -1,3 +1,25 @@
+###############################################################################
+# Copyright (C) 2009, 2010, 2011, 2012 by Kapil Arya, Gene Cooperman,         #
+#                                        Tyler Denniston, and Ana-Maria Visan #
+# {kapil,gene,tyler,amvisan}@ccs.neu.edu                                      #
+#                                                                             #
+# This file is part of FReD.                                                  #
+#                                                                             #
+# FReD is free software: you can redistribute it and/or modify                #
+# it under the terms of the GNU General Public License as published by        #
+# the Free Software Foundation, either version 3 of the License, or           #
+# (at your option) any later version.                                         #
+#                                                                             #
+# FReD is distributed in the hope that it will be useful,                     #
+# but WITHOUT ANY WARRANTY; without even the implied warranty of              #
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the               #
+# GNU General Public License for more details.                                #
+#                                                                             #
+# You should have received a copy of the GNU General Public License           #
+# along with FReD.  If not, see <http://www.gnu.org/licenses/>.               #
+###############################################################################
+
+import dmtcpmanager
 import fredutil
 
 class Debugger():
@@ -71,12 +93,35 @@ class ReversibleDebugger(Debugger):
     """
     def __init__(self, personality):
         Debugger.__init__(self, personality)
-        self.checkpoint = Checkpoint()
+        self.checkpoint = Checkpoint(0)
 
+    def do_checkpoint(self):
+        """Perform a new checkpoint."""
+        new_ckpt = Checkpoint(self.checkpoint.n_index + 1)
+        self.checkpoint.next = new_ckpt
+        new_ckpt.previous = self.checkpoint
+        self.checkpoint = new_ckpt
+        dmtcpmanager.do_checkpoint()
+
+    def do_restart(self):
+        """Restart from the current checkpoint."""
+        if self.checkpoint.previous != None:
+            self.checkpoint = self.checkpoint.previous
+        dmtcpmanager.restart_last_ckpt()
+        
     def list_checkpoints(self):
         """Return the list of available Checkpoint files."""
-        fredutil.fred_error("Unimplemented command.")
-        return []
+        checkpoints = []
+        orig_index = self.checkpoint.n_index
+        ckpt = self.checkpoint
+        while ckpt.n_index > 0:
+            ckpt = ckpt.previous
+        while ckpt.next != None:
+            checkpoints.append(ckpt.n_index)
+            ckpt = ckpt.next
+        while ckpt.n_index != orig_index:
+            ckpt = ckpt.previous
+        return checkpoints
 
     def history(self):
         """Return the history of the current Checkpoint."""
@@ -246,10 +291,10 @@ class FredCommand():
 class Checkpoint():
     """ This class will represent a linked list of checkpoints.  A
     checkpoint has an index number and a command history."""
-    def __init__(self):
+    def __init__(self, idx=-1):
         self.previous   = None # Pointer to the previous Checkpoint
         self.next       = None # Pointer to next Checkpoint
-        self.n_index    = -1   # Index number
+        self.n_index    = idx  # Index number
         # The history is a list of FredCommands sent to the debugger
         # from the beginning of this checkpoint.
         self.l_history  = []
