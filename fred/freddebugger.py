@@ -105,8 +105,6 @@ class ReversibleDebugger(Debugger):
 
     def do_restart(self):
         """Restart from the current checkpoint."""
-        if self.checkpoint.previous != None:
-            self.checkpoint = self.checkpoint.previous
         dmtcpmanager.restart_last_ckpt()
         
     def list_checkpoints(self):
@@ -130,6 +128,7 @@ class ReversibleDebugger(Debugger):
     def log_command(self, s_command):
         """Convert given command to FredCommand instance and add to current
         history."""
+        # identify_command() sets native repr.
         cmd = self._p.identify_command(s_command)
         cmd.s_args = s_command.partition(' ')[2]
         self.checkpoint.log_command(cmd)
@@ -138,6 +137,12 @@ class ReversibleDebugger(Debugger):
         """Directly log the given FredCommand instance."""
         self.checkpoint.log_command(cmd)
     
+    def execute_fred_command(self, cmd):
+        """Execute the given FredCommand."""
+        if cmd.s_native == "":
+            fredutil.fred_fatal("FredCommand instance has null native string.")
+        self._p.execute_command(cmd.s_native + " " + cmd.s_args + "\n")
+
     def do_next(self, n):
         """Perform n 'next' commands. Returns output."""
         cmd = fred_next_cmd()
@@ -180,9 +185,27 @@ class ReversibleDebugger(Debugger):
         # side effects. Example: "print var++"
         return self._print(expr)
 
+    def replay_history(self):
+        """Issue the commands in current checkpoint's history to debugger."""
+        for cmd in self.checkpoint.l_history:
+            self.execute_fred_command(cmd)
+
     def undo(self, n):
         """Undo the last n commands."""
-        fredutil.fred_error("Unimplemented command.")
+        if len(self.checkpoint.l_history) == 0:
+            # Back up to previous checkpoint
+            if self.checkpoint.previous == None:
+                fredutil.fred_error("No undo possible (empty command history "
+                                    "and no previous checkpoints).")
+                return
+            else:
+                self.checkpoint = self.checkpoint.previous
+        # Trim history by one command:
+        self.checkpoint.l_history = self.checkpoint.l_history[:-1]
+        # Restart from checkpoint
+        self.do_restart()
+        # Replay the history
+        self.replay_history()
 
     def reverse_next(self, n):
         """Perform n 'reverse-next' commands."""
@@ -278,16 +301,39 @@ class BacktraceFrame():
                self.n_line == other.n_line
 
 class FredCommand():
+    """Represents one user command sent to the debugger.
+    Used to abstract away personality-specific syntax. Each FredCommand retains
+    the 'native' command, however, which is used during command replay."""
     def __init__(self, name, args=""):
         self.s_name = name
         self.s_args = args
+        # Native is what the user entered.
+        self.s_native = ""
 
     def __repr__(self):
+        """Return a FReD-abstracted representation of this command."""
+        if self.is_unknown():
+            return self.native_repr()
         s = self.s_name
         if self.s_args != "":
             s += " " + self.s_args
         return s
+
+    def native_repr(self):
+        """Return a personality-native representation of this command.
+        Native representation can be passed directly to the debugger."""
+        s = self.s_native
+        if self.s_args != "":
+            s += " " + self.s_args
+        return s        
+
+    def set_native(self, s_repr):
+        """Set the native representation to the given string."""
+        self.s_native = s_repr
         
+    def is_unknown(self):
+        return self.s_name == fred_unknown_cmd().s_name
+    
 class Checkpoint():
     """ This class will represent a linked list of checkpoints.  A
     checkpoint has an index number and a command history."""

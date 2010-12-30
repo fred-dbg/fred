@@ -26,6 +26,7 @@ import os
 import pty
 import readline
 import sys
+import signal
 import threading
 
 import fredutil
@@ -154,7 +155,13 @@ def spawn_child(argv):
     if gn_child_pid == 0:
         os.execvp(argv[0], argv)
 
-def signal(signum):
+def kill_child():
+    """Kill the child process."""
+    global gn_child_fd
+    signal_child(signal.SIGKILL)
+    os.close(gn_child_fd)
+    
+def signal_child(signum):
     """Send the signal to the child process."""
     global gn_child_pid
     os.kill(gn_child_pid, signum)
@@ -188,3 +195,7 @@ def setup(find_prompt_fnc, argv):
     readline.set_completer(fred_completer)
     spawn_child(["dmtcp_checkpoint"] + argv)
     start_output_thread()
+
+def teardown():
+    """Perform any cleanup associated with FReD exit."""
+    kill_child()

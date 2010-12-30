@@ -186,23 +186,11 @@ def parse_program_args():
         assert False, "Sourcing from file unimplemented."
     os.environ['DMTCP_PORT'] = str(options.dmtcp_port)
     os.environ['DMTCP_TMPDIR'] = GS_FRED_TMPDIR
-
     return l_args
 
-def main():
-    """Program execution starts here."""
-    global g_debugger
-    # Parse arguments
-    l_cmd = parse_program_args()
-    # Set up the FReD global debugger
-    find_prompt_fnc = set_up_debugger(l_cmd[0])
-    # Set up I/O handling (with appropriate find_prompt())
-    fredio.setup(find_prompt_fnc, l_cmd)
-    # Set up DMTCP manager
-    dmtcpmanager.start(l_cmd, int(os.environ['DMTCP_PORT']))
-    
+def main_io_loop():
+    """Main I/O loop to get and handle user commands."""
     wait_for_prompt = True
-    # Enter main input loop:
     while 1:
         try:
             if wait_for_prompt:
@@ -216,31 +204,48 @@ def main():
             # command again. We want to preserve that functionality for fred
             # commands too.
             if s_command == '':
-               if is_fred_command(s_last_command):
-                  handle_fred_command(s_last_command)
-                  # Skip wait_for_prompt() next iteration:
-                  wait_for_prompt = False
-                  g_debugger.prompt()
-               else:
-                  fredio.send_command(s_last_command)
-                  g_debugger.log_command(s_last_command)
+                if is_fred_command(s_last_command):
+                    handle_fred_command(s_last_command)
+                    # Skip wait_for_prompt() next iteration:
+                    wait_for_prompt = False
+                    g_debugger.prompt()
+                else:
+                    fredio.send_command(s_last_command)
+                    g_debugger.log_command(s_last_command)
             else:
-               if is_fred_command(s_command):
-                  s_last_command = s_command
-                  handle_fred_command(s_command)
-                  # Skip wait_for_prompt() next iteration:
-                  wait_for_prompt = False
-                  g_debugger.prompt()
-               else:
-                  fredio.send_command(s_command)
-                  g_debugger.log_command(s_command)
-               s_last_command = s_command
+                if is_fred_command(s_command):
+                    s_last_command = s_command
+                    handle_fred_command(s_command)
+                    # Skip wait_for_prompt() next iteration:
+                    wait_for_prompt = False
+                    g_debugger.prompt()
+                else:
+                    fredio.send_command(s_command)
+                    g_debugger.log_command(s_command)
+                s_last_command = s_command
         except KeyboardInterrupt:
-            fredio.signal(signal.SIGINT)
+            fredio.signal_child(signal.SIGINT)
+
+def main():
+    """Program execution starts here."""
+    global g_debugger
+    # Parse arguments
+    l_cmd = parse_program_args()
+    # Set up the FReD global debugger
+    find_prompt_fnc = set_up_debugger(l_cmd[0])
+    # Set up I/O handling (with appropriate find_prompt())
+    fredio.setup(find_prompt_fnc, l_cmd)
+    # Set up DMTCP manager
+    dmtcpmanager.start(l_cmd, int(os.environ['DMTCP_PORT']))
+    # Main input/output loop
+    main_io_loop()
+    # If we get here, quit.
     fred_quit(0)
 
 def fred_quit(exit_code):
     """Performs any necessary cleanup and quits FReD."""
+    dmtcpmanager.DMTCPManager.killPeers()
+    fredio.teardown()
     exit(exit_code)
     
 if __name__ == '__main__':
