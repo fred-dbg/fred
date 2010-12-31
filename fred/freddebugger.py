@@ -84,6 +84,11 @@ class Debugger():
     def get_prompt_regex(self):
         """Return a regex from the personality that will match the prompt."""
         return self._p.gre_prompt
+
+    def get_ls_needs_input(self):
+        """Return a list of regexes from the personality that match lines
+        requesting additional user input."""
+        return self._p.ls_needs_user_input
     
     def prompt(self):
         """Bring user back to debugger prompt."""
@@ -138,11 +143,13 @@ class ReversibleDebugger(Debugger):
         return self.l_checkpoints
     
     def history(self):
-        """Return the history of the current Checkpoint."""
+        """Return the history of all Checkpoints."""
+        l_history = []
         if self.checkpoint != None:
-            return self.checkpoint.l_history
-        else:
-            return []
+            for ckpt in self.l_checkpoints:
+                l_history.extend(ckpt.l_history)
+                l_history.append("*ckpt*")
+        return l_history
 
     def log_command(self, s_command):
         """Convert given command to FredCommand instance and add to current

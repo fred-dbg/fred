@@ -25,6 +25,7 @@ import fredutil
 #****************************************************************************
 
 import os
+import shutil
 import sys
 import subprocess
 import string
@@ -185,9 +186,13 @@ def start(argv, dmtcp_port):
 def manager_quit():
     ''' Used when manager is in module mode to kill the child, and perform any
     cleanup. '''
-    global childInTransition
+    global childInTransition, DMTCP_MANAGER_ROOT
+    fredutil.fred_debug("DMTCP Manager exiting.")
     childInTransition = True
     DMTCPManager.killPeers()
+    fredutil.fred_debug("Removing manager directory '%s'" % \
+                        DMTCP_MANAGER_ROOT)
+    shutil.rmtree(DMTCP_MANAGER_ROOT, ignore_errors = True)
 
 def initializeFiles(firstName):
     ''' Initalizes housekeeping files and directories. '''

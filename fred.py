@@ -22,7 +22,9 @@
 ###############################################################################
 
 from optparse import OptionParser
+import pdb
 import os
+import shutil
 import signal
 import sys
 
@@ -148,6 +150,8 @@ def handle_fred_command(s_command):
         fred_command_help()
     elif s_command_name == "history":
         print g_debugger.history()
+    elif s_command_name == "debug":
+       pdb.set_trace()
     else:
         fredutil.fred_error("Unknown FReD command '%s'" % s_command_name)
 
@@ -223,8 +227,8 @@ def main_io_loop():
     global g_source_script
     # If the user gave a source script file, execute it now.
     if g_source_script != None:
-       fredio.wait_for_prompt()
-       source_from_file(g_source_script)
+        fredio.wait_for_prompt()
+        source_from_file(g_source_script)
     wait_for_prompt = True
     while 1:
         try:
@@ -268,7 +272,8 @@ def main():
     (find_prompt_fnc, print_prompt_fnc) = set_up_debugger(l_cmd[0])
     # Set up I/O handling (with appropriate find_prompt())
     fredio.setup(find_prompt_fnc, print_prompt_fnc,
-                 g_debugger.get_prompt_regex(), l_cmd)
+                 g_debugger.get_prompt_regex(), g_debugger.get_ls_needs_input(),
+                 l_cmd)
     # Set up DMTCP manager
     dmtcpmanager.start(l_cmd, int(os.environ['DMTCP_PORT']))
     # Main input/output loop
@@ -278,8 +283,12 @@ def main():
 
 def fred_quit(exit_code):
     """Performs any necessary cleanup and quits FReD."""
+    global GS_FRED_TMPDIR
     fredutil.fred_debug("FReD exiting.")
-    dmtcpmanager.DMTCPManager.killPeers()
+    fredutil.fred_debug("Removing temporary directory '%s'" % \
+                        GS_FRED_TMPDIR)
+    shutil.rmtree(GS_FRED_TMPDIR, ignore_errors=True)
+    dmtcpmanager.manager_quit()
     fredio.teardown()
     exit(exit_code)
     

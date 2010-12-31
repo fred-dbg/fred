@@ -34,6 +34,8 @@ import fredutil
 
 # Maximum length of a prompt string (from any debugger)
 GN_MAX_PROMPT_LENGTH = 32
+# Maximum length of a string for requesting additional user input
+gn_max_need_input_length = 0
 
 gn_child_pid = -1
 gn_child_fd = None
@@ -46,21 +48,28 @@ g_capture_output_event = threading.Event()
 gre_prompt = ""
 g_find_prompt_function = None
 g_print_prompt_function = None
+gls_needs_user_input = []
+gb_need_user_input = False
 
 class ThreadedOutput(threading.Thread):
     def run(self):
         global gb_prompt_ready, gb_capture_output, gs_captured_output, \
                g_capture_output_event, gb_capture_output_til_prompt, \
-               gb_hide_output
+               gb_hide_output, gn_max_need_input_length, gb_need_user_input
         # Last printed will be the last 'n' characters printed from child. This
         # is so we can know when the debugger prompt has been printed to
         # screen.
         last_printed = ""
+        # Used to detect when debugger needs additional user input
+        last_printed_need_input = ""
         while 1:
             output = get_child_output()
             if output != None:
                 last_printed = fredutil.last_n(last_printed, output,
                                                GN_MAX_PROMPT_LENGTH)
+                last_printed_need_input = \
+                    fredutil.last_n(last_printed_need_input, output,
+                                    gn_max_need_input_length)
                 if gb_capture_output:
                     gs_captured_output += output
                     if gb_capture_output_til_prompt:
@@ -73,8 +82,9 @@ class ThreadedOutput(threading.Thread):
                     output = re.sub(gre_prompt, '', output)
                     sys.stdout.write(output)
                     sys.stdout.flush()
-            # Always keep this up-to-date:
+            # Always keep these up-to-date:
             gb_prompt_ready = g_find_prompt_function(last_printed)
+            gb_need_user_input = match_needs_user_input(last_printed_need_input)
 
 def start_output_thread():
     """Start the output thread in daemon mode.
@@ -100,8 +110,14 @@ def get_child_output():
 def wait_for_prompt():
     """Spin until the global gb_prompt_ready flag has been set to True.
     gb_prompt_ready is set by the output thread."""
-    global gb_prompt_ready
+    global gb_prompt_ready, gb_need_user_input
     while not gb_prompt_ready:
+        if gb_need_user_input:
+            # Happens when, for example, gdb prints more than one screen,
+            # and the user must press 'return' to continue printing.
+            user_input = raw_input().strip()
+            send_child_input(user_input + '\n')
+            gb_need_user_input = False
         pass
     # Reset for next time
     gb_prompt_ready = False
@@ -143,6 +159,23 @@ def get_child_response(input, hide=True, wait_for_prompt=False):
     response = wait_for_captured_output(wait_for_prompt)
     gb_hide_output = b_orig_hide_state
     return response
+
+def set_max_needs_input_length():
+    """Sets correct value of gn_max_need_input_length."""
+    global gn_max_need_input_length, gls_needs_user_input
+    n_max = 0
+    for item in gls_needs_user_input:
+        if len(item) > n_max:
+            n_max = len(item)
+    gn_max_need_input_length = n_max
+
+def match_needs_user_input(s_str):
+    """Return True if any regexes in gls_needs_user_input match 's_str'."""
+    global gls_needs_user_input
+    for item in gls_needs_user_input:
+        if re.search(item, s_str) != None:
+            return True
+    return False
 
 def fred_completer(text, state):
     """Custom completer function called when the user presses TAB."""
@@ -200,12 +233,16 @@ def reexec(argv):
     fredutil.fred_debug("Replacing current child with '%s'" % str(argv))
     spawn_child(argv)
 
-def setup(find_prompt_fnc, print_prompt_fnc, prompt_re, argv):
+def setup(find_prompt_fnc, print_prompt_fnc, prompt_re, ls_needs_user_input,
+          argv):
     """Perform any setup needed to do i/o with the child process."""
-    global g_find_prompt_function, g_print_prompt_function, gre_prompt
+    global g_find_prompt_function, g_print_prompt_function, gre_prompt, \
+           gls_needs_user_input
     g_find_prompt_function = find_prompt_fnc
     g_print_prompt_function = print_prompt_fnc
     gre_prompt = prompt_re
+    gls_needs_user_input = ls_needs_user_input
+    set_max_needs_input_length()
     # Enable tab completion (with our own 'completer' function)
     #readline.parse_and_bind('tab: complete')
     #readline.set_completer(fred_completer)

@@ -61,6 +61,10 @@ class PersonalityGdb(personality.Personality):
                                          + fredutil.GS_FILE_PATH_RE +
                                          "):(\D+)\s+(?:breakpoint already hit "
                                          "(\d+) time)?")
+        # List of regexes that match debugger prompts for user input
+        self.ls_needs_user_input = \
+        [ "---Type <return> to continue, or q <return> to quit---",
+          ".+ \(y or n\)" ]
 
     def get_backtrace(self):
         """Return a Backtrace object representing the current backtrace."""

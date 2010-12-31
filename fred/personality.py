@@ -47,7 +47,8 @@ class Personality:
         self.gre_prompt = None
         self.gre_backtrace_frame = None
         self.gre_breakpoint = None
-
+        self.ls_needs_user_input = []
+        
     def get_backtrace(self):
         """Return a Backtrace object representing the current backtrace."""
         assert False, "Must be implemented in subclass."
@@ -55,7 +56,6 @@ class Personality:
     def get_breakpoints(self):
         """Return a list of Breakpoint objects of the current breakpoints."""
         assert False, "Must be implemented in subclass."
-
 
     def do_next(self, n):
         """Perform n 'next' commands. Returns output."""
