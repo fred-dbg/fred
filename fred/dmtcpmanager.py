@@ -326,9 +326,9 @@ def restart_last_ckpt():
     ''' Restart from the most recent checkpoint. '''
     global numCheckpoints
     dprint("Restoring most recent ckpt image: %d." % (numCheckpoints-1))
-    restartFromCkpt(numCheckpoints-1)
+    restart_ckpt(numCheckpoints-1)
 
-def restartFromCkpt(index):
+def restart_ckpt(index):
     ''' Restart from the ckpt file(s) referenced by the given index. '''
     global ckptListFilePaths, openFilesListPaths, DMTCP_MANAGER_ROOT
     global childInTransition, ckptCounter, currentCkptIndex
@@ -491,6 +491,12 @@ def updateSyncHousekeeping(filename):
         dprint("Renaming \"%s\" to \"%s.%d\"" % \
                (full_filename, DMTCP_MANAGER_ROOT + filename, ckptCounter))
         os.rename(full_filename, "%s.%d" % (DMTCP_MANAGER_ROOT+filename, ckptCounter))
+    # Create an empty log file for the new checkpoint
+    dprint("Creating new empty log file %s.%d." % \
+           (DMTCP_MANAGER_ROOT + filename, ckptCounter))
+    f = open(DMTCP_MANAGER_ROOT + filename + "." + str(ckptCounter), 'w')
+    os.fchmod(f.fileno(), 0600)
+    f.close()
     # Leave a symlink for DMTCP to write to
     dprint("Symlinking %s.%d to %s" % \
            (DMTCP_MANAGER_ROOT + filename, ckptCounter, full_filename))

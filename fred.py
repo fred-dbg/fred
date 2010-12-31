@@ -177,6 +177,8 @@ def parse_program_args():
                       metavar="PORT")
     parser.add_option("-x", "--source", dest="source_script",
                       help="Execute batch file FILE", metavar="FILE")
+    parser.add_option("--enable-debug", dest="debug", action="store_true",
+                      help="Enable FReD debugging messages.")
     (options, l_args) = parser.parse_args()
     # 'l_args' is the 'gdb ARGS ./a.out' list
     if len(l_args) == 0:
@@ -185,6 +187,8 @@ def parse_program_args():
     if options.source_script != None:
         assert False, "Sourcing from file unimplemented."
     os.environ['DMTCP_PORT'] = str(options.dmtcp_port)
+    if options.debug != None:
+        fredutil.GB_DEBUG = True
     os.environ['DMTCP_TMPDIR'] = GS_FRED_TMPDIR
     return l_args
 

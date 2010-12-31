@@ -112,12 +112,15 @@ class Personality:
         elif re.search(self.gs_where_re, s_command) != None:
             cmd = freddebugger.fred_where_cmd()
             cmd.set_native(self.GS_WHERE)
+            cmd.set_ignore()
         elif re.search(self.gs_info_breakpoints_re, s_command) != None:
             cmd = freddebugger.fred_info_breakpoints_cmd()
             cmd.set_native(self.GS_INFO_BREAKPOINTS)
+            cmd.set_ignore()
         elif re.search(self.gs_print_re, s_command) != None:
             cmd = freddebugger.fred_print_cmd()
             cmd.set_native(self.GS_PRINT)
+            cmd.set_ignore()
         else:
             cmd = freddebugger.fred_unknown_cmd()
         cmd.set_native(s_command.partition(' ')[0])

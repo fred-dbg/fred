@@ -24,6 +24,7 @@ import sys
 
 # Legal characters for a file path
 GS_FILE_PATH_RE = "[/a-zA-Z0-9_\-\.]+"
+GB_DEBUG = False
 
 def last_n(s, source, n):
     """ Return the last n characters of the concatenation of s+source.
@@ -48,7 +49,16 @@ def fred_fatal(message):
     sys.stderr.write("FReD fatal error: %s\n" % message)
     sys.stderr.flush()
     sys.exit(1)
-    
+
+def fred_debug(msg):
+    """Print the given debug message."""
+    global GB_DEBUG
+    if GB_DEBUG != None:
+        caller_name = sys._getframe(1).f_code.co_name
+        caller_lineno = sys._getframe(1).f_lineno
+        # Prints name of function and line number making call to dprint()
+        print "[fred-debug] %s():%d - %s" % (caller_name, caller_lineno, msg)
+
 def getRE(str, idx=0):
     """Return a regular expression string matching the given string with a
     specified number of characters required.
