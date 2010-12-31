@@ -25,6 +25,7 @@ import fcntl
 import os
 import pty
 import readline
+import re
 import sys
 import signal
 import threading
@@ -42,7 +43,9 @@ gb_capture_output = False
 gb_capture_output_til_prompt = False
 gs_captured_output = ""
 g_capture_output_event = threading.Event()
+gre_prompt = ""
 g_find_prompt_function = None
+g_print_prompt_function = None
 
 class ThreadedOutput(threading.Thread):
     def run(self):
@@ -58,9 +61,6 @@ class ThreadedOutput(threading.Thread):
             if output != None:
                 last_printed = fredutil.last_n(last_printed, output,
                                                GN_MAX_PROMPT_LENGTH)
-                if not gb_hide_output:
-                    sys.stdout.write(output)
-                    sys.stdout.flush()
                 if gb_capture_output:
                     gs_captured_output += output
                     if gb_capture_output_til_prompt:
@@ -68,6 +68,11 @@ class ThreadedOutput(threading.Thread):
                             g_capture_output_event.set()
                     else:
                         g_capture_output_event.set()
+                if not gb_hide_output:
+                    # Always remove prompt from output so we can print it:
+                    output = re.sub(gre_prompt, '', output)
+                    sys.stdout.write(output)
+                    sys.stdout.flush()
             # Always keep this up-to-date:
             gb_prompt_ready = g_find_prompt_function(last_printed)
 
@@ -176,7 +181,8 @@ def child_is_alive():
 
 def get_command():
     """Get a command from the user using raw_input."""
-    return raw_input().strip()
+    global g_print_prompt_function
+    return raw_input(g_print_prompt_function()).strip()
 
 def send_command(command):
     """Send a command to the child process."""
@@ -186,10 +192,12 @@ def reexec(argv):
     """Replace the current child process with the new given one."""
     spawn_child(argv)
 
-def setup(find_prompt_fnc, argv):
+def setup(find_prompt_fnc, print_prompt_fnc, prompt_re, argv):
     """Perform any setup needed to do i/o with the child process."""
-    global g_find_prompt_function
+    global g_find_prompt_function, g_print_prompt_function, gre_prompt
     g_find_prompt_function = find_prompt_fnc
+    g_print_prompt_function = print_prompt_fnc
+    gre_prompt = prompt_re
     # Enable tab completion (with our own 'completer' function)
     readline.parse_and_bind('tab: complete')
     readline.set_completer(fred_completer)

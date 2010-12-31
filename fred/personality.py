@@ -89,6 +89,10 @@ class Personality:
         """Return True if given string matches the prompt string."""
         return re.search(self.gre_prompt, string) != None
 
+    def prompt_string(self):
+        """Return the debugger's prompt string."""
+        assert False, "Must be implemented in subclass."
+
     def prompt(self):
         """Bring user back to debugger prompt."""
         assert False, "Must be implemented in subclass."

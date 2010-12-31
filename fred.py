@@ -100,6 +100,8 @@ def fred_command_help():
   fred-undo [n]:         Undo last n debugger commands.
   fred-reverse-next [n], fred-rn [n]:  Reverse-next n times.
   fred-reverse-step [n], fred-rs [n]:  Reverse-step n times.
+  fred-reverse-finish, fred-rf:        Reverse execute until function exited.
+  fred-reverse-continue, fred-rc:      Reverse execute to previous breakpoint.
   fred-checkpoint, fred-ckpt: Request a new checkpoint to be made.
   fred-restart:               Restart from last checkpoint.
   fred-reverse-watch <EXPR>, fred-rw <EXPR>:
@@ -165,7 +167,8 @@ def set_up_debugger(s_debugger_name):
     else:
         fredutil.fred_error("Unimplemented debugger '%s'" % s_debugger_name)
         fred_quit(1)
-    return g_debugger.get_prompt_str_function()   
+    return (g_debugger.get_find_prompt_function(),
+            g_debugger.get_prompt_string_function())
 
 def parse_program_args():
     """Initialize command line options, and parse them.
@@ -238,9 +241,10 @@ def main():
     # Parse arguments
     l_cmd = parse_program_args()
     # Set up the FReD global debugger
-    find_prompt_fnc = set_up_debugger(l_cmd[0])
+    (find_prompt_fnc, print_prompt_fnc) = set_up_debugger(l_cmd[0])
     # Set up I/O handling (with appropriate find_prompt())
-    fredio.setup(find_prompt_fnc, l_cmd)
+    fredio.setup(find_prompt_fnc, print_prompt_fnc,
+                 g_debugger.get_prompt_regex(), l_cmd)
     # Set up DMTCP manager
     dmtcpmanager.start(l_cmd, int(os.environ['DMTCP_PORT']))
     # Main input/output loop

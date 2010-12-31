@@ -73,10 +73,18 @@ class Debugger():
         self.state().backtrace     = self._p.get_backtrace()
         self.state().l_breakpoints = self._p.get_breakpoints()
 
-    def get_prompt_str_function(self):
-        """Returns the 'contains_prompt_str' function from the personality."""
+    def get_find_prompt_function(self):
+        """Return the 'contains_prompt_str' function from the personality."""
         return self._p.contains_prompt_str
 
+    def get_prompt_string_function(self):
+        """Return the 'prompt_string' function from the personality."""
+        return self._p.prompt_string
+
+    def get_prompt_regex(self):
+        """Return a regex from the personality that will match the prompt."""
+        return self._p.gre_prompt
+    
     def prompt(self):
         """Bring user back to debugger prompt."""
         self._p.prompt()

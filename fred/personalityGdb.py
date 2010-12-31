@@ -70,6 +70,10 @@ class PersonalityGdb(personality.Personality):
         """Return a list of Breakpoint objects for the current breakpoints."""
         return self._parse_breakpoints(self.do_info_breakpoints())
 
+    def prompt_string(self):
+        """Return the debugger's prompt string."""
+        return self.GS_PROMPT
+
     def prompt(self):
         """Bring user back to debugger prompt."""
         sys.stdout.write(self.GS_PROMPT)
