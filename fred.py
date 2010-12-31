@@ -92,6 +92,7 @@ GS_FRED_TMPDIR = '/tmp/fred.' + os.environ['USER']
 ######################## Global Variables #####################################
 # The global ReversibleDebugger instance.
 g_debugger = None
+g_source_script = None
 ######################## End Global Variables #################################
 
 def fred_command_help():
@@ -140,7 +141,7 @@ def handle_fred_command(s_command):
     elif s_command_name in ["reverse-watch", "rw"]:
         g_debugger.reverse_watch(s_command_args)
     elif s_command_name == "source":
-        g_debugger.source(s_command_args)
+        source_from_file(s_command_args)
     elif s_command_name == "list":
         print g_debugger.list_checkpoints()
     elif s_command_name == "help":
@@ -149,6 +150,25 @@ def handle_fred_command(s_command):
         print g_debugger.history()
     else:
         fredutil.fred_error("Unknown FReD command '%s'" % s_command_name)
+
+def source_from_file(s_filename):
+   """Execute commands from given file."""
+   fredutil.fred_debug("Start sourcing from file '%s'" % s_filename)
+   try:
+      f = open(s_filename)
+   except IOError as (errno, strerror):
+      fredutil.fred_error("Error opening source file '%s': %s" % \
+                          (s_filename, strerror))
+      return
+   for s_line in f:
+      s_line = s_line.strip()
+      if is_fred_command(s_line):
+         handle_fred_command(s_line)
+      else:
+         fredio.send_command_blocking(s_line)
+         g_debugger.log_command(s_line)
+   f.close()
+   fredutil.fred_debug("Finished sourcing from file '%s'" % s_filename)
 
 def is_fred_command(s_command):
     """Return True if the given command needs special handling."""
@@ -161,19 +181,19 @@ def set_up_debugger(s_debugger_name):
     Return the personality's find prompt function to pass to fredio."""
     global g_debugger
     if s_debugger_name == "gdb":
+        fredutil.fred_debug("Using gdb personality.")
         from fred.personalityGdb import PersonalityGdb
         g_debugger = freddebugger.ReversibleDebugger(PersonalityGdb())
         del PersonalityGdb
     else:
-        fredutil.fred_error("Unimplemented debugger '%s'" % s_debugger_name)
-        fred_quit(1)
+        fredutil.fred_fatal("Unimplemented debugger '%s'" % s_debugger_name)
     return (g_debugger.get_find_prompt_function(),
             g_debugger.get_prompt_string_function())
 
 def parse_program_args():
     """Initialize command line options, and parse them.
     Return the user's inferior to execute as a list."""
-    global GS_FRED_USAGE
+    global GS_FRED_USAGE, g_source_script
     parser = OptionParser(usage=GS_FRED_USAGE, version=GS_FRED_VERSION)
     parser.disable_interspersed_args()
     # Note that '-h' and '--help' are supported automatically.
@@ -190,7 +210,8 @@ def parse_program_args():
         parser.print_help()
         fred_quit(1)
     if options.source_script != None:
-        assert False, "Sourcing from file unimplemented."
+        # Source script executed from main_io_loop().
+        g_source_script = options.source_script
     os.environ['DMTCP_PORT'] = str(options.dmtcp_port)
     if options.debug != None:
         fredutil.GB_DEBUG = True
@@ -199,6 +220,11 @@ def parse_program_args():
 
 def main_io_loop():
     """Main I/O loop to get and handle user commands."""
+    global g_source_script
+    # If the user gave a source script file, execute it now.
+    if g_source_script != None:
+       fredio.wait_for_prompt()
+       source_from_file(g_source_script)
     wait_for_prompt = True
     while 1:
         try:
@@ -217,7 +243,6 @@ def main_io_loop():
                     handle_fred_command(s_last_command)
                     # Skip wait_for_prompt() next iteration:
                     wait_for_prompt = False
-                    g_debugger.prompt()
                 else:
                     fredio.send_command(s_last_command)
                     g_debugger.log_command(s_last_command)
@@ -227,7 +252,6 @@ def main_io_loop():
                     handle_fred_command(s_command)
                     # Skip wait_for_prompt() next iteration:
                     wait_for_prompt = False
-                    g_debugger.prompt()
                 else:
                     fredio.send_command(s_command)
                     g_debugger.log_command(s_command)
@@ -254,6 +278,7 @@ def main():
 
 def fred_quit(exit_code):
     """Performs any necessary cleanup and quits FReD."""
+    fredutil.fred_debug("FReD exiting.")
     dmtcpmanager.DMTCPManager.killPeers()
     fredio.teardown()
     exit(exit_code)

@@ -136,26 +136,27 @@ def get_child_response(input, hide=True, wait_for_prompt=False):
     wait_for_prompt flag is True, collects output until the debugger prompt is
     ready."""
     global gb_hide_output
-    orig_hide_state = gb_hide_output
+    b_orig_hide_state = gb_hide_output
     gb_hide_output = hide
     start_output_capture(wait_for_prompt)
     send_child_input(input)
     response = wait_for_captured_output(wait_for_prompt)
-    gb_hide_output = orig_hide_state
+    gb_hide_output = b_orig_hide_state
     return response
 
 def fred_completer(text, state):
     """Custom completer function called when the user presses TAB."""
-    current_cmd = readline.get_line_buffer()
+    s_current_cmd = readline.get_line_buffer()
     # Write partial command+\t to debuggerso it can do the completion.
-    result = get_child_response(current_cmd + '\t')
+    result = get_child_response(s_current_cmd + '\t')
     # Erase what text we already have:
-    result = result.replace(current_cmd, "")
+    result = result.replace(s_current_cmd, "")
     readline.insert_text(result)
 
 def spawn_child(argv):
     """Spawn a child process using the given command array."""
     global gn_child_pid, gn_child_fd
+    fredutil.fred_debug("Starting child '%s'" % str(argv))
     (gn_child_pid, gn_child_fd) = pty.fork()
     if gn_child_pid == 0:
         os.execvp(argv[0], argv)
@@ -163,6 +164,7 @@ def spawn_child(argv):
 def kill_child():
     """Kill the child process."""
     global gn_child_fd
+    fredutil.fred_debug("Killing child process.")
     signal_child(signal.SIGKILL)
     os.close(gn_child_fd)
     
@@ -188,8 +190,14 @@ def send_command(command):
     """Send a command to the child process."""
     send_child_input(command+'\n')
 
+def send_command_blocking(command):
+    """Send a command to the child process and wait for the prompt."""
+    send_child_input(command+'\n')
+    wait_for_prompt()
+    
 def reexec(argv):
     """Replace the current child process with the new given one."""
+    fredutil.fred_debug("Replacing current child with '%s'" % str(argv))
     spawn_child(argv)
 
 def setup(find_prompt_fnc, print_prompt_fnc, prompt_re, argv):
@@ -199,9 +207,9 @@ def setup(find_prompt_fnc, print_prompt_fnc, prompt_re, argv):
     g_print_prompt_function = print_prompt_fnc
     gre_prompt = prompt_re
     # Enable tab completion (with our own 'completer' function)
-    readline.parse_and_bind('tab: complete')
-    readline.set_completer(fred_completer)
-    spawn_child(["dmtcp_checkpoint"] + argv)
+    #readline.parse_and_bind('tab: complete')
+    #readline.set_completer(fred_completer)
+    spawn_child(["dmtcp_checkpoint", "--port", os.environ["DMTCP_PORT"]] + argv)
     start_output_thread()
 
 def teardown():

@@ -239,14 +239,10 @@ class ReversibleDebugger(Debugger):
 
     def reverse_next(self, n):
         """Perform n 'reverse-next' commands."""
-        #cmd = FredCommand(GS_REVERSE_NEXT_COMMAND, str(n))
-        #self.log_command(cmd)
         fredutil.fred_error("Unimplemented command.")
 
     def reverse_step(self, n):
         """Perform n 'reverse-step' commands."""
-        #cmd = FredCommand(GS_REVERSE_STEP_COMMAND, str(n))
-        #self.log_command(cmd)
         fredutil.fred_error("Unimplemented command.")
 
     def reverse_watch(self, s_expr):

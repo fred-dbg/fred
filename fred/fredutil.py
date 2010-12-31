@@ -19,6 +19,7 @@
 # along with FReD.  If not, see <http://www.gnu.org/licenses/>.               #
 ###############################################################################
 
+import os
 import re
 import sys
 
@@ -54,10 +55,10 @@ def fred_debug(msg):
     """Print the given debug message."""
     global GB_DEBUG
     if GB_DEBUG != None:
-        caller_name = sys._getframe(1).f_code.co_name
+        caller_name = os.path.basename(sys._getframe(1).f_code.co_filename)
         caller_lineno = sys._getframe(1).f_lineno
         # Prints name of function and line number making call to dprint()
-        print "[fred-debug] %s():%d - %s" % (caller_name, caller_lineno, msg)
+        print "[fred-debug] %s:%d - %s" % (caller_name, caller_lineno, msg)
 
 def getRE(str, idx=0):
     """Return a regular expression string matching the given string with a
