@@ -70,6 +70,7 @@ class Debugger():
 
     def update_state(self):
         """Update the underlying DebuggerState."""
+        fredutil.fred_debug("Updating DebuggerState.")
         self.state().backtrace     = self._p.get_backtrace()
         self.state().l_breakpoints = self._p.get_breakpoints()
 
@@ -124,12 +125,14 @@ class ReversibleDebugger(Debugger):
         self.checkpoint = self.l_checkpoints[new_ckpt.n_index]
         dmtcpmanager.do_checkpoint()
         fredutil.fred_debug("Created checkpoint #%d." % new_ckpt.n_index)
+        self.update_state()
 
     def do_restart(self):
         """Restart from the current checkpoint."""
         fredutil.fred_debug("Restarting from checkpoint index %d." % \
                             self.checkpoint.n_index)
         dmtcpmanager.restart_last_ckpt()
+        self.update_state()
 
     def do_restart_previous(self):
         """Restart from the previous checkpoint."""
@@ -137,6 +140,7 @@ class ReversibleDebugger(Debugger):
         fredutil.fred_debug("Restarting from checkpoint index %d." % \
                             self.checkpoint.n_index)
         dmtcpmanager.restart_ckpt(self.checkpoint.n_index)
+        self.update_state()
         
     def list_checkpoints(self):
         """Return the list of available Checkpoint files."""
@@ -173,35 +177,44 @@ class ReversibleDebugger(Debugger):
         elif cmd.b_ignore:
             return
         self._p.execute_command(cmd.s_native + " " + cmd.s_args + "\n")
+        self.update_state()
 
-    def do_next(self, n):
+    def do_next(self, n=1):
         """Perform n 'next' commands. Returns output."""
         cmd = fred_next_cmd()
         cmd.s_args = str(n)
         self.log_fred_command(cmd)
-        return self._next(n)
+        output = self._next(n)
+        self.update_state()
+        return output
         
-    def do_step(self, n):
+    def do_step(self, n=1):
         """Perform n 'step' commands. Returns output."""
         cmd = fred_step_cmd()
         cmd.s_args = str(n)
         self.log_fred_command(cmd)
-        return self._step(n)
+        output = self._step(n)
+        self.update_state()
+        return output
         
-    def do_continue(self, n):
+    def do_continue(self, n=1):
         """Perform n 'continue' commands. Returns output."""
         cmd = fred_continue_cmd()
         cmd.s_args = str(n)
         self.log_fred_command(cmd)
-        return self._continue(n)
+        output = self._continue(n)
+        self.update_state()
+        return output
         
     def do_breakpoint(self, expr):
         """Perform 'break expr' command. Returns output."""
         cmd = fred_breakpoint_cmd()
         cmd.s_args = expr
         self.log_fred_command(cmd)
-        return self._breakpoint(expr)
-
+        output = self._breakpoint(expr)
+        self.update_state()
+        return output
+    
     def do_where(self):
         """Perform 'where' command. Returns output."""
         return self._where()
@@ -223,6 +236,13 @@ class ReversibleDebugger(Debugger):
         for cmd in self.checkpoint.l_history:
             self.execute_fred_command(cmd)
 
+    def trim_non_ignore(self, n):
+        """Trim last n non-ignore commands."""
+        while n > 0:
+            if not self.checkpoint.l_history[-1].b_ignore:
+                n -= 1
+            self.checkpoint.l_history.pop()
+
     def undo(self, n=1):
         """Undo the last n commands."""
         b_restart = True
@@ -240,15 +260,46 @@ class ReversibleDebugger(Debugger):
                 self.do_restart_previous()
         if b_restart:
             self.do_restart()
-        # Trim history by n commands
-        self.checkpoint.l_history = self.checkpoint.l_history[:-n]
+        # Trim history by n non-ignore commands
+        self.trim_non_ignore(n)
         self.replay_history()
+        self.update_state()
+        fredutil.fred_debug("Done undoing %d command(s)." % n)
 
-    def reverse_next(self, n):
+    def reverse_next(self, n=1):
         """Perform n 'reverse-next' commands."""
-        fredutil.fred_error("Unimplemented command.")
+        orig_state = self._state.copy()
+        while True:
+            if self._state.level() > orig_state.level():
+                fredutil.fred_debug("RN: DEEPER")
+                # DEEPER
+                self.do_next()
+            elif self._state.level() < orig_state.level():
+                fredutil.fred_debug("RN: SHALLOWER")
+                # SHALLOWER
+                self.do_step()
+            else:
+                fredutil.fred_debug("RN: SAME")
+                # SAME LEVEL
+                if self._state == orig_state:
+                    fredutil.fred_debug("RN: AT ORIG STATE")
+                    if self.checkpoint.l_history[-1].is_next() or \
+                       self.checkpoint.l_history[-1].is_step():
+                        fredutil.fred_debug("RN: AFTER NEXT OR STEP")
+                        n_lvl = self._state.level()
+                        self.undo()
+                        if n_lvl >= self._state.level():
+                            break
+                    else:
+                        fredutil.fred_debug("RN: NOT AFTER NEXT OR STEP")
+                        self.undo()
+                else:
+                    fredutil.fred_debug("RN: NOT AT ORIG STATE")
+                    self.do_next()
+        self.update_state()
+        fredutil.fred_debug("Reverse next finished.")
 
-    def reverse_step(self, n):
+    def reverse_step(self, n=1):
         """Perform n 'reverse-step' commands."""
         fredutil.fred_error("Unimplemented command.")
 
@@ -272,6 +323,18 @@ class DebuggerState():
         return self.backtrace == other.backtrace and \
                self.l_breakpoints == other.l_breakpoints
 
+    def copy(self):
+        """Return a deep copy of this instance."""
+        new_state = DebuggerState()
+        new_state.backtrace = self.backtrace.copy()
+        for b in self.l_breakpoints:
+            new_state.l_breakpoints.append(b.copy())
+        return new_state
+
+    def level(self):
+        """Return stack depth."""
+        return len(self.backtrace.l_frames)
+    
 class Breakpoint():
     """Represents one breakpoint in the debugger.
     It's not necessary to use all of these fields. gdb is currently the only
@@ -304,6 +367,20 @@ class Breakpoint():
                self.n_line == other.n_line and \
                self.n_count == other.n_count
 
+    def copy(self):
+        """Return a deep copy of this instance."""
+        bp = Breakpoint()
+        bp.n_number = self.n_number
+        bp.s_type = self.s_type
+        bp.s_display = self.s_display
+        bp.s_enable = self.s_enable
+        bp.s_address = self.s_address
+        bp.s_function = self.s_function
+        bp.s_file = self.s_file
+        bp.n_line = self.n_line
+        bp.n_count = self.n_count
+        return bp
+
 class Backtrace():
     """Represents a stack trace (backtrace)."""
     def __init__(self):
@@ -312,6 +389,12 @@ class Backtrace():
 
     def __eq__(self, other):
         return other != None and self.l_frames == other.l_frames
+
+    def copy(self):
+        """Return a deep copy of this instance."""
+        new_bt = Backtrace()
+        new_bt.l_frames = self.l_frames[:]
+        return new_bt
 
 class BacktraceFrame():
     """Represents one frame in the stack trace (backtrace).
@@ -372,6 +455,15 @@ class FredCommand():
         
     def is_unknown(self):
         return self.s_name == fred_unknown_cmd().s_name
+
+    def is_next(self):
+        return self.s_name == fred_next_cmd().s_name
+
+    def is_step(self):
+        return self.s_name == fred_step_cmd().s_name
+
+    def is_continue(self):
+        return self.s_name == fred_continue_cmd().s_name
     
 class Checkpoint():
     """ This class will represent a linked list of checkpoints.  A

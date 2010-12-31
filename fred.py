@@ -77,7 +77,7 @@ For example, a mutex or thread object does not have a specific prefix.
 However, the name of the variable should be descriptive enough to tell what
 type it is meant to be.
 
-Please make it a goal to document every putlic function with a docstring. It
+Please make it a goal to document every public function with a docstring. It
 only takes a few seconds, and saves a lot of time for future programmers. For
 docstring conventions, you can see PEP-257.
 '''
@@ -151,7 +151,7 @@ def handle_fred_command(s_command):
     elif s_command_name == "history":
         print g_debugger.history()
     elif s_command_name == "debug":
-       pdb.set_trace()
+        pdb.set_trace()
     else:
         fredutil.fred_error("Unknown FReD command '%s'" % s_command_name)
 
@@ -159,18 +159,18 @@ def source_from_file(s_filename):
    """Execute commands from given file."""
    fredutil.fred_debug("Start sourcing from file '%s'" % s_filename)
    try:
-      f = open(s_filename)
+       f = open(s_filename)
    except IOError as (errno, strerror):
-      fredutil.fred_error("Error opening source file '%s': %s" % \
-                          (s_filename, strerror))
-      return
+       fredutil.fred_error("Error opening source file '%s': %s" % \
+                           (s_filename, strerror))
+       return
    for s_line in f:
-      s_line = s_line.strip()
-      if is_fred_command(s_line):
-         handle_fred_command(s_line)
-      else:
-         fredio.send_command_blocking(s_line)
-         g_debugger.log_command(s_line)
+       s_line = s_line.strip()
+       if is_fred_command(s_line):
+          handle_fred_command(s_line)
+       else:
+          fredio.send_command_blocking(s_line)
+          g_debugger.log_command(s_line)
    f.close()
    fredutil.fred_debug("Finished sourcing from file '%s'" % s_filename)
 
@@ -225,18 +225,12 @@ def parse_program_args():
 def main_io_loop():
     """Main I/O loop to get and handle user commands."""
     global g_source_script
+    fredio.wait_for_prompt()
     # If the user gave a source script file, execute it now.
     if g_source_script != None:
-        fredio.wait_for_prompt()
         source_from_file(g_source_script)
-    wait_for_prompt = True
     while 1:
         try:
-            if wait_for_prompt:
-                fredio.wait_for_prompt()
-            else:
-                # Reset
-                wait_for_prompt = True
             # Get one user command (blocking):
             s_command = fredio.get_command()
             # Special case: user just entered '\n', meaning execute last
@@ -245,19 +239,14 @@ def main_io_loop():
             if s_command == '':
                 if is_fred_command(s_last_command):
                     handle_fred_command(s_last_command)
-                    # Skip wait_for_prompt() next iteration:
-                    wait_for_prompt = False
                 else:
-                    fredio.send_command(s_last_command)
+                    fredio.send_command_blocking(s_last_command)
                     g_debugger.log_command(s_last_command)
             else:
                 if is_fred_command(s_command):
-                    s_last_command = s_command
                     handle_fred_command(s_command)
-                    # Skip wait_for_prompt() next iteration:
-                    wait_for_prompt = False
                 else:
-                    fredio.send_command(s_command)
+                    fredio.send_command_blocking(s_command)
                     g_debugger.log_command(s_command)
                 s_last_command = s_command
         except KeyboardInterrupt:

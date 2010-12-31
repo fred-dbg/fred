@@ -22,6 +22,7 @@
 import personality
 import re
 import sys
+import pdb
 
 import freddebugger
 import fredutil
@@ -48,19 +49,18 @@ class PersonalityGdb(personality.Personality):
         self.gs_print_re = fredutil.getRE(self.GS_PRINT, 5) + "|^p(/\w)?"
         
         self.GS_PROMPT = "(gdb) "
-        self.gre_prompt = re.compile("\(gdb\) ")
+        self.gre_prompt = re.compile("\(gdb\) $")
         # Basic stack trace format, matches this kind:
         # "#0  *__GI___libc_malloc (bytes=8) at malloc.c:3551"
-        self.gre_backtrace_frame = re.compile("#(\d+)\s+(.+?)\s+\((.*)\)"
-                                              "\s+at\s+("
-                                              + fredutil.GS_FILE_PATH_RE +
-                                              "):(\d+)")
-        self.gre_breakpoint = re.compile("(\d+)\s*(\w+)\s*(\w+)\s*(\w+)\s*"
-                                         "(0x[0-9A-Fa-f]+)"
-                                         "in ([a-zA-Z0-9_]+)\s+at ("
-                                         + fredutil.GS_FILE_PATH_RE +
-                                         "):(\D+)\s+(?:breakpoint already hit "
-                                         "(\d+) time)?")
+        self.gre_backtrace_frame = "#(\d+)\s+(.+?)\s+\((.*)\)\s+at\s+(" \
+                                   + fredutil.GS_FILE_PATH_RE + \
+                                   "):(\d+)"
+        self.gre_breakpoint = "(\d+)\s*(\w+)\s*(\w+)\s*(\w+)\s*" \
+                              "(0x[0-9A-Fa-f]+)" \
+                              "in ([a-zA-Z0-9_]+)\s+at (" \
+                              + fredutil.GS_FILE_PATH_RE + \
+                              "):(\D+)\s+(?:breakpoint already hit " \
+                              "(\d+) time)?"
         # List of regexes that match debugger prompts for user input
         self.ls_needs_user_input = \
         [ "---Type <return> to continue, or q <return> to quit---",
@@ -90,19 +90,19 @@ class PersonalityGdb(personality.Personality):
         frame_list = []
         bt = freddebugger.Backtrace()
         for i in range(0, len(bt_list)):
-            frame_list[i] = self._parse_backtrace_frame(bt_list[i])
+            frame_list.append(self._parse_backtrace_frame(bt_list[i]))
         bt.l_frames = frame_list
         return bt
 
     def _parse_backtrace_frame(self, match_obj):
         """Return a BacktraceFrame from the given re Match object.
-        The Match object should be the result of gre_backtrace_frame."""
+        The Match object should be a tuple (result of gre_backtrace_frame.)"""
         frame = freddebugger.BacktraceFrame()
-        frame.n_frame_num = match_obj.group(0)
-        frame.s_function  = match_obj.group(1)
-        frame.s_args      = match_obj.group(2)
-        frame.s_file      = match_obj.group(3)
-        frame.s_line      = match_obj.group(4)
+        frame.n_frame_num = match_obj[0]
+        frame.s_function  = match_obj[1]
+        frame.s_args      = match_obj[2]
+        frame.s_file      = match_obj[3]
+        frame.s_line      = match_obj[4]
         return frame
 
     def _parse_breakpoints(self, info_str):
