@@ -121,6 +121,8 @@ def handle_fred_command(s_command):
     s_command = s_command.replace(GS_FRED_COMMAND_PREFIX, "")
     (s_command_name, sep, s_command_args) = s_command.partition(' ')
     n_count = fredutil.to_int(s_command_args)
+    if n_count == 0:
+        n_count = 1
     if is_quit_command(s_command_name):
         fred_quit(0)
     elif s_command_name == "undo":

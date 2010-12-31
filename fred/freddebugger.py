@@ -88,12 +88,13 @@ class ReversibleDebugger(Debugger):
     debugger commands.
 
     It contains an instance of Checkpoint which should always represent the
-    current checkpoint.  A Checkpoint contains pointers to the previous and
-    next checkpoints for navigation through time (doubly-linked list).
+    current checkpoint.  It also contains a list of all Checkpoint objects
+    such that Checkpoint.n_index refers to the index into that list.
     """
     def __init__(self, personality):
         Debugger.__init__(self, personality)
         self.checkpoint = None
+        self.l_checkpoints = []
 
     def do_checkpoint(self):
         """Perform a new checkpoint."""
@@ -106,7 +107,8 @@ class ReversibleDebugger(Debugger):
             n_new_index = 0
             new_ckpt = Checkpoint(n_new_index)            
         new_ckpt.previous = self.checkpoint
-        self.checkpoint = new_ckpt
+        self.l_checkpoints.append(new_ckpt)
+        self.checkpoint = self.l_checkpoints[new_ckpt.n_index]
         dmtcpmanager.do_checkpoint()
         fredutil.fred_debug("Created checkpoint #%d." % new_ckpt.n_index)
 
@@ -118,29 +120,15 @@ class ReversibleDebugger(Debugger):
 
     def do_restart_previous(self):
         """Restart from the previous checkpoint."""
-        self.checkpoint = self.checkpoint.previous
+        self.checkpoint = self.l_checkpoints[self.checkpoint.n_index - 1]
         fredutil.fred_debug("Restarting from checkpoint index %d." % \
                             self.checkpoint.n_index)
         dmtcpmanager.restart_ckpt(self.checkpoint.n_index)
         
     def list_checkpoints(self):
         """Return the list of available Checkpoint files."""
-        checkpoints = []
-        if self.checkpoint == None:
-            return []
-        orig_index = self.checkpoint.n_index
-        ckpt = self.checkpoint
-        while ckpt.n_index > 0:
-            ckpt = ckpt.previous
-        while ckpt.next != None:
-            checkpoints.append(ckpt.n_index)
-            ckpt = ckpt.next
-        # Always append the last one:
-        checkpoints.append(ckpt.n_index)
-        while ckpt.n_index != orig_index:
-            ckpt = ckpt.previous
-        return checkpoints
-
+        return self.l_checkpoints
+    
     def history(self):
         """Return the history of the current Checkpoint."""
         if self.checkpoint != None:
@@ -165,6 +153,7 @@ class ReversibleDebugger(Debugger):
     def execute_fred_command(self, cmd):
         """Execute the given FredCommand."""
         if cmd.s_native == "":
+            # This should never happen.
             fredutil.fred_fatal("FredCommand instance has null native string.")
         elif cmd.b_ignore:
             return
@@ -219,10 +208,14 @@ class ReversibleDebugger(Debugger):
         for cmd in self.checkpoint.l_history:
             self.execute_fred_command(cmd)
 
-    def undo(self, n):
+    def undo(self, n=1):
         """Undo the last n commands."""
+        b_restart = True
         fredutil.fred_debug("Undoing %d command(s)." % n)
-        if len(self.checkpoint.l_history) == 0:
+        while len(self.checkpoint.l_history) == 0 or \
+              n > len(self.checkpoint.l_history):
+            b_restart = False
+            n -= len(self.checkpoint.l_history)
             # Back up to previous checkpoint
             if self.checkpoint.previous == None:
                 fredutil.fred_error("No undo possible (empty command history "
@@ -230,10 +223,10 @@ class ReversibleDebugger(Debugger):
                 return
             else:
                 self.do_restart_previous()
-        else:
+        if b_restart:
             self.do_restart()
-        # Trim history by one command
-        self.checkpoint.l_history = self.checkpoint.l_history[:-1]
+        # Trim history by n commands
+        self.checkpoint.l_history = self.checkpoint.l_history[:-n]
         self.replay_history()
 
     def reverse_next(self, n):
@@ -380,6 +373,9 @@ class Checkpoint():
         # from the beginning of this checkpoint.
         self.l_history  = []
 
+    def __repr__(self):
+        return str(self.n_index)
+    
     def log_command(self, cmd):
         """Adds the given FredCommand to the history."""
         self.l_history.append(cmd)
