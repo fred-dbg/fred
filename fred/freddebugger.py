@@ -151,13 +151,22 @@ class ReversibleDebugger(Debugger):
         l_history = []
         if self.checkpoint != None:
             for ckpt in self.l_checkpoints:
-                l_history.extend(ckpt.l_history)
                 l_history.append("*ckpt*")
+                l_history.extend(ckpt.l_history)
         return l_history
 
     def last_command(self):
         """Return the last command of the current history."""
-        return self.checkpoint.l_history[-1]
+        if len(self.checkpoint.l_history) == 0:
+            if self.checkpoint.previous != None:
+                assert len(self.checkpoint.previous.l_history) > 0, \
+                       "Unimplemented."
+                return self.checkpoint.previous.l_history[-1]
+            else:
+                assert False, "Unimplemented branch."
+        else:
+            return self.checkpoint.l_history[-1]
+            
     
     def log_command(self, s_command):
         """Convert given command to FredCommand instance and add to current
@@ -312,7 +321,44 @@ class ReversibleDebugger(Debugger):
 
     def reverse_step(self, n=1):
         """Perform n 'reverse-step' commands."""
-        fredutil.fred_error("Unimplemented command.")
+        self.update_state()
+        orig_state = self.state().copy()
+        debug_loop_counter = 0
+        while True:
+            debug_loop_counter += 1
+            fredutil.fred_debug("RS: LOOP ITERATION %d" % debug_loop_counter)
+            if self.state().level() > orig_state.level():
+                fredutil.fred_debug("RS: DEEPER")
+                self.do_next()
+            elif self.state().level() < orig_state.level():
+                fredutil.fred_debug("RS: SHALLOWER")
+                self.do_step()
+            else:
+                fredutil.fred_debug("RS: SAME")
+                if self.state() == orig_state:
+                    fredutil.fred_debug("RS: AT ORIG STATE")
+                    if self.last_command().is_step():
+                        fredutil.fred_debug("RS: AFTER STEP")
+                        self.undo()
+                        break
+                    else:
+                        fredutil.fred_debug("RS: NOT AFTER STEP")
+                        self.undo()
+                else:
+                    fredutil.fred_debug("RS: NOT AT ORIG STATE")
+                    # TODO: This is a very inefficient implementation.
+                    self.do_step()
+                    if self.state() == orig_state:
+                        continue
+                    self.undo()
+                    self.do_next()
+                    if self.state() == orig_state:
+                        self.undo()
+                        self.do_step()
+                        continue
+                    
+        self.update_state()
+        fredutil.fred_debug("Reverse step finished.")
 
     def reverse_watch(self, s_expr):
         """Perform 'reverse-watch' command on expression."""

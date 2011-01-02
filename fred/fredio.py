@@ -218,6 +218,7 @@ def get_command():
     """Get a command from the user using raw_input."""
     global g_print_prompt_function
     return raw_input(g_print_prompt_function()).strip()
+    #return raw_input("!").strip()
 
 def send_command(command):
     """Send a command to the child process."""

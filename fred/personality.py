@@ -51,11 +51,31 @@ class Personality:
         
     def get_backtrace(self):
         """Return a Backtrace object representing the current backtrace."""
-        assert False, "Must be implemented in subclass."
+        return self._parse_backtrace(self.do_where())
 
     def get_breakpoints(self):
-        """Return a list of Breakpoint objects of the current breakpoints."""
-        assert False, "Must be implemented in subclass."
+        """Return a list of Breakpoint objects for the current breakpoints."""
+        return self._parse_breakpoints(self.do_info_breakpoints())
+
+    def _parse_breakpoints(self, info_str):
+        """Return a list of Breakpoint objects parsed from output of 'info
+        breakpoints' cmd."""
+        l_breakpoints = []
+        l_matches = re.findall(self.gre_breakpoint, info_str, re.MULTILINE)
+        for i in range(0, len(l_matches)):
+            l_breakpoints.append(self._parse_one_breakpoint(l_matches[i]))
+        return l_breakpoints
+
+    def _parse_backtrace(self, where_str):
+        """Return a Backtrace instance parsed from output of 'where' cmd."""
+        backtrace = re.sub(self.gre_prompt, '', where_str)
+        bt_list = re.findall(self.gre_backtrace_frame, backtrace, re.MULTILINE)
+        frame_list = []
+        bt = freddebugger.Backtrace()
+        for i in range(0, len(bt_list)):
+            frame_list.append(self._parse_backtrace_frame(bt_list[i]))
+        bt.l_frames = frame_list
+        return bt
 
     def do_next(self, n):
         """Perform n 'next' commands. Returns output."""

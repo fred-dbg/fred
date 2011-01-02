@@ -154,6 +154,11 @@ def handle_fred_command(s_command):
         pdb.set_trace()
     else:
         fredutil.fred_error("Unknown FReD command '%s'" % s_command_name)
+    # TODO: This is kind of hackish. Since a FReD command does not get passed
+    # to the debugger, the next command after a FReD command will result in the
+    # prompt being ready *immediately* (since it was ready before the FReD
+    # command).
+    fredio.gb_prompt_ready = False
 
 def source_from_file(s_filename):
    """Execute commands from given file."""

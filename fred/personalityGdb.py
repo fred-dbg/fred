@@ -57,22 +57,14 @@ class PersonalityGdb(personality.Personality):
                                    "):(\d+)"
         self.gre_breakpoint = "(\d+)\s*(\w+)\s*(\w+)\s*(\w+)\s*" \
                               "(0x[0-9A-Fa-f]+)" \
-                              "in ([a-zA-Z0-9_]+)\s+at (" \
+                              " in ([a-zA-Z0-9_]+)\s+at (" \
                               + fredutil.GS_FILE_PATH_RE + \
-                              "):(\D+)\s+(?:breakpoint already hit " \
+                              "):(\d+)\s+(?:breakpoint already hit " \
                               "(\d+) time)?"
         # List of regexes that match debugger prompts for user input
         self.ls_needs_user_input = \
         [ "---Type <return> to continue, or q <return> to quit---",
           ".+ \(y or n\)" ]
-
-    def get_backtrace(self):
-        """Return a Backtrace object representing the current backtrace."""
-        return self._parse_backtrace(self.do_where())
-
-    def get_breakpoints(self):
-        """Return a list of Breakpoint objects for the current breakpoints."""
-        return self._parse_breakpoints(self.do_info_breakpoints())
 
     def prompt_string(self):
         """Return the debugger's prompt string."""
@@ -82,17 +74,6 @@ class PersonalityGdb(personality.Personality):
         """Bring user back to debugger prompt."""
         sys.stdout.write(self.GS_PROMPT)
         sys.stdout.flush()
-
-    def _parse_backtrace(self, where_str):
-        """Return a Backtrace instance parsed from output of 'where' cmd."""
-        backtrace = re.sub(self.gre_prompt, '', where_str)
-        bt_list = re.findall(self.gre_backtrace_frame, backtrace, re.MULTILINE)
-        frame_list = []
-        bt = freddebugger.Backtrace()
-        for i in range(0, len(bt_list)):
-            frame_list.append(self._parse_backtrace_frame(bt_list[i]))
-        bt.l_frames = frame_list
-        return bt
 
     def _parse_backtrace_frame(self, match_obj):
         """Return a BacktraceFrame from the given re Match object.
@@ -105,26 +86,17 @@ class PersonalityGdb(personality.Personality):
         frame.n_line      = int(match_obj[4])
         return frame
 
-    def _parse_breakpoints(self, info_str):
-        """Return a list of Breakpoint objects parsed from output of 'info
-        breakpoints' cmd."""
-        l_breakpoints = []
-        l_matches = re.findall(self.gre_breakpoint, info_str, re.MULTILINE)
-        for i in range(0, len(l_matches)):
-            l_breakpoints[i] = self._parse_one_breakpoint(l_matches[i])
-        return l_breakpoints
-
     def _parse_one_breakpoint(self, match_obj):
         """Return a Breakpoint from the given re Match object.
-        The Match object should be the result of gre_breakpoint."""
+        The Match object should be a tuple (the result of gre_breakpoint)."""
         breakpoint = freddebugger.Breakpoint()
-        breakpoint.n_number   = match_obj.group(0)
-        breakpoint.s_type     = match_obj.group(1)
-        breakpoint.s_display  = match_obj.group(2)
-        breakpoint.s_enable   = match_obj.group(3)
-        breakpoint.s_address  = match_obj.group(4)
-        breakpoint.s_function = match_obj.group(5)
-        breakpoint.s_file     = match_obj.group(6)
-        breakpoint.n_line     = match_obj.group(7)
-        breakpoint.n_count    = match_obj.group(8)
+        breakpoint.n_number   = int(match_obj[0])
+        breakpoint.s_type     = match_obj[1]
+        breakpoint.s_display  = match_obj[2]
+        breakpoint.s_enable   = match_obj[3]
+        breakpoint.s_address  = match_obj[4]
+        breakpoint.s_function = match_obj[5]
+        breakpoint.s_file     = match_obj[6]
+        breakpoint.n_line     = int(match_obj[7])
+        breakpoint.n_count    = fredutil.to_int(match_obj[8])
         return breakpoint
