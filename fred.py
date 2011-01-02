@@ -252,9 +252,24 @@ def main_io_loop():
         except KeyboardInterrupt:
             fredio.signal_child(signal.SIGINT)
 
+def remove_fred_tmpdir():
+    """Remove FReD temporary directory and contents."""
+    fredutil.fred_debug("Removing temporary directory '%s'" % \
+                        GS_FRED_TMPDIR)
+    # Safety feature: assert that the directory contains "/tmp", just in case.
+    assert GS_FRED_TMPDIR.find("/tmp") != -1
+    shutil.rmtree(GS_FRED_TMPDIR, ignore_errors=True)
+
+def cleanup_fred_files():
+    """Remove any FReD-related temporary files."""
+    remove_fred_tmpdir()
+    dmtcpmanager.remove_manager_root()
+
 def main():
     """Program execution starts here."""
     global g_debugger
+    # Remove any files from a previous run:
+    cleanup_fred_files()
     # Parse arguments
     l_cmd = parse_program_args()
     # Set up the FReD global debugger
@@ -271,13 +286,10 @@ def main():
     fred_quit(0)
 
 def fred_quit(exit_code):
-    """Performs any necessary cleanup and quits FReD."""
+    """Perform any necessary cleanup and quits FReD."""
     global GS_FRED_TMPDIR
     fredutil.fred_debug("FReD exiting.")
-    fredutil.fred_debug("Removing temporary directory '%s'" % \
-                        GS_FRED_TMPDIR)
-    shutil.rmtree(GS_FRED_TMPDIR, ignore_errors=True)
-    dmtcpmanager.manager_quit()
+    cleanup_fred_files()
     fredio.teardown()
     exit(exit_code)
     

@@ -98,11 +98,11 @@ class PersonalityGdb(personality.Personality):
         """Return a BacktraceFrame from the given re Match object.
         The Match object should be a tuple (result of gre_backtrace_frame.)"""
         frame = freddebugger.BacktraceFrame()
-        frame.n_frame_num = match_obj[0]
+        frame.n_frame_num = int(match_obj[0])
         frame.s_function  = match_obj[1]
         frame.s_args      = match_obj[2]
         frame.s_file      = match_obj[3]
-        frame.s_line      = match_obj[4]
+        frame.n_line      = int(match_obj[4])
         return frame
 
     def _parse_breakpoints(self, info_str):

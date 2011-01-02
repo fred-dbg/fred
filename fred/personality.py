@@ -109,33 +109,46 @@ class Personality:
         cmd = None
         if re.search(self.gs_next_re, s_command) != None:
             cmd = freddebugger.fred_next_cmd()
-            cmd.set_native(self.GS_NEXT)
         elif re.search(self.gs_step_re, s_command) != None:
             cmd = freddebugger.fred_step_cmd()
-            cmd.set_native(self.GS_STEP)
         elif re.search(self.gs_continue_re, s_command) != None:
             cmd = freddebugger.fred_continue_cmd()
-            cmd.set_native(self.GS_CONTINUE)
         elif re.search(self.gs_breakpoint_re, s_command) != None:
             cmd = freddebugger.fred_breakpoint_cmd()
-            cmd.set_native(self.GS_BREAKPOINT)
         elif re.search(self.gs_where_re, s_command) != None:
             cmd = freddebugger.fred_where_cmd()
-            cmd.set_native(self.GS_WHERE)
             cmd.set_ignore()
         elif re.search(self.gs_info_breakpoints_re, s_command) != None:
             cmd = freddebugger.fred_info_breakpoints_cmd()
-            cmd.set_native(self.GS_INFO_BREAKPOINTS)
             cmd.set_ignore()
         elif re.search(self.gs_print_re, s_command) != None:
             cmd = freddebugger.fred_print_cmd()
-            cmd.set_native(self.GS_PRINT)
             cmd.set_ignore()
         else:
             cmd = freddebugger.fred_unknown_cmd()
         cmd.set_native(s_command.partition(' ')[0])
         return cmd        
 
+    def get_native(self, fred_cmd):
+        """Return native representation of given FredCommand."""
+        if fred_cmd.is_next():
+            return self.GS_NEXT
+        elif fred_cmd.is_step():
+            return self.GS_STEP
+        elif fred_cmd.is_continue():
+            return self.GS_CONTINUE
+        elif fred_cmd.is_breakpoint():
+            return self.GS_BREAKPOINT
+        elif fred_cmd.is_where():
+            return self.GS_WHERE
+        elif fred_cmd.is_info_breakpoints():
+            return self.GS_INFO_BREAKPOINTS
+        elif fred_cmd.is_print():
+            return self.GS_PRINT
+        else:
+            fredutil.fred_debug("Don't know native representation of %s" % \
+                                fred_cmd)
+            return ""
     def execute_command(self, s_cmd):
         """Send the given string to debugger and return its output."""
         return fredio.get_child_response(s_cmd, wait_for_prompt=True)

@@ -43,11 +43,7 @@ SYNCHRONIZATION_LOG_HANDLING = True
 SYNC_LOG_BASENAME = "synchronization-"
 
 # ---------- Global constants
-HOME_DIR     = os.getenv('HOME')
-try:
-    DMTCP_MANAGER_ROOT = os.environ['DMTCP_MANAGER_ROOT']
-except KeyError:
-    DMTCP_MANAGER_ROOT = HOME_DIR + '/.fred-dmtcp-manager/'
+DMTCP_MANAGER_ROOT = "/tmp/fred.%s/.fred-dmtcp-manager/" % os.environ["USER"]
 DMTCP_PORT   = 0
 TTYFD        = sys.stdin.fileno()  # stdin by default
 # ---------- End of Global constants 
@@ -131,7 +127,7 @@ class DMTCPManager:
     @staticmethod
     def restartWithCheckpointFiles(list):
         ''' Runs dmtcp_restart with the given list of ckpt files. '''
-        cmdstr = ["dmtcp_restart", "--quiet", "--port", str(DMTCP_PORT), "-j"]
+        cmdstr = ["dmtcp_restart", "--quiet", "--port", str(DMTCP_PORT)]
         for f in list:
             cmdstr.append(f)
         dprint("Executing restart command: %s" % str(cmdstr))
@@ -152,7 +148,11 @@ def start(argv, dmtcp_port):
 
     dprint("Using port %d for DMTCP." % dmtcp_port)
     DMTCP_PORT = dmtcp_port
-    
+
+    # Use DMTCP_GZIP=0 : fast checkpoint/restart, but larger checkpoint files
+    os.environ["DMTCP_GZIP"] = '0'
+    os.environ["DMTCP_QUIET"] = '2'
+
     # Don't do anything if we can't find DMTCP.
     if not DMTCPManager.checkPath():
         fredutil.fred_fatal("No DMTCP binaries available in your PATH.\n")
@@ -183,6 +183,14 @@ def start(argv, dmtcp_port):
     childInTransition = False
     return 0
 
+def remove_manager_root():
+    """Remove manager root directory and contents."""
+    fredutil.fred_debug("Removing manager directory '%s'" % \
+                        DMTCP_MANAGER_ROOT)
+    # Safety feature: assert that the directory contains "/tmp", just in case.
+    assert DMTCP_MANAGER_ROOT.find("/tmp") != -1
+    shutil.rmtree(DMTCP_MANAGER_ROOT, ignore_errors = True)
+
 def manager_quit():
     ''' Used when manager is in module mode to kill the child, and perform any
     cleanup. '''
@@ -190,10 +198,8 @@ def manager_quit():
     fredutil.fred_debug("DMTCP Manager exiting.")
     childInTransition = True
     DMTCPManager.killPeers()
-    fredutil.fred_debug("Removing manager directory '%s'" % \
-                        DMTCP_MANAGER_ROOT)
-    shutil.rmtree(DMTCP_MANAGER_ROOT, ignore_errors = True)
-
+    remove_manager_root()
+    
 def initializeFiles(firstName):
     ''' Initalizes housekeeping files and directories. '''
     global DMTCP_MANAGER_ROOT, ckptIndexFilePath, numCheckpoints
@@ -203,7 +209,7 @@ def initializeFiles(firstName):
     # Create DMTCP_MANAGER_ROOT if it doesn't exist
     if not fileExists(DMTCP_MANAGER_ROOT):
         dprint("%s doesn't exist; creating it now." % DMTCP_MANAGER_ROOT)
-        os.mkdir(DMTCP_MANAGER_ROOT, 0755)
+        os.makedirs(DMTCP_MANAGER_ROOT, 0755)
 
     # Initialize checkpoint index file path: file which contains latest index
     # of checkpoint.  We only care about the first program name because any
