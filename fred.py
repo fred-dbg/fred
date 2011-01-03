@@ -275,7 +275,7 @@ def remove_fred_tmpdir():
     fredutil.fred_debug("Removing temporary directory '%s'" % \
                         GS_FRED_TMPDIR)
     # Safety feature: assert that the directory contains "/tmp", just in case.
-    assert GS_FRED_TMPDIR.find("/tmp") != -1
+    fredutil.fred_assert(GS_FRED_TMPDIR.find("/tmp") != -1)
     shutil.rmtree(GS_FRED_TMPDIR, ignore_errors=True)
 
 def cleanup_fred_files():

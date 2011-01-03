@@ -93,7 +93,7 @@ class PersonalityGdb(personality.Personality):
         stepping into libc, etc."""
         global gs_inferior_name
         if gs_inferior_name == "":
-            assert self.s_inferior_name != "", "Empty inferior name."
+            fredutil.fred_assert(self.s_inferior_name != "", "Empty inferior name.")
             gs_inferior_name = self.s_inferior_name
         # If the 'step' results in an address of something that is outside of
         # the user's code, execute a 'finish', and replace the 'step' in
@@ -165,10 +165,10 @@ def within_user_code(n_addr):
 def get_user_code_addresses():
     """Get user code ranges from /proc/pid/maps."""
     global gn_user_code_min, gn_user_code_max, gs_inferior_name
-    assert gs_inferior_name != "", "Empty inferior name."
+    fredutil.fred_assert(gs_inferior_name != "", "Empty inferior name.")
     n_gdb_pid = fredio.get_child_pid()
     n_inferior_pid = get_inferior_pid(n_gdb_pid)
-    assert n_inferior_pid != -1, "Error finding inferior pid."
+    fredutil.fred_assert(n_inferior_pid != -1, "Error finding inferior pid.")
     permissions_re = "\sr.xp\s" # Matches an executable segment in proc maps
     interval_re = "([0-9A-Fa-f]+)-([0-9A-Fa-f]+)\s.+"
     f = open("/proc/%d/maps" % n_inferior_pid, "r")

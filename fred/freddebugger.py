@@ -171,11 +171,11 @@ class ReversibleDebugger(Debugger):
         """Return the last command of the current history."""
         if len(self.checkpoint.l_history) == 0:
             if self.checkpoint.previous != None:
-                assert len(self.checkpoint.previous.l_history) > 0, \
-                       "Unimplemented."
+                fredutil.fred_assert(len(self.checkpoint.previous.l_history) > 0, \
+                       "Unimplemented.")
                 return self.checkpoint.previous.l_history[-1]
             else:
-                assert False, "Unimplemented branch."
+                fredutil.fred_assert(False, "Unimplemented branch.")
         else:
             return self.checkpoint.l_history[-1]
             
@@ -272,7 +272,8 @@ class ReversibleDebugger(Debugger):
             self.execute_fred_command(cmd)
 
     def trim_non_ignore(self, n):
-        """Trim last n non-ignore commands."""
+        """Trim last n non-ignore commands.
+        Also adjust things like 'next 5' to be 'next 4'."""
         while n > 0:
             if not self.last_command().b_ignore:
                 if self.last_command().b_count_cmd:
@@ -594,12 +595,14 @@ class FredCommand():
 
     def count(self):
         """Return integer representation of 'count' argument."""
-        assert self.b_count_cmd, "Tried to get count of non-count cmd."
+        fredutil.fred_assert(self.b_count_cmd,
+                             "Tried to get count of non-count cmd.")
         return fredutil.to_int(self.s_args)
 
     def set_count(self, n):
         """Set s_args flag to the given count."""
-        assert self.b_count_cmd, "Tried to set count of non-count cmd."
+        fredutil.fred_assert(self.b_count_cmd,
+                             "Tried to set count of non-count cmd.")
         self.s_args = str(n)
 
 class Checkpoint():

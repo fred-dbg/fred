@@ -188,7 +188,7 @@ def remove_manager_root():
     fredutil.fred_debug("Removing manager directory '%s'" % \
                         DMTCP_MANAGER_ROOT)
     # Safety feature: assert that the directory contains "/tmp", just in case.
-    assert DMTCP_MANAGER_ROOT.find("/tmp") != -1
+    fredutil.fred_assert(DMTCP_MANAGER_ROOT.find("/tmp") != -1)
     shutil.rmtree(DMTCP_MANAGER_ROOT, ignore_errors = True)
 
 def manager_quit():

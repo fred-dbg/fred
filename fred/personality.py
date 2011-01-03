@@ -118,11 +118,11 @@ class Personality:
 
     def prompt_string(self):
         """Return the debugger's prompt string."""
-        assert False, "Must be implemented in subclass."
+        fredutil.fred_assert(False, "Must be implemented in subclass.")
 
     def prompt(self):
         """Bring user back to debugger prompt."""
-        assert False, "Must be implemented in subclass."
+        fredutil.fred_assert(False, "Must be implemented in subclass.")
 
     def identify_command(self, s_command):
         """Return a FredCommand representing given personality command.

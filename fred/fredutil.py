@@ -60,6 +60,12 @@ def fred_debug(msg):
         # Prints name of function and line number making call to dprint()
         print "[fred-debug] %s:%d - %s" % (caller_name, caller_lineno, msg)
 
+def fred_assert(b_expr, msg="Assertion failed."):
+    """Assert that b_expr is True. If not, print message and dump into pdb."""
+    if not b_expr:
+        fred_error(msg)
+        pdb.set_trace()
+
 def getRE(str, idx=0):
     """Return a regular expression string matching the given string with a
     specified number of characters required.
