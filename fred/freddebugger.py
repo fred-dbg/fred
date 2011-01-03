@@ -275,6 +275,12 @@ class ReversibleDebugger(Debugger):
         """Trim last n non-ignore commands."""
         while n > 0:
             if not self.last_command().b_ignore:
+                if self.last_command().b_count_cmd:
+                    count = self.last_command().count()
+                    if count != 0:
+                        self.last_command().set_count(count - 1)
+                        n -= 1
+                        continue
                 n -= 1
             self.checkpoint.l_history.pop()
 
@@ -339,6 +345,8 @@ class ReversibleDebugger(Debugger):
 
     def reverse_step(self, n=1):
         """Perform n 'reverse-step' commands."""
+        if n != 1:
+            fredutil.fred_fatal("Unimplemented.")
         self.update_state()
         orig_state = self.state().copy()
         debug_loop_counter = 0
@@ -378,6 +386,19 @@ class ReversibleDebugger(Debugger):
         self.update_state()
         fredutil.fred_debug("Reverse step finished.")
 
+    def reverse_finish(self):
+        """Perform 'reverse-finish' command."""
+        self.update_state()
+        orig_state = self.state().copy()
+        while self.state().level() >= orig_state.level():
+            self.reverse_next()
+        self.update_state()
+        fredutil.fred_debug("Reverse finish finished.")
+        
+    def reverse_continue(self):
+        """Perform 'reverse-continue' command."""
+        fredutil.fred_error("Unimplemented command.")
+        
     def reverse_watch(self, s_expr):
         """Perform 'reverse-watch' command on expression."""
         fredutil.fred_error("Unimplemented command.")
@@ -514,6 +535,8 @@ class FredCommand():
         self.s_native = ""
         # When this flag is True, this command will not be replayed.
         self.b_ignore = False
+        # When True, this command may take a numerical count argument
+        self.b_count_cmd = False
 
     def __repr__(self):
         """Return a FReD-abstracted representation of this command."""
@@ -540,6 +563,11 @@ class FredCommand():
         """Set the ignore flag to true."""
         self.b_ignore = True
         
+    def set_count_cmd(self, b_allowed):
+        """Set the count cmd flag to true if b_allowed."""
+        if b_allowed:
+            self.b_count_cmd = True
+
     def is_unknown(self):
         return self.s_name == fred_unknown_cmd().s_name
 
@@ -563,6 +591,16 @@ class FredCommand():
 
     def is_print(self):
         return self.s_name == fred_print_cmd().s_name
+
+    def count(self):
+        """Return integer representation of 'count' argument."""
+        assert self.b_count_cmd, "Tried to get count of non-count cmd."
+        return fredutil.to_int(self.s_args)
+
+    def set_count(self, n):
+        """Set s_args flag to the given count."""
+        assert self.b_count_cmd, "Tried to set count of non-count cmd."
+        self.s_args = str(n)
 
 class Checkpoint():
     """ This class will represent a linked list of checkpoints.  A

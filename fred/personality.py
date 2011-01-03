@@ -48,6 +48,7 @@ class Personality:
         self.gre_backtrace_frame = None
         self.gre_breakpoint = None
         self.ls_needs_user_input = []
+        self.b_has_count_commands = False
         
     def get_backtrace(self):
         """Return a Backtrace object representing the current backtrace."""
@@ -129,10 +130,13 @@ class Personality:
         cmd = None
         if re.search(self.gs_next_re, s_command) != None:
             cmd = freddebugger.fred_next_cmd()
+            cmd.set_count_cmd(self.b_has_count_commands)
         elif re.search(self.gs_step_re, s_command) != None:
             cmd = freddebugger.fred_step_cmd()
+            cmd.set_count_cmd(self.b_has_count_commands)
         elif re.search(self.gs_continue_re, s_command) != None:
             cmd = freddebugger.fred_continue_cmd()
+            cmd.set_count_cmd(self.b_has_count_commands)
         elif re.search(self.gs_breakpoint_re, s_command) != None:
             cmd = freddebugger.fred_breakpoint_cmd()
         elif re.search(self.gs_where_re, s_command) != None:

@@ -73,9 +73,11 @@ class PersonalityGdb(personality.Personality):
         self.ls_needs_user_input = \
         [ "---Type <return> to continue, or q <return> to quit---",
           ".+ \(y or n\)" ]
-
+        # Things like 'next 5' are allowed:
+        self.b_has_count_commands = True
         # GDB only: name of inferior process.
         self.s_inferior_name = ""
+
         
     def prompt_string(self):
         """Return the debugger's prompt string."""

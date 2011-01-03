@@ -136,6 +136,10 @@ def handle_fred_command(s_command):
         g_debugger.reverse_next(n_count)
     elif s_command_name in ["reverse-step", "rs"]:
         g_debugger.reverse_step(n_count)
+    elif s_command_name in ["reverse-finish", "rf"]:
+        g_debugger.reverse_finish()
+    elif s_command_name in ["reverse-continue", "rc"]:
+        g_debugger.reverse_continue()
     elif s_command_name in ["checkpoint", "ckpt"]:
         g_debugger.do_checkpoint()
     elif s_command_name == "restart":
@@ -211,7 +215,8 @@ def parse_program_args():
                       metavar="PORT")
     parser.add_option("-x", "--source", dest="source_script",
                       help="Execute batch file FILE", metavar="FILE")
-    parser.add_option("--enable-debug", dest="debug", action="store_true",
+    parser.add_option("--enable-debug", dest="debug", default=False,
+                      action="store_true",
                       help="Enable FReD debugging messages.")
     (options, l_args) = parser.parse_args()
     # 'l_args' is the 'gdb ARGS ./a.out' list
@@ -222,7 +227,7 @@ def parse_program_args():
         # Source script executed from main_io_loop().
         g_source_script = options.source_script
     os.environ['DMTCP_PORT'] = str(options.dmtcp_port)
-    if options.debug != None:
+    if options.debug == True:
         fredutil.GB_DEBUG = True
     os.environ['DMTCP_TMPDIR'] = GS_FRED_TMPDIR
     return l_args

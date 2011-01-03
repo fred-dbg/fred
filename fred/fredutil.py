@@ -54,7 +54,7 @@ def fred_fatal(message):
 def fred_debug(msg):
     """Print the given debug message."""
     global GB_DEBUG
-    if GB_DEBUG != None:
+    if GB_DEBUG:
         caller_name = os.path.basename(sys._getframe(1).f_code.co_filename)
         caller_lineno = sys._getframe(1).f_lineno
         # Prints name of function and line number making call to dprint()
