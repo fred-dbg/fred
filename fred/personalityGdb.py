@@ -19,13 +19,20 @@
 # along with FReD.  If not, see <http://www.gnu.org/licenses/>.               #
 ###############################################################################
 
+import glob
+import os
 import personality
 import re
 import sys
 import pdb
 
 import freddebugger
+import fredio
 import fredutil
+
+gn_user_code_min = 0
+gn_user_code_max = 0
+gs_inferior_name = ""
 
 class PersonalityGdb(personality.Personality):
     def __init__(self):
@@ -38,6 +45,7 @@ class PersonalityGdb(personality.Personality):
         self.GS_WHERE = "where"
         self.GS_INFO_BREAKPOINTS = "info breakpoints"
         self.GS_PRINT = "print"
+        self.GS_FINISH = "finish"
         
         self.gs_next_re = fredutil.getRE(self.GS_NEXT, 4) + "|^n"
         self.gs_step_re = fredutil.getRE(self.GS_STEP, 4) + "|^s"
@@ -66,6 +74,9 @@ class PersonalityGdb(personality.Personality):
         [ "---Type <return> to continue, or q <return> to quit---",
           ".+ \(y or n\)" ]
 
+        # GDB only: name of inferior process.
+        self.s_inferior_name = ""
+        
     def prompt_string(self):
         """Return the debugger's prompt string."""
         return self.GS_PROMPT
@@ -74,6 +85,29 @@ class PersonalityGdb(personality.Personality):
         """Bring user back to debugger prompt."""
         sys.stdout.write(self.GS_PROMPT)
         sys.stdout.flush()
+
+    def do_step(self, n):
+        """Override generic do_step() from personality.py so we can avoid
+        stepping into libc, etc."""
+        global gs_inferior_name
+        if gs_inferior_name == "":
+            assert self.s_inferior_name != "", "Empty inferior name."
+            gs_inferior_name = self.s_inferior_name
+        # If the 'step' results in an address of something that is outside of
+        # the user's code, execute a 'finish', and replace the 'step' in
+        # history with a 'next', so on replay only the next is executed.
+        output = fredio.get_child_response(self.GS_STEP + " " + str(n) + "\n",
+                                           wait_for_prompt=True)
+        bt = self.get_backtrace()
+        cur_func = bt.l_frames[0].s_function
+        n_cur_addr = parse_address(self.do_print("&" + cur_func))
+        if not within_user_code(n_cur_addr):
+            pdb.set_trace()
+            fredio.get_child_response(self.GS_FINISH + "\n",
+                                      wait_for_prompt=True)
+            # TODO: Think of more portable way to do this:
+            return "DO-NOT-STEP"
+        return output
 
     def _parse_backtrace_frame(self, match_obj):
         """Return a BacktraceFrame from the given re Match object.
@@ -100,3 +134,66 @@ class PersonalityGdb(personality.Personality):
         breakpoint.n_line     = int(match_obj[7])
         breakpoint.n_count    = fredutil.to_int(match_obj[8])
         return breakpoint
+
+    def set_inferior_name(self):
+        """Set the inferior name to what 'info inferiors' tells us."""
+        exp = "\*\s+[0-9]+\s+\S+\s+(.+)"
+        s_info_proc = self.execute_command("info inferiors\n")
+        self.s_inferior_name = re.search(exp, s_info_proc).group(1).strip()
+
+    def reset_user_code_interval(self):
+        """Reset gn_user_code_min and gn_user_code_max (for restarts)."""
+        global gn_user_code_min, gn_user_code_max
+        gn_user_code_min = gn_user_code_max = 0
+
+def parse_address(s_addr):
+    """Parse the given address string from gdb and return a number."""
+    # Example input: "$2 = (int (*)(item *)) 0x8048508 <list_len>"
+    exp = ".+\(.+\) (0x[0-9A-Fa-f]+).+"
+    n_addr = int(re.search(exp, s_addr).group(1), 16)
+    return n_addr
+
+def within_user_code(n_addr):
+    """Return True if n_addr is within the user program's code segment."""
+    global gn_user_code_min, gn_user_code_max
+    if gn_user_code_min == 0:
+        get_user_code_addresses()
+    return n_addr > gn_user_code_min and n_addr < gn_user_code_max
+
+def get_user_code_addresses():
+    """Get user code ranges from /proc/pid/maps."""
+    global gn_user_code_min, gn_user_code_max, gs_inferior_name
+    assert gs_inferior_name != "", "Empty inferior name."
+    n_gdb_pid = fredio.get_child_pid()
+    n_inferior_pid = get_inferior_pid(n_gdb_pid)
+    assert n_inferior_pid != -1, "Error finding inferior pid."
+    permissions_re = "\sr.xp\s" # Matches an executable segment in proc maps
+    interval_re = "([0-9A-Fa-f]+)-([0-9A-Fa-f]+)\s.+"
+    f = open("/proc/%d/maps" % n_inferior_pid, "r")
+    executable_lines = []
+    for line in f:
+        if re.search(gs_inferior_name, line) != None:
+            # There may be more than one executable segment (for instance, the
+            # current iteration of DMTCP trampolines splits the code segment
+            # into several).
+            if re.search(permissions_re, line) != None:
+                executable_lines.append(line)
+    f.close()
+    gn_user_code_min = \
+        int(re.search(interval_re, executable_lines[0]).group(1), 16)
+    gn_user_code_max = \
+        int(re.search(interval_re, executable_lines[-1]).group(2), 16)
+
+def get_inferior_pid(n_gdb_pid):
+    """Given the pid of gdb, return the pid of the inferior or -1 on error.
+    This is inefficiently implemented by scanning entries in /proc."""
+    l_pid_dirs = glob.glob("/proc/[0-9]*")
+    for pid_dir in l_pid_dirs:
+        n_pid = fredutil.to_int(re.search("/proc/([0-9]+).*", pid_dir).group(1))
+        f = open(pid_dir + "/stat")
+        n_ppid = fredutil.to_int(f.read().split()[3])
+        f.close()
+        if n_ppid == n_gdb_pid:
+            return n_pid
+    return -1
+    

@@ -227,13 +227,21 @@ def parse_program_args():
     os.environ['DMTCP_TMPDIR'] = GS_FRED_TMPDIR
     return l_args
 
+def interactive_debugger_setup():
+    """Perform any debugger setup that requires a debugger prompt."""
+    global g_debugger, g_source_script
+    if g_debugger.personality_name() == "gdb":
+        # Special case for gdb: record name of executable.
+        g_debugger._p.set_inferior_name()
+    # If the user gave a source script file, execute it now.
+    if g_source_script != None:
+        source_from_file(g_source_script)
+
 def main_io_loop():
     """Main I/O loop to get and handle user commands."""
     global g_source_script
     fredio.wait_for_prompt()
-    # If the user gave a source script file, execute it now.
-    if g_source_script != None:
-        source_from_file(g_source_script)
+    interactive_debugger_setup()
     while 1:
         try:
             # Get one user command (blocking):

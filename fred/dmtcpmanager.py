@@ -345,6 +345,12 @@ def restart_ckpt(index):
     global childInTransition, ckptCounter, currentCkptIndex
     dprint("Going to restart index %d" % index)
     childInTransition = True
+    # Kill the currently connected peers:
+    #killChild() # XXX: hack: killPeers() doesn't do the job for Matlab.
+    DMTCPManager.killPeers()
+    # Wait until the peers are really gone
+    while DMTCPManager.getNumPeers() != 0:
+        time.sleep(0.1)
     # Set up any support files associated with the checkpoint: ckpt_files_*, etc
     setupCheckpointSupportFiles(index)
     # The number of peers we wait on to restart is equal to the number of
@@ -365,12 +371,6 @@ def restart_ckpt(index):
         os.symlink(ckpt, new_name)
         ckptFileList[i] = new_name
     numPeers = len(ckptFileList)
-    # Kill the currently connected peers:
-    #killChild() # XXX: hack: killPeers() doesn't do the job for Matlab.
-    DMTCPManager.killPeers()
-    # Wait until the peers are really gone
-    while DMTCPManager.getNumPeers() != 0:
-        time.sleep(0.1)
     DMTCPManager.restartWithCheckpointFiles(ckptFileList)
     # Wait until every peer has finished resuming:
     while DMTCPManager.getNumPeers() < numPeers:
@@ -501,17 +501,13 @@ def updateSyncHousekeeping(filename):
         # Not a link; this must be the first checkpoint
         dprint("Renaming \"%s\" to \"%s.%d\"" % \
                (full_filename, DMTCP_MANAGER_ROOT + filename, ckptCounter))
-        os.rename(full_filename, "%s.%d" % (DMTCP_MANAGER_ROOT+filename, ckptCounter))
-    # Create an empty log file for the new checkpoint
-    dprint("Creating new empty log file %s.%d." % \
-           (DMTCP_MANAGER_ROOT + filename, ckptCounter))
-    f = open(DMTCP_MANAGER_ROOT + filename + "." + str(ckptCounter), 'w')
-    os.fchmod(f.fileno(), 0600)
-    f.close()
+        os.rename(full_filename,
+                  "%s.%d" % (DMTCP_MANAGER_ROOT + filename, ckptCounter))
     # Leave a symlink for DMTCP to write to
     dprint("Symlinking %s.%d to %s" % \
            (DMTCP_MANAGER_ROOT + filename, ckptCounter, full_filename))
-    os.symlink("%s.%d" % (DMTCP_MANAGER_ROOT + filename, ckptCounter), full_filename)
+    os.symlink("%s.%d" % (DMTCP_MANAGER_ROOT + filename, ckptCounter),
+               full_filename)
     listfilepath = DMTCP_MANAGER_ROOT + filename + "_list"
     if not listfilepath in synchronizationLogListFiles:
         dprint("Didn't find sync log list file. Adding new entry: %s"

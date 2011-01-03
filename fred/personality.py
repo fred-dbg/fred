@@ -169,6 +169,7 @@ class Personality:
             fredutil.fred_debug("Don't know native representation of %s" % \
                                 fred_cmd)
             return ""
+
     def execute_command(self, s_cmd):
         """Send the given string to debugger and return its output."""
         return fredio.get_child_response(s_cmd, wait_for_prompt=True)

@@ -214,6 +214,11 @@ def child_is_alive():
         return False
     return True
 
+def get_child_pid():
+    """Return the current child pid."""
+    global gn_child_pid
+    return gn_child_pid
+
 def get_command():
     """Get a command from the user using raw_input."""
     global g_print_prompt_function

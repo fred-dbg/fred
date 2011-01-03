@@ -18,6 +18,7 @@
 # You should have received a copy of the GNU General Public License           #
 # along with FReD.  If not, see <http://www.gnu.org/licenses/>.               #
 ###############################################################################
+import pdb
 
 import dmtcpmanager
 import fredutil
@@ -34,6 +35,10 @@ class Debugger():
     def __init__(self, personality):
         self._p = personality
         self._state = DebuggerState()
+
+    def personality_name(self):
+        """Return the name of the personality."""
+        return self._p.s_name
 
     def _next(self, n):
         """Perform n 'next' commands. Returns output."""
@@ -127,10 +132,16 @@ class ReversibleDebugger(Debugger):
         fredutil.fred_debug("Created checkpoint #%d." % new_ckpt.n_index)
         self.update_state()
 
+    def reset_on_restart(self):
+        """Perform any reset functions that should happen on restart."""
+        if self.personality_name() == "gdb":
+            self._p.reset_user_code_interval()
+
     def do_restart(self):
         """Restart from the current checkpoint."""
         fredutil.fred_debug("Restarting from checkpoint index %d." % \
                             self.checkpoint.n_index)
+        self.reset_on_restart()
         dmtcpmanager.restart_last_ckpt()
         self.update_state()
 
@@ -139,6 +150,7 @@ class ReversibleDebugger(Debugger):
         self.checkpoint = self.l_checkpoints[self.checkpoint.n_index - 1]
         fredutil.fred_debug("Restarting from checkpoint index %d." % \
                             self.checkpoint.n_index)
+        self.reset_on_restart()
         dmtcpmanager.restart_ckpt(self.checkpoint.n_index)
         self.update_state()
         
@@ -207,8 +219,14 @@ class ReversibleDebugger(Debugger):
         cmd = fred_step_cmd()
         cmd.set_native(self._p.get_native(cmd))
         cmd.s_args = str(n)
-        self.log_fred_command(cmd)
+        # TODO: Special case for gdb so we don't step into libc. Think of
+        # more portable way to do this.
         output = self._step(n)
+        if output == "DO-NOT-STEP":
+            # Log a next instead of step so we don't step into libc again.
+            cmd = fred_next_cmd()
+            cmd.set_native(self._p.get_native(cmd))
+        self.log_fred_command(cmd)
         self.update_state()
         return output
         
@@ -330,6 +348,9 @@ class ReversibleDebugger(Debugger):
             if self.state().level() > orig_state.level():
                 fredutil.fred_debug("RS: DEEPER")
                 self.do_next()
+                if self.state() == orig_state:
+                    self.undo()
+                    break
             elif self.state().level() < orig_state.level():
                 fredutil.fred_debug("RS: SHALLOWER")
                 self.do_step()
@@ -344,6 +365,7 @@ class ReversibleDebugger(Debugger):
                     else:
                         fredutil.fred_debug("RS: NOT AFTER STEP")
                         self.undo()
+                        self.do_step()
                 else:
                     fredutil.fred_debug("RS: NOT AT ORIG STATE")
                     # TODO: This is a very inefficient implementation.
@@ -352,10 +374,6 @@ class ReversibleDebugger(Debugger):
                         continue
                     self.undo()
                     self.do_next()
-                    if self.state() == orig_state:
-                        self.undo()
-                        self.do_step()
-                        continue
                     
         self.update_state()
         fredutil.fred_debug("Reverse step finished.")
