@@ -715,6 +715,16 @@ class BacktraceFrame():
         return "frame: " + str((self.n_frame_num, self.s_addr, self.s_function,
                                 self.s_args, self.s_file, self.n_line))
 
+    def copy(self):
+        """Return deep copy of this instance."""
+        new_frame = BacktraceFrame()
+        new_frame.n_frame_num = self.n_frame_num
+        new_frame.s_addr      = self.s_addr
+        new_frame.s_function  = self.s_function
+        new_frame.s_args      = self.s_args
+        new_frame.s_file      = self.s_file
+        new_frame.n_line      = self.n_line
+
 class FredCommand():
     """Represents one user command sent to the debugger.
     Used to abstract away personality-specific syntax. Each FredCommand retains
