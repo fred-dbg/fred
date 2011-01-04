@@ -129,7 +129,7 @@ def handle_fred_command(s_command):
     if n_count == 0:
         n_count = 1
     if is_quit_command(s_command_name):
-        fred_quit(0)
+        fredutil.fred_quit(0)
     elif s_command_name == "undo":
         g_debugger.undo(n_count)
     elif s_command_name in ["reverse-next", "rn"]:
@@ -222,7 +222,7 @@ def parse_program_args():
     # 'l_args' is the 'gdb ARGS ./a.out' list
     if len(l_args) == 0:
         parser.print_help()
-        fred_quit(1)
+        fredutil.fred_quit(1)
     if options.source_script != None:
         # Source script executed from main_io_loop().
         g_source_script = options.source_script
@@ -301,15 +301,7 @@ def main():
     # Main input/output loop
     main_io_loop()
     # If we get here, quit.
-    fred_quit(0)
-
-def fred_quit(exit_code):
-    """Perform any necessary cleanup and quits FReD."""
-    global GS_FRED_TMPDIR
-    fredutil.fred_debug("FReD exiting.")
-    cleanup_fred_files()
-    fredio.teardown()
-    exit(exit_code)
+    fredutil.fred_quit(0)
     
 if __name__ == '__main__':
     main()

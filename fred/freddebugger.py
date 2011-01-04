@@ -135,7 +135,7 @@ class ReversibleDebugger(Debugger):
         self.l_checkpoints.append(new_ckpt)
         self.checkpoint = self.l_checkpoints[new_ckpt.n_index]
         dmtcpmanager.do_checkpoint()
-        fredutil.fred_debug("Created checkpoint #%d." % new_ckpt.n_index)
+        fredutil.fred_info("Created checkpoint #%d." % new_ckpt.n_index)
         self.update_state()
 
     def reset_on_restart(self):

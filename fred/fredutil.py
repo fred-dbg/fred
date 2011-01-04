@@ -24,6 +24,8 @@ import os
 import re
 import sys
 
+import fredio
+
 # Legal characters for a file path
 GS_FILE_PATH_RE = "[/a-zA-Z0-9_\-\.]+"
 GB_DEBUG = False
@@ -41,6 +43,13 @@ def last_n(s, source, n):
     """
     return (s+source)[-n:]
 
+
+
+def fred_info(message):
+    """Print an info message to the screen with a fred-specific prefix."""
+    sys.stdout.write("FReD: %s\n" % message)
+    sys.stdout.flush()
+
 def fred_error(message):
     """Print an error message to the screen with a fred-specific prefix."""
     sys.stderr.write("FReD: %s\n" % message)
@@ -50,6 +59,7 @@ def fred_fatal(message):
     """Kill FReD with given message."""
     sys.stderr.write("FReD fatal error: %s\n" % message)
     sys.stderr.flush()
+    
     sys.exit(1)
 
 def fred_debug(msg):
@@ -97,3 +107,8 @@ def to_int(str, n_default=0):
     except ValueError:
         return n_default
         
+def fred_quit(exit_code):
+    """Perform any necessary cleanup and quits FReD."""
+    fred_debug("FReD exiting.")
+    fredio.teardown()
+    sys.exit(exit_code)

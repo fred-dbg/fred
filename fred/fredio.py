@@ -241,7 +241,9 @@ def send_command(command):
 
 def send_command_blocking(command):
     """Send a command to the child process and wait for the prompt."""
+    global gb_prompt_ready
     send_child_input(command+'\n')
+    gb_prompt_ready = False
     wait_for_prompt()
     
 def reexec(argv):
