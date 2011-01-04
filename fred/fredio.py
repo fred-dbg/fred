@@ -43,6 +43,7 @@ gb_prompt_ready = False
 gb_hide_output = False
 gb_capture_output = False
 gb_capture_output_til_prompt = False
+gb_capture_output_multi_page = False
 gs_captured_output = ""
 g_capture_output_event = threading.Event()
 gre_prompt = ""
@@ -55,7 +56,8 @@ class ThreadedOutput(threading.Thread):
     def run(self):
         global gb_prompt_ready, gb_capture_output, gs_captured_output, \
                g_capture_output_event, gb_capture_output_til_prompt, \
-               gb_hide_output, gn_max_need_input_length, gb_need_user_input
+               gb_hide_output, gn_max_need_input_length, gb_need_user_input, \
+               gb_capture_output_multi_page
         # Last printed will be the last 'n' characters printed from child. This
         # is so we can know when the debugger prompt has been printed to
         # screen.
@@ -72,6 +74,9 @@ class ThreadedOutput(threading.Thread):
                                     gn_max_need_input_length)
                 if gb_capture_output:
                     gs_captured_output += output
+                    if gb_capture_output_multi_page:
+                        if match_needs_user_input(last_printed_need_input):
+                            send_child_input("\n")
                     if gb_capture_output_til_prompt:
                         if g_find_prompt_function(last_printed):
                             g_capture_output_event.set()
@@ -132,21 +137,23 @@ def start_output_capture(wait_for_prompt):
     gb_capture_output = True
     g_capture_output_event.clear()
 
-def wait_for_captured_output(wait_for_prompt):
+def wait_for_captured_output(b_wait_for_prompt, b_multi_page):
     """Wait until output capture is done, and return captured output.
     The actual output capture is done by the output thread, and placed into
     global gs_captured_output. This function resets that global string when
     finished."""
     global gb_capture_output, gs_captured_output, g_capture_output_event, \
-           gb_capture_output_til_prompt
-    gb_capture_output_til_prompt = wait_for_prompt
+           gb_capture_output_til_prompt, gb_capture_output_multi_page
+    gb_capture_output_til_prompt = b_wait_for_prompt
+    gb_capture_output_multi_page = b_multi_page
     g_capture_output_event.wait()
     output = gs_captured_output
     gs_captured_output = ""
     gb_capture_output = False
     return output
 
-def get_child_response(input, hide=True, wait_for_prompt=False):
+def get_child_response(s_input, hide=True, b_wait_for_prompt=False,
+                       b_multi_page=True):
     """Sends requested input to child, and returns any response made.
     If hide flag is True (default), suppresses echoing from child.  If
     wait_for_prompt flag is True, collects output until the debugger prompt is
@@ -154,9 +161,9 @@ def get_child_response(input, hide=True, wait_for_prompt=False):
     global gb_hide_output
     b_orig_hide_state = gb_hide_output
     gb_hide_output = hide
-    start_output_capture(wait_for_prompt)
-    send_child_input(input)
-    response = wait_for_captured_output(wait_for_prompt)
+    start_output_capture(b_wait_for_prompt)
+    send_child_input(s_input)
+    response = wait_for_captured_output(b_wait_for_prompt, b_multi_page)
     gb_hide_output = b_orig_hide_state
     return response
 
@@ -192,6 +199,7 @@ def spawn_child(argv):
     fredutil.fred_debug("Starting child '%s'" % str(argv))
     (gn_child_pid, gn_child_fd) = pty.fork()
     if gn_child_pid == 0:
+        sys.stderr = sys.stdout
         os.execvp(argv[0], argv)
 
 def kill_child():
@@ -199,7 +207,7 @@ def kill_child():
     global gn_child_fd
     if gn_child_pid == -1:
       return
-    fredutil.fred_debug("Killing child process pid %d", gn_child_pid)
+    fredutil.fred_debug("Killing child process pid %d" % gn_child_pid)
     signal_child(signal.SIGKILL)
     os.close(gn_child_fd)
     

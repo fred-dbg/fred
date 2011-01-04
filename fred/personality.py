@@ -82,36 +82,36 @@ class Personality:
     def do_next(self, n):
         """Perform n 'next' commands. Returns output."""
         return fredio.get_child_response(self.GS_NEXT + " " + str(n) + "\n",
-                                         wait_for_prompt=True)
+                                         b_wait_for_prompt=True)
         
     def do_step(self, n):
         """Perform n 'step' commands. Returns output."""
         return fredio.get_child_response(self.GS_STEP + " " + str(n) + "\n",
-                                         wait_for_prompt=True)
+                                         b_wait_for_prompt=True)
         
     def do_continue(self, n):
         """Perform n 'continue' commands. Returns output."""
         return fredio.get_child_response(self.GS_CONTINUE + " " + str(n) + "\n",
-                                         wait_for_prompt=True)
+                                         b_wait_for_prompt=True)
         
     def do_breakpoint(self, expr):
         """Perform 'break expr' command. Returns output."""
         return fredio.get_child_response(self.GS_BREAKPOINT + " " + str(expr) + "\n",
-                                         wait_for_prompt=True)
+                                         b_wait_for_prompt=True)
 
     def do_where(self):
         """Perform 'where' command. Returns output."""
-        return fredio.get_child_response(self.GS_WHERE + "\n", wait_for_prompt=True)
+        return fredio.get_child_response(self.GS_WHERE + "\n", b_wait_for_prompt=True)
 
     def do_info_breakpoints(self):
         """Perform 'info_breakpoints' command. Returns output."""
         return fredio.get_child_response(self.GS_INFO_BREAKPOINTS + "\n",
-                                         wait_for_prompt=True)
+                                         b_wait_for_prompt=True)
 
     def do_print(self, expr):
         """Perform 'print expr' command. Returns output."""
         return fredio.get_child_response(self.GS_PRINT + " " + str(expr) + "\n",
-                                         wait_for_prompt=True)
+                                         b_wait_for_prompt=True)
 
     def contains_prompt_str(self, string):
         """Return True if given string matches the prompt string."""
@@ -190,7 +190,7 @@ class Personality:
 
     def execute_command(self, s_cmd):
         """Send the given string to debugger and return its output."""
-        return fredio.get_child_response(s_cmd, wait_for_prompt=True)
+        return fredio.get_child_response(s_cmd, b_wait_for_prompt=True)
 
     def sanitize_print_result(self, s_printed):
         """Sanitize the result of a debugger 'print' command.

@@ -120,6 +120,7 @@ class DMTCPManager:
         #executeShellCommand(['dmtcp_command','k'])
         pid = os.fork()
         if pid == 0:
+            sys.stderr = sys.stdout
             os.execvp('dmtcp_command', ['dmtcp_command', '--quiet', 'k'])
         else:
             os.waitpid(pid, 0)
@@ -583,55 +584,18 @@ def fileExists(filename):
 def executeShellCommandAndWait(cmd):
     """ Executes a shell command and calls waitpid() on it. That means that
         this is a blocking call. """
-    rc = subprocess.check_call(cmd)
+    rc = subprocess.check_call(cmd, stderr=subprocess.STDOUT)
     return rc
 
 def executeShellCommand(cmd):
     ''' Executes a shell command and returns its output.
-        Argument should be a list of the arguments.'''
-    
+        Argument should be a list of the arguments.'''    
     dprint("Executing command string: %s" % cmd)
-
     # If we omit stdin arg and p.stdin.close(), then this doesn't work.  Why?
     p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                         stderr=subprocess.PIPE, close_fds=True)
+                         stderr=subprocess.STDOUT, close_fds=True)
     p.stdin.close()
     return p.stdout.read()
-
-    # The above is the translation of the deprecated popen2 below, which works.
-    #(child_stdout, child_stdin) = popen2.popen2(cmd)
-    #child_stdin.close()
-    #return child_stdout.read()
-
-    # When using subprocess in the code below, I get a null string for stdout,
-    # and the stdout goes to terminal instead of to p.stdout.
-    # In some variations, I get a truncated error statement:
-    #      s.wait(%s): time out", self, timeout)  (from internal python lib?)
-    # This happens only when executing ["dmtcp_command", "s"]
-    #   just after having previously told coordinator to kill all processes:
-    #   ["dmtcp_command", "k"]
-    # I don't know why.
-    # The python manual claims the following should be the equivalent
-    #    of the popen2 construct, but it fails for me:
-    # p = subprocess.Popen("cmd", shell=True,
-    #      stdin=subprocess.PIPE, stdout=subprocess.PIPE, close_fds=True)
-    # (child_stdin, child_stdout) = (p.stdin, p.stdout)
-
-    # Ignoring stdin and stderr
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
-
-    # The communicate() method blocks until the subprocess terminates.
-    # EOF is then sent to stdout.  It uses Python's temporary memory.
-    # This could be problematic if there is a lot of output, or if
-    # a non-blocking call (asynchronous processing) is required.
-    # For this, methods like poll(), wait(), p.stdout.readline() are available.
-    (output, errors) = p.communicate()
-    if output != None:
-        p.stdout.close()
-        return output
-    else:
-        print "********************** executeShellCommand:  output was None"
-        return None
 
 def dprint(msg):
     ''' Prints debugging messages to console if the DMTCP_MANAGER_DEBUG env

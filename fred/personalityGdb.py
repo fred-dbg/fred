@@ -150,9 +150,12 @@ class PersonalityGdb(personality.Personality):
 
     def set_inferior_name(self):
         """Set the inferior name to what 'info inferiors' tells us."""
-        exp = "\*\s+[0-9]+\s+\S+\s+(.+)"
-        s_info_proc = self.execute_command("info inferiors\n")
-        self.s_inferior_name = re.search(exp, s_info_proc).group(1).strip()
+        exp = "Local exec file:\s+`(.+?)'"
+        s_info_files = fredio.get_child_response("info files\n",
+                                                 b_multi_page=True,
+                                                 b_wait_for_prompt=True)
+        match = re.search(exp, s_info_files, re.MULTILINE)
+        self.s_inferior_name = match.group(1).strip()
 
     def reset_user_code_interval(self):
         """Reset gn_user_code_min and gn_user_code_max (for restarts)."""
