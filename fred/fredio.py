@@ -197,7 +197,9 @@ def spawn_child(argv):
 def kill_child():
     """Kill the child process."""
     global gn_child_fd
-    fredutil.fred_debug("Killing child process.")
+    if gn_child_pid == -1:
+      return
+    fredutil.fred_debug("Killing child process pid %d", gn_child_pid)
     signal_child(signal.SIGKILL)
     os.close(gn_child_fd)
     
