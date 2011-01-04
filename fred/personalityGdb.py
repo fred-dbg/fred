@@ -109,14 +109,14 @@ class PersonalityGdb(personality.Personality):
         # the user's code, execute a 'finish', and replace the 'step' in
         # history with a 'next', so on replay only the next is executed.
         output = fredio.get_child_response(self.GS_STEP + " " + str(n) + "\n",
-                                           wait_for_prompt=True)
+                                           b_wait_for_prompt=True)
         bt = self.get_backtrace()
         cur_func = bt.l_frames[0].s_function
         n_cur_addr = parse_address(self.do_print("&" + cur_func))
         if not within_user_code(n_cur_addr):
             pdb.set_trace()
             fredio.get_child_response(self.GS_FINISH + "\n",
-                                      wait_for_prompt=True)
+                                      b_wait_for_prompt=True)
             # TODO: Think of more portable way to do this:
             return "DO-NOT-STEP"
         return output
