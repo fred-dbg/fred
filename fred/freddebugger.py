@@ -204,6 +204,8 @@ class ReversibleDebugger(Debugger):
         # identify_command() sets native repr.
         cmd = self._p.identify_command(s_command)
         cmd.s_args = s_command.partition(' ')[2]
+        if cmd.b_count_cmd and cmd.s_args != "":
+            cmd.set_count(int(cmd.s_args))
         if self.checkpoint != None:
             self.checkpoint.log_command(cmd)
 
@@ -226,7 +228,8 @@ class ReversibleDebugger(Debugger):
         """Perform n 'next' commands. Returns output."""
         cmd = fred_next_cmd()
         cmd.set_native(self._p.get_native(cmd))
-        cmd.s_args = str(n)
+        cmd.set_count_cmd(self._p.b_has_count_commands)
+        cmd.set_count(n)
         self.log_fred_command(cmd)
         output = self._next(n)
         self.update_state()
@@ -236,7 +239,8 @@ class ReversibleDebugger(Debugger):
         """Perform n 'step' commands. Returns output."""
         cmd = fred_step_cmd()
         cmd.set_native(self._p.get_native(cmd))
-        cmd.s_args = str(n)
+        cmd.set_count_cmd(self._p.b_has_count_commands)
+        cmd.set_count(n)
         # TODO: Special case for gdb so we don't step into libc. Think of
         # more portable way to do this.
         output = self._step(n)
@@ -244,6 +248,8 @@ class ReversibleDebugger(Debugger):
             # Log a next instead of step so we don't step into libc again.
             cmd = fred_next_cmd()
             cmd.set_native(self._p.get_native(cmd))
+            cmd.set_count_cmd(self._p.b_has_count_commands)
+            cmd.set_count(1)
         self.log_fred_command(cmd)
         self.update_state()
         return output
@@ -334,7 +340,7 @@ class ReversibleDebugger(Debugger):
             if not self.last_command().b_ignore:
                 if self.last_command().b_count_cmd:
                     count = self.last_command().count()
-                    if count != 0:
+                    if count != 1:
                         self.last_command().set_count(count - 1)
                         n -= 1
                         continue
@@ -357,7 +363,7 @@ class ReversibleDebugger(Debugger):
             else:
                 self.do_restart_previous()
         if b_restart:
-            self.do_restart(b_clear_history = True)
+            self.do_restart()
         # Trim history by n non-ignore commands
         self.trim_non_ignore(n)
         self.replay_history()
@@ -724,6 +730,7 @@ class BacktraceFrame():
         new_frame.s_args      = self.s_args
         new_frame.s_file      = self.s_file
         new_frame.n_line      = self.n_line
+        return new_frame
 
 class FredCommand():
     """Represents one user command sent to the debugger.

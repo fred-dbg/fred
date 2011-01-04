@@ -114,7 +114,6 @@ class PersonalityGdb(personality.Personality):
         cur_func = bt.l_frames[0].s_function
         n_cur_addr = parse_address(self.do_print("&" + cur_func))
         if not within_user_code(n_cur_addr):
-            pdb.set_trace()
             fredio.get_child_response(self.GS_FINISH + "\n",
                                       b_wait_for_prompt=True)
             # TODO: Think of more portable way to do this:
