@@ -71,7 +71,8 @@ class Personality:
     def _parse_backtrace(self, where_str):
         """Return a Backtrace instance parsed from output of 'where' cmd."""
         backtrace = re.sub(self.gre_prompt, '', where_str)
-        bt_list = re.findall(self.gre_backtrace_frame, backtrace, re.MULTILINE)
+        bt_list = re.findall(self.gre_backtrace_frame,
+                             backtrace, re.MULTILINE | re.DOTALL)
         frame_list = []
         bt = freddebugger.Backtrace()
         for i in range(0, len(bt_list)):

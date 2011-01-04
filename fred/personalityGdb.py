@@ -62,7 +62,7 @@ class PersonalityGdb(personality.Personality):
         self.gre_prompt = re.compile("\(gdb\) $")
         # Basic stack trace format, matches this kind:
         # "#0  *__GI___libc_malloc (bytes=8) at malloc.c:3551"
-        self.gre_backtrace_frame = "#(\d+)\s+(.+?)\s+\((.*)\)\s+at\s+(" \
+        self.gre_backtrace_frame = "^#(\d+)\s+(.+?)\s+\((.*?)\)\s+at\s+(" \
                                    + fredutil.GS_FILE_PATH_RE + \
                                    "):(\d+)"
         self.gre_breakpoint = "(\d+)\s*(\w+)\s*(\w+)\s*(\w+)\s*" \
