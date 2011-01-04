@@ -89,11 +89,11 @@ def getREWork(str):
         return str
     return str[0] + '(' + getREWork(str[1:]) + ')?'
 
-def to_int(str):
-    """Return the integer representation of the given string, or 0."""
+def to_int(str, n_default=0):
+    """Return the integer representation of the given string, or 'default'."""
     try:
         retval = int(str)
         return retval
     except ValueError:
-        return 0
+        return n_default
         

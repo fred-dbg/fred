@@ -77,6 +77,7 @@ class PersonalityGdb(personality.Personality):
           ".+ \(y or n\)" ]
         # Things like 'next 5' are allowed:
         self.b_has_count_commands = True
+        self.b_coalesce_support = True
         # GDB only: name of inferior process.
         self.s_inferior_name = ""
         

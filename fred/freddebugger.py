@@ -282,16 +282,49 @@ class ReversibleDebugger(Debugger):
         # side effects. Example: "print var++"
         return self._print(expr)
 
+    def _copy_fred_commands(self, l_cmds):
+        """Perform a deep copy on the given list of FredCommands."""
+        l_result = []
+        for cmd in l_cmds:
+            l_result.append(cmd.copy())
+        return l_result
+
+    def _coalesce_history(self, l_history):
+        """Return a modified version of l_history with as much condensing done
+        as possible. Example: [n,n,n,n,n] => [n 5]."""
+        if not self._p.b_coalesce_support or len(l_history) == 0:
+            return l_history
+        l_result = self._copy_fred_commands(l_history)
+        i = j = 0
+        while i < len(l_result):
+            if not l_result[i].b_count_cmd:
+                i += 1
+                continue
+            n_count = l_result[i].count()
+            j = i + 1
+            while j < len(l_result):
+                if l_result[j].s_name == l_result[i].s_name:
+                    n_count += l_result[j].count()
+                else:
+                    break
+                j += 1
+            if n_count > 1:
+                del l_result[i+1:i+n_count]
+                l_result[i].set_count(n_count)
+            i += 1
+        return l_result
+
     def replay_history(self, l_history=[], n=-1):
         """Issue the commands in given or current checkpoint's history to
         debugger."""
         if len(l_history) == 0:
-            l_history = self.checkpoint.l_history
+            l_history = self._copy_fred_commands(self.checkpoint.l_history)
         if n == -1:
             n = len(l_history)
+        l_temp = self._coalesce_history(l_history)
         fredutil.fred_debug("Replaying the following history: %s" % \
-                            str(l_history[0:n]))
-        for cmd in l_history[0:n]:
+                            str(l_temp[0:n]))
+        for cmd in l_temp[0:n]:
             self.execute_fred_command(cmd)
 
     def trim_non_ignore(self, n):
@@ -432,8 +465,8 @@ class ReversibleDebugger(Debugger):
         self._binary_search_checkpoints(s_expr, s_expr_val)
 
         self.checkpoint.l_history = \
-            self._binary_search_history(self.checkpoint.l_history[:], 0,
-                                        s_expr, s_expr_val)
+            self._binary_search_history(self._copy_fred_commands(self.checkpoint.l_history),
+                                        0, s_expr, s_expr_val)
 
         self.update_state()
         fredutil.fred_debug("Reverse watch finished.")
@@ -535,7 +568,6 @@ class ReversibleDebugger(Debugger):
         fredutil.fred_debug("Starting expansion with next on %s" % \
                             str(l_history))
         n_min = len(l_history)
-        pdb.set_trace()
         l_expanded_history = [self._p.get_personality_cmd(fred_next_cmd())]
         self.replay_history(l_expanded_history)
         l_history += l_expanded_history
@@ -646,10 +678,17 @@ class Backtrace():
     def __repr__(self):
         return str(self.l_frames)
 
+    def _copy_frames(self, l_frames):
+        """Return deep copy of this instance's l_frames."""
+        l_result = []
+        for frame in l_frames:
+            l_result.append(frame.copy())
+        return l_result
+
     def copy(self):
         """Return a deep copy of this instance."""
         new_bt = Backtrace()
-        new_bt.l_frames = self.l_frames[:]
+        new_bt.l_frames = self._copy_frames(self.l_frames)
         return new_bt
 
 class BacktraceFrame():
@@ -698,6 +737,15 @@ class FredCommand():
         if self.s_args != "":
             s += " " + self.s_args
         return s
+
+    def copy(self):
+        """Return a deep copy of this FredCommand."""
+        new_cmd = FredCommand(self.s_name)
+        new_cmd.s_args      = self.s_args
+        new_cmd.s_native    = self.s_native
+        new_cmd.b_ignore    = self.b_ignore
+        new_cmd.b_count_cmd = self.b_count_cmd
+        return new_cmd
 
     def native_repr(self):
         """Return a personality-native representation of this command.
@@ -748,7 +796,7 @@ class FredCommand():
         """Return integer representation of 'count' argument."""
         fredutil.fred_assert(self.b_count_cmd,
                              "Tried to get count of non-count cmd.")
-        return fredutil.to_int(self.s_args)
+        return fredutil.to_int(self.s_args, 1)
 
     def set_count(self, n):
         """Set s_args flag to the given count."""

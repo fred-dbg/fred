@@ -49,6 +49,7 @@ class Personality:
         self.gre_breakpoint = None
         self.ls_needs_user_input = []
         self.b_has_count_commands = False
+        self.b_coalesce_support = False
         
     def get_backtrace(self):
         """Return a Backtrace object representing the current backtrace."""
