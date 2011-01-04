@@ -46,6 +46,7 @@ class PersonalityGdb(personality.Personality):
         self.GS_INFO_BREAKPOINTS = "info breakpoints"
         self.GS_PRINT = "print"
         self.GS_FINISH = "finish"
+        self.GS_CURRENT_POS = "where 1"
         
         self.gs_next_re = fredutil.getRE(self.GS_NEXT, 4) + "|^n"
         self.gs_step_re = fredutil.getRE(self.GS_STEP, 4) + "|^s"
@@ -55,6 +56,7 @@ class PersonalityGdb(personality.Personality):
         self.gs_info_breakpoints_re = \
             fredutil.getRE(self.GS_INFO_BREAKPOINTS, 5) + "|^i b"
         self.gs_print_re = fredutil.getRE(self.GS_PRINT, 5) + "|^p(/\w)?"
+        self.gs_program_not_running_re = "No stack."
         
         self.GS_PROMPT = "(gdb) "
         self.gre_prompt = re.compile("\(gdb\) $")
@@ -77,7 +79,6 @@ class PersonalityGdb(personality.Personality):
         self.b_has_count_commands = True
         # GDB only: name of inferior process.
         self.s_inferior_name = ""
-
         
     def prompt_string(self):
         """Return the debugger's prompt string."""
@@ -88,6 +89,14 @@ class PersonalityGdb(personality.Personality):
         sys.stdout.write(self.GS_PROMPT)
         sys.stdout.flush()
 
+    def sanitize_print_result(self, s_printed):
+        """Sanitize the result of a debugger 'print' command.
+        This is to normalize out things like gdb's print result:
+          $XX = 16
+        Where $XX changes with each command executed."""
+        exp = "\$[0-9]+ = (.+)"
+        return re.search(exp, s_printed).group(1)
+        
     def do_step(self, n):
         """Override generic do_step() from personality.py so we can avoid
         stepping into libc, etc."""
@@ -110,6 +119,7 @@ class PersonalityGdb(personality.Personality):
             # TODO: Think of more portable way to do this:
             return "DO-NOT-STEP"
         return output
+
 
     def _parse_backtrace_frame(self, match_obj):
         """Return a BacktraceFrame from the given re Match object.

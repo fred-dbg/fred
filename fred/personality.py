@@ -124,6 +124,19 @@ class Personality:
         """Bring user back to debugger prompt."""
         fredutil.fred_assert(False, "Must be implemented in subclass.")
 
+    def program_is_running(self):
+        """Return True if inferior is still running."""
+        output = self.execute_command(self.GS_CURRENT_POS + "\n")
+        # Bit confusing... but if the program is running then the regular
+        # expression here WON'T match
+        return re.search(self.gs_program_not_running_re, output) == None
+
+    def get_personality_cmd(self, generic_cmd):
+        """Return a FredCommand (with native representation filled out) from
+        the given FredCommand."""
+        cmd = self.identify_command(self.get_native(generic_cmd))
+        return cmd
+
     def identify_command(self, s_command):
         """Return a FredCommand representing given personality command.
         Also sets 'native' string appropriately."""
@@ -177,3 +190,10 @@ class Personality:
     def execute_command(self, s_cmd):
         """Send the given string to debugger and return its output."""
         return fredio.get_child_response(s_cmd, wait_for_prompt=True)
+
+    def sanitize_print_result(self, s_printed):
+        """Sanitize the result of a debugger 'print' command.
+        This is to normalize out things like gdb's print result:
+          $XX = 16
+        Where $XX changes with each command executed."""
+        fredutil.fred_assert(False, "Must be implemented in subclass.")

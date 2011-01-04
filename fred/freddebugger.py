@@ -18,6 +18,8 @@
 # You should have received a copy of the GNU General Public License           #
 # along with FReD.  If not, see <http://www.gnu.org/licenses/>.               #
 ###############################################################################
+
+import math
 import pdb
 
 import dmtcpmanager
@@ -100,6 +102,10 @@ class Debugger():
         """Bring user back to debugger prompt."""
         self._p.prompt()
 
+    def program_is_running(self):
+        """Return True if inferior is still running."""
+        return self._p.program_is_running()
+
 class ReversibleDebugger(Debugger):
     """Represents control and management of a reversible Debugger.
 
@@ -137,12 +143,19 @@ class ReversibleDebugger(Debugger):
         if self.personality_name() == "gdb":
             self._p.reset_user_code_interval()
 
-    def do_restart(self):
-        """Restart from the current checkpoint."""
+    def do_restart(self, b_clear_history=False, n_index=-1):
+        """Restart from the current or specified checkpoint."""
         fredutil.fred_debug("Restarting from checkpoint index %d." % \
                             self.checkpoint.n_index)
         self.reset_on_restart()
-        dmtcpmanager.restart_last_ckpt()
+        if (n_index == -1):
+            # Restart from current checkpoint.
+            dmtcpmanager.restart_last_ckpt()
+        else:
+            dmtcpmanager.restart_ckpt(n_index)
+            self.checkpoint = self.l_checkpoints[n_index]
+        if b_clear_history:
+            self.clear_history()
         self.update_state()
 
     def do_restart_previous(self):
@@ -152,6 +165,7 @@ class ReversibleDebugger(Debugger):
                             self.checkpoint.n_index)
         self.reset_on_restart()
         dmtcpmanager.restart_ckpt(self.checkpoint.n_index)
+        self.clear_history()
         self.update_state()
         
     def list_checkpoints(self):
@@ -166,6 +180,10 @@ class ReversibleDebugger(Debugger):
                 l_history.append("*ckpt*")
                 l_history.extend(ckpt.l_history)
         return l_history
+
+    def clear_history(self):
+        """Clear the current checkpoint's history."""
+        del self.checkpoint.l_history[:]
 
     def last_command(self):
         """Return the last command of the current history."""
@@ -264,11 +282,16 @@ class ReversibleDebugger(Debugger):
         # side effects. Example: "print var++"
         return self._print(expr)
 
-    def replay_history(self):
-        """Issue the commands in current checkpoint's history to debugger."""
+    def replay_history(self, l_history=[], n=-1):
+        """Issue the commands in given or current checkpoint's history to
+        debugger."""
+        if len(l_history) == 0:
+            l_history = self.checkpoint.l_history
+        if n == -1:
+            n = len(l_history)
         fredutil.fred_debug("Replaying the following history: %s" % \
-                            str(self.checkpoint.l_history))
-        for cmd in self.checkpoint.l_history:
+                            str(l_history[0:n]))
+        for cmd in l_history[0:n]:
             self.execute_fred_command(cmd)
 
     def trim_non_ignore(self, n):
@@ -301,7 +324,7 @@ class ReversibleDebugger(Debugger):
             else:
                 self.do_restart_previous()
         if b_restart:
-            self.do_restart()
+            self.do_restart(b_clear_history = True)
         # Trim history by n non-ignore commands
         self.trim_non_ignore(n)
         self.replay_history()
@@ -402,8 +425,136 @@ class ReversibleDebugger(Debugger):
         
     def reverse_watch(self, s_expr):
         """Perform 'reverse-watch' command on expression."""
-        fredutil.fred_error("Unimplemented command.")
+        s_expr_val = self._evaluate_expression(s_expr)
+        fredutil.fred_debug("RW: Starting with expr value '%s'" % \
+                            s_expr_val)
+        # Find starting checkpoint using binary search:
+        self._binary_search_checkpoints(s_expr, s_expr_val)
 
+        self.checkpoint.l_history = \
+            self._binary_search_history(self.checkpoint.l_history[:], 0,
+                                        s_expr, s_expr_val)
+
+        self.update_state()
+        fredutil.fred_debug("Reverse watch finished.")
+
+    def _binary_search_checkpoints(self, s_expr, s_expr_val):
+        """Perform binary search over checkpoints to identify interval where
+        expression changes value."""
+        fredutil.fred_debug("Starting binary search for checkpoint interval.")
+        n_right_ckpt = self.checkpoint.n_index
+        if n_right_ckpt == 0:
+            fredutil.fred_debug("Only one checkpoint.")
+            self.do_restart(n_right_ckpt)
+            return
+        n_left_ckpt = 0
+        # Repeat until the interval is 1 checkpoint long. That means the left
+        # checkpoint has the "correct" value and the right one has the
+        # "incorrect" value. "Incorrect" in this case means the same as the
+        # start value.
+        while (n_right_ckpt - n_left_ckpt) != 1:
+            n_diff = (n_right_ckpt - n_left_ckpt) / 2
+            n_new_index = int(math.ceil(n_diff) + n_left_ckpt)
+            self.do_restart(n_new_index)
+            s_expr_new_val = self._evaluate_expression(s_expr)
+            if s_expr_new_val != s_expr_val:
+                # correct
+                n_left_ckpt = n_new_index
+            else:
+                n_right_ckpt = n_new_index
+        # Now n_left_ckpt contains index of the target checkpoint.
+        # Restart and return.
+        fredutil.fred_debug("Found checkpoint: %d" % n_left_ckpt)
+        self.do_restart(n_left_ckpt)
+
+    def _binary_search_history(self, l_history, n_min, s_expr, s_expr_val):
+        """Perform binary search on given history to identify interval where
+        expression changes value."""
+        fredutil.fred_debug("Start binary search on history: %s" % \
+                            str(l_history))
+        n_count = n_max = len(l_history)
+        while n_max - n_min > 1:
+            n_count = (n_min + n_max) / 2
+            self.do_restart(b_clear_history = True)
+            self.replay_history(l_history, n_count)
+            if self._evaluate_expression(s_expr) == s_expr_val:
+                fredutil.fred_debug("Setting max bound %d" % n_count)
+                n_max = n_count
+            else:
+                fredutil.fred_debug("Setting min bound %d" % n_count)
+                n_min = n_count
+        # XXX: deviate here
+        self.do_restart(b_clear_history = True)
+        l_history = l_history[:n_min+1]
+        self.replay_history(l_history, n_min)
+        if n_min == 0 and self._evaluate_expression(s_expr) == s_expr_val:
+            fredutil.fred_error("Reverse-watch failed to search history.")
+            return None
+        fredutil.fred_assert(n_max - n_min == 1)
+        fredutil.fred_debug("Done searching history.")
+        return self._binary_search_expand_history(l_history, s_expr, s_expr_val)
+
+    def _binary_search_expand_history(self, l_history, s_expr, s_expr_val):
+        """On entry, current time is history[0:-1] and expr will change upon
+        executing last command, history[-1]. Last command must be 'c', 'n', or
+        's'.
+        Expands [..., 'c'] -> [..., 'n', ...]
+             or [..., 'n'] -> [..., 's', 'n', ...]
+             
+        Returns history such that s_expr != s_expr_val at end of
+        history, and if 's' were executed, then s_expr_val would be
+        True."""
+        fredutil.fred_debug("Start expanding history: %s" % str(l_history))
+        if l_history[-1].is_step():
+            fredutil.fred_debug("Last command was step.")
+            return l_history
+        fredutil.fred_assert(l_history[-1].is_next() or \
+                             l_history[-1].is_continue())
+        if l_history[-1].is_continue():
+            fredutil.fred_debug("Last command continue.")
+            l_history = \
+                self._binary_search_expand_with_next(l_history[0:-1], s_expr, s_expr_val)
+        while l_history[-1].is_next():
+            l_history[-1] = self._p.get_personality_cmd(fred_step_cmd())
+            self.replay_history([self._p.get_personality_cmd(fred_step_cmd())])
+            if self._evaluate_expression(s_expr) == s_expr_val:
+                # Done: return debugger at time: l_history[0:-1]
+                self.checkpoint.l_history = l_history[0:-1]
+                self.do_restart()
+                self.replay_history()
+                break
+            else:
+                self.do_restart(b_clear_history = True)
+                self.replay_history(l_history)
+                l_history = \
+                    self._binary_search_expand_with_next(l_history, s_expr,
+                                                         s_expr_val)
+        return l_history
+        
+    def _binary_search_expand_with_next(self, l_history, s_expr, s_expr_val):
+        fredutil.fred_debug("Starting expansion with next on %s" % \
+                            str(l_history))
+        n_min = len(l_history)
+        pdb.set_trace()
+        l_expanded_history = [self._p.get_personality_cmd(fred_next_cmd())]
+        self.replay_history(l_expanded_history)
+        l_history += l_expanded_history
+        while self.program_is_running() and \
+              self._evaluate_expression(s_expr) != s_expr_val:
+            self.replay_history(l_expanded_history)
+            n_min = len(l_history)
+            l_history += l_expanded_history
+            l_expanded_history += l_expanded_history
+        fredutil.fred_debug("Done next expansion: %s" % str(l_history))
+        return self._binary_search_history(l_history, n_min, s_expr, s_expr_val)
+
+    def _evaluate_expression(self, s_expr):
+        """Returns sanitized value of expression in debugger. Used by
+        reverse-watch."""
+        s_val = self.do_print(s_expr + "\n")
+        s_val = self._p.sanitize_print_result(s_val)
+        return s_val
+            
 class DebuggerState():
     """Represents the current state of a debugger.
     State of a debugger is represented by:
