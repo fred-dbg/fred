@@ -154,7 +154,7 @@ class ReversibleDebugger(Debugger):
         if self.personality_name() == "gdb":
             self._p.reset_user_code_interval()
 
-    def do_restart(self, b_clear_history=False, n_index=-1):
+    def do_restart(self, n_index=-1, b_clear_history=False):
         """Restart from the current or specified checkpoint."""
         fredutil.fred_debug("Restarting from checkpoint index %d." % \
                             self.checkpoint.n_index)

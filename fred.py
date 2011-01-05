@@ -143,7 +143,8 @@ def handle_fred_command(s_command):
     elif s_command_name in ["checkpoint", "ckpt"]:
         g_debugger.do_checkpoint()
     elif s_command_name == "restart":
-        g_debugger.do_restart()
+        # n_count is a misnomer here: it is really a checkpoint index.
+        g_debugger.do_restart(n_count, b_clear_history=True)
     elif s_command_name in ["reverse-watch", "rw"]:
         g_debugger.reverse_watch(s_command_args)
     elif s_command_name == "source":
