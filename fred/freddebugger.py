@@ -161,7 +161,7 @@ class ReversibleDebugger(Debugger):
         self.reset_on_restart()
         if (n_index == -1):
             # Restart from current checkpoint.
-            dmtcpmanager.restart_last_ckpt()
+            dmtcpmanager.restart_ckpt(self.checkpoint.n_index)
         else:
             dmtcpmanager.restart_ckpt(n_index)
             self.checkpoint = self.l_checkpoints[n_index]
