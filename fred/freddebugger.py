@@ -70,6 +70,17 @@ class Debugger():
         """Perform 'print expr' command. Returns output."""
         return self._p.do_print(expr)
 
+    def at_breakpoint(self):
+        """Return True if debugger is currently on a breakpoint."""
+        bt_frame = self._p.current_position()
+        self.update_state()
+        for breakpoint in self.state().l_breakpoints:
+            if breakpoint.s_function == bt_frame.s_function and \
+               breakpoint.s_file == bt_frame.s_file and \
+               breakpoint.n_line == bt_frame.n_line:
+                return True
+        return False
+
     def state(self):
         """Return the DebuggerState representing the current state of
         the debugger."""
@@ -408,43 +419,43 @@ class ReversibleDebugger(Debugger):
 
     def reverse_step(self, n=1):
         """Perform n 'reverse-step' commands."""
-        if n != 1:
-            fredutil.fred_fatal("Unimplemented.")
-        self.update_state()
-        orig_state = self.state().copy()
-        debug_loop_counter = 0
-        while True:
-            debug_loop_counter += 1
-            fredutil.fred_debug("RS: LOOP ITERATION %d" % debug_loop_counter)
-            if self.state().level() > orig_state.level():
-                fredutil.fred_debug("RS: DEEPER")
-                self.do_next()
-                if self.state() == orig_state:
-                    self.undo()
-                    break
-            elif self.state().level() < orig_state.level():
-                fredutil.fred_debug("RS: SHALLOWER")
-                self.do_step()
-            else:
-                fredutil.fred_debug("RS: SAME")
-                if self.state() == orig_state:
-                    fredutil.fred_debug("RS: AT ORIG STATE")
-                    if self.last_command().is_step():
-                        fredutil.fred_debug("RS: AFTER STEP")
+        while n > 0:
+            n -= 1
+            self.update_state()
+            orig_state = self.state().copy()
+            debug_loop_counter = 0
+            while True:
+                debug_loop_counter += 1
+                fredutil.fred_debug("RS: LOOP ITERATION %d" % debug_loop_counter)
+                if self.state().level() > orig_state.level():
+                    fredutil.fred_debug("RS: DEEPER")
+                    self.do_next()
+                    if self.state() == orig_state:
                         self.undo()
                         break
-                    else:
-                        fredutil.fred_debug("RS: NOT AFTER STEP")
-                        self.undo()
-                        self.do_step()
-                else:
-                    fredutil.fred_debug("RS: NOT AT ORIG STATE")
-                    # TODO: This is a very inefficient implementation.
+                elif self.state().level() < orig_state.level():
+                    fredutil.fred_debug("RS: SHALLOWER")
                     self.do_step()
+                else:
+                    fredutil.fred_debug("RS: SAME")
                     if self.state() == orig_state:
-                        continue
-                    self.undo()
-                    self.do_next()
+                        fredutil.fred_debug("RS: AT ORIG STATE")
+                        if self.last_command().is_step():
+                            fredutil.fred_debug("RS: AFTER STEP")
+                            self.undo()
+                            break
+                        else:
+                            fredutil.fred_debug("RS: NOT AFTER STEP")
+                            self.undo()
+                            self.do_step()
+                    else:
+                        fredutil.fred_debug("RS: NOT AT ORIG STATE")
+                        # TODO: This is a very inefficient implementation.
+                        self.do_step()
+                        if self.state() == orig_state:
+                            continue
+                        self.undo()
+                        self.do_next()
                     
         self.update_state()
         fredutil.fred_debug("Reverse step finished.")
@@ -459,8 +470,50 @@ class ReversibleDebugger(Debugger):
         fredutil.fred_debug("Reverse finish finished.")
         
     def reverse_continue(self):
-        """Perform 'reverse-continue' command."""
-        fredutil.fred_error("Unimplemented command.")
+        """Perform 'reverse-continue' command.
+
+        REVERSE CONTINUE():
+          BEGIN: Restore last checkpoint
+          Reply commands until ORIG_STATE
+          if N (> 0) previous breakpoint(s) found
+            Restore last checkpoint and replay until breakpoint N
+          If no previous breakpoint found,
+            set ORIG_STATE to state (time) as of last checkpoint
+            Restore checkpoint previous to last checkpoint
+            GOTO BEGIN
+        """
+        self.update_state()
+        orig_state = self.state().copy()
+        n_to_restart = self.checkpoint.n_index
+        n_breakpoints_found = 0
+        b_finished = False
+        while True:
+            if b_finished:
+                break
+            self.do_restart(n_to_restart)
+            for cmd in self.checkpoint.l_history:
+                self.execute_fred_command(cmd)
+                if self.at_breakpoint():
+                    n_breakpoints_found += 1
+            if n_breakpoints_found > 0:
+                n_recount = 0
+                self.do_restart(n_to_restart)
+                for i in range(0,len(self.checkpoint.l_history)):
+                    cmd = self.checkpoint.l_history[i]
+                    self.execute_fred_command(cmd)
+                    if self.at_breakpoint():
+                        n_recount += 1
+                    if n_recount == n_breakpoints_found:
+                        del self.checkpoint.l_history[i+1:]
+                        b_finished = True
+                        break
+            else:
+                n_to_restart -= 1
+                if n_to_restart < 0:
+                    fredutil.fred_error("Reverse-continue failed.")
+                    break
+        self.update_state()
+        fredutil.fred_debug("Reverse continue finished.")
         
     def reverse_watch(self, s_expr):
         """Perform 'reverse-watch' command on expression."""

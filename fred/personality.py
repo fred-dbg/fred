@@ -21,6 +21,7 @@
 
 import fredio
 import freddebugger
+import fredutil
 
 import re
 
@@ -34,6 +35,8 @@ class Personality:
         self.GS_WHERE = None
         self.GS_INFO_BREAKPOINTS = None
         self.GS_PRINT = None
+        self.GS_FINISH = None
+        self.GS_CURRENT_POS = None
 
         self.gs_next_re = None
         self.gs_step_re = None
@@ -42,14 +45,21 @@ class Personality:
         self.gs_where_re = None
         self.gs_info_breakpoints_re = None
         self.gs_print_re = None
+        self.gs_program_not_running_re = None
 
         self.GS_PROMPT = None
         self.gre_prompt = None
         self.gre_backtrace_frame = None
         self.gre_breakpoint = None
+        # List of regexes that match debugger prompts for user input:
         self.ls_needs_user_input = []
+        # Things like 'next 5' are allowed:
         self.b_has_count_commands = False
         self.b_coalesce_support = False
+        # List index which is the topmost frame in a backtrace. Will be 0 for
+        # gdb and -1 for python, because of the way they order their
+        # backtraces. -2 is to check for initialization.
+        self.n_top_backtrace_frame = -2
         
     def get_backtrace(self):
         """Return a Backtrace object representing the current backtrace."""
@@ -68,6 +78,11 @@ class Personality:
             l_breakpoints.append(self._parse_one_breakpoint(l_matches[i]))
         return l_breakpoints
 
+    def _parse_one_breakpoint(self, match_obj):
+        """Return a Breakpoint from the given re Match object.
+        The Match object should be a tuple (the result of gre_breakpoint)."""
+        fredutil.fred_assert(False, "Must be implemented in subclass.")
+        
     def _parse_backtrace(self, where_str):
         """Return a Backtrace instance parsed from output of 'where' cmd."""
         backtrace = re.sub(self.gre_prompt, '', where_str)
@@ -80,6 +95,11 @@ class Personality:
         bt.l_frames = frame_list
         return bt
 
+    def _parse_backtrace_frame(self, match_obj):
+        """Return a BacktraceFrame from the given re Match object.
+        The Match object should be a tuple (result of gre_backtrace_frame.)"""
+        fredutil.fred_assert(False, "Must be implemented in subclass.")
+        
     def do_next(self, n):
         """Perform n 'next' commands. Returns output."""
         return fredio.get_child_response(self.GS_NEXT + " " + str(n) + "\n",
@@ -113,6 +133,12 @@ class Personality:
         """Perform 'print expr' command. Returns output."""
         return fredio.get_child_response(self.GS_PRINT + " " + str(expr) + "\n",
                                          b_wait_for_prompt=True)
+
+    def current_position(self):
+        """Return a BacktraceFrame representing current debugger position."""
+        bt = self.get_backtrace()
+        fredutil.fred_assert(self.n_top_backtrace_frame != -2)
+        return bt.l_frames[self.n_top_backtrace_frame]
 
     def contains_prompt_str(self, string):
         """Return True if given string matches the prompt string."""
