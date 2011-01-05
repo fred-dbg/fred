@@ -379,6 +379,10 @@ def restart_ckpt(index):
     currentCkptIndex = index
     childInTransition = False
 
+def erase_checkpoints(n_start_idx, n_end_idx):
+    """Erase the given interval of checkpoints (inclusive)."""
+    pass
+
 def getProgramNameFromCkpt(name):
     ''' Returns the program name from the given checkpoint filename. '''
     # TODO: consolidate into one regular expression

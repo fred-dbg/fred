@@ -176,7 +176,6 @@ class ReversibleDebugger(Debugger):
                             self.checkpoint.n_index)
         self.reset_on_restart()
         dmtcpmanager.restart_ckpt(self.checkpoint.n_index)
-        self.clear_history()
         self.update_state()
         
     def list_checkpoints(self):
@@ -358,14 +357,21 @@ class ReversibleDebugger(Debugger):
                 n -= 1
             self.checkpoint.l_history.pop()
 
+    def number_non_ignore_cmds(self):
+        """Return the number of non-ignore cmds from current history."""
+        n = 0
+        for cmd in self.checkpoint.l_history:
+            if not cmd.b_ignore:
+                n += 1 if not cmd.b_count_cmd else cmd.count()
+        return n
+
     def undo(self, n=1):
         """Undo the last n commands."""
         b_restart = True
         fredutil.fred_debug("Undoing %d command(s)." % n)
-        while len(self.checkpoint.l_history) == 0 or \
-              n > len(self.checkpoint.l_history):
+        while n > self.number_non_ignore_cmds():
             b_restart = False
-            n -= len(self.checkpoint.l_history)
+            n -= self.number_non_ignore_cmds()
             # Back up to previous checkpoint
             if self.checkpoint.previous == None:
                 fredutil.fred_error("No undo possible (empty command history "
@@ -378,6 +384,10 @@ class ReversibleDebugger(Debugger):
         # Trim history by n non-ignore commands
         self.trim_non_ignore(n)
         self.replay_history()
+        # Erase everything from the future:
+        dmtcpmanager.erase_checkpoints(self.checkpoint.n_index+1,
+                                       len(self.l_checkpoints))
+        del self.l_checkpoints[self.checkpoint.n_index+1:]
         self.update_state()
         fredutil.fred_debug("Done undoing %d command(s)." % n)
 
