@@ -329,7 +329,7 @@ def setupCheckpointSupportFiles(index):
                 dprint("Replacing old log %s in favor of new (patched) log %s" \
                        % (oldLog, full_path))
                 os.remove(oldLog)
-                os.rename(full_path, oldLog)
+                shutil.move(full_path, oldLog)
             # Create a new symlink for the target index's sync log:
             dprint("Symlinking %s to %s." % (DMTCP_MANAGER_ROOT + logfile, full_path))
             os.symlink(DMTCP_MANAGER_ROOT + logfile, full_path)
@@ -415,7 +415,7 @@ def updateHousekeeping(filename):
         # Add counter and move to DMTCP_MANAGER_ROOT
         dprint("Renaming \"%s\" to \"%s.%d\"" % (filename,
                DMTCP_MANAGER_ROOT + filename, ckptCounter))
-        os.rename(filename, "%s.%d" % (DMTCP_MANAGER_ROOT+filename, ckptCounter))
+        shutil.move(filename, "%s.%d" % (DMTCP_MANAGER_ROOT+filename, ckptCounter))
     else:
         dprint("File %s does not exist; skipping." % filename)
         return
@@ -445,7 +445,7 @@ def updateOpenFilesHousekeeping(filename):
         # Add counter and move to DMTCP_MANAGER_ROOT
         dprint("Renaming \"%s\" to \"%s.%d\"" % (filename,
                DMTCP_MANAGER_ROOT + filename, ckptCounter))
-        os.rename(filename, "%s.%d" % (DMTCP_MANAGER_ROOT+filename, ckptCounter))
+        shutil.move(filename, "%s.%d" % (DMTCP_MANAGER_ROOT+filename, ckptCounter))
     else:
         dprint("File %s does not exist; skipping." % filename)
         return
@@ -508,7 +508,7 @@ def updateSyncHousekeeping(filename):
         # Not a link; this must be the first checkpoint
         dprint("Renaming \"%s\" to \"%s.%d\"" % \
                (full_filename, DMTCP_MANAGER_ROOT + filename, ckptCounter))
-        os.rename(full_filename,
+        shutil.move(full_filename,
                   "%s.%d" % (DMTCP_MANAGER_ROOT + filename, ckptCounter))
     # Leave a symlink for DMTCP to write to
     dprint("Symlinking %s.%d to %s" % \
