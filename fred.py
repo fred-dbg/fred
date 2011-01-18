@@ -118,16 +118,14 @@ def fred_command_help():
 
 def is_quit_command(s_command):
     """Return True if s_command is a debugger 'quit' command."""
-    return s_command in ["q", "quit"]
+    return s_command in ["q", "quit", "exit"]
 
 def handle_fred_command(s_command):
     """Performs handling of 'special' (non-debugger) commands."""
     global g_debugger, GS_FRED_COMMAND_PREFIX
     s_command = s_command.replace(GS_FRED_COMMAND_PREFIX, "")
     (s_command_name, sep, s_command_args) = s_command.partition(' ')
-    n_count = fredutil.to_int(s_command_args)
-    if n_count == 0:
-        n_count = 1
+    n_count = fredutil.to_int(s_command_args, 1)
     if is_quit_command(s_command_name):
         fredutil.fred_quit(0)
     elif s_command_name == "undo":
@@ -175,7 +173,7 @@ def source_from_file(s_filename):
        if is_fred_command(s_line):
           handle_fred_command(s_line)
        else:
-          fredio.send_command_blocking(s_line)
+          fredio.send_command(s_line)
           g_debugger.log_command(s_line)
    f.close()
    fredutil.fred_debug("Finished sourcing from file '%s'" % s_filename)
@@ -252,18 +250,14 @@ def main_io_loop():
             # command again. We want to preserve that functionality for fred
             # commands too.
             if s_command == '':
-                if is_fred_command(s_last_command):
-                    handle_fred_command(s_last_command)
-                else:
-                    fredio.send_command_blocking(s_last_command)
-                    g_debugger.log_command(s_last_command)
+                s_command = s_last_command
+            if is_fred_command(s_command):
+                handle_fred_command(s_command)
+                # TODO: Currently we do not log fred commands. Do we need to?
             else:
-                if is_fred_command(s_command):
-                    handle_fred_command(s_command)
-                else:
-                    fredio.send_command_blocking(s_command)
-                    g_debugger.log_command(s_command)
-                s_last_command = s_command
+                fredio.send_command(s_command)
+                g_debugger.log_command(s_command)
+            s_last_command = s_command
         except KeyboardInterrupt:
             fredio.signal_child(signal.SIGINT)
 

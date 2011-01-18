@@ -43,8 +43,6 @@ def last_n(s, source, n):
     """
     return (s+source)[-n:]
 
-
-
 def fred_info(message):
     """Print an info message to the screen with a fred-specific prefix."""
     sys.stdout.write("FReD: %s\n" % message)
@@ -52,15 +50,14 @@ def fred_info(message):
 
 def fred_error(message):
     """Print an error message to the screen with a fred-specific prefix."""
-    sys.stderr.write("FReD: %s\n" % message)
+    sys.stderr.write("FReD error: %s\n" % message)
     sys.stderr.flush()
 
 def fred_fatal(message):
     """Kill FReD with given message."""
     sys.stderr.write("FReD fatal error: %s\n" % message)
     sys.stderr.flush()
-    
-    sys.exit(1)
+    fred_quit(1)
 
 def fred_debug(msg):
     """Print the given debug message."""
@@ -68,7 +65,7 @@ def fred_debug(msg):
     if GB_DEBUG:
         caller_name = os.path.basename(sys._getframe(1).f_code.co_filename)
         caller_lineno = sys._getframe(1).f_lineno
-        # Prints name of function and line number making call to dprint()
+        # Prints name of file and line number making call to dprint()
         print "[fred-debug] %s:%d - %s" % (caller_name, caller_lineno, msg)
 
 def fred_assert(b_expr, msg="Assertion failed."):

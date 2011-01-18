@@ -235,15 +235,16 @@ def get_command():
     return raw_input(g_print_prompt_function()).strip()
     #return raw_input("!").strip()
 
-def send_command(command):
-    """Send a command to the child process."""
+def send_command_nonblocking(command):
+    """Send a command to the child process, and do not wait for prompt."""
     send_child_input(command+'\n')
 
-def send_command_blocking(command):
+def send_command(command):
     """Send a command to the child process and wait for the prompt."""
-    global gb_prompt_ready
+    global gb_prompt_ready, gb_need_user_input
     send_child_input(command+'\n')
     gb_prompt_ready = False
+    gb_need_user_input = False
     wait_for_prompt()
     
 def reexec(argv):
