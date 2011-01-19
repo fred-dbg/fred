@@ -21,9 +21,11 @@
 # along with FReD.  If not, see <http://www.gnu.org/licenses/>.               #
 ###############################################################################
 
-
+import sys
 import fredapp
 import fred.fredutil
+import fred.dmtcpmanager
+import fred.fredio
 
 """
 This file should be executable from the command line to run several integration and unit tests on FReD.
@@ -41,25 +43,15 @@ g_debugger = None
 
 def run_all_tests():
     """Run all available test suites."""
+    print "%-30s | %-15s" % ("Test name", "Result")
+    print "-" * 31 + "+" + "-" * 15
+    # TODO: This is hackish.
+    fred.fredio.gb_hide_output = True
     run_integration_tests()
     run_unit_tests()
-    print_aggregate_test_results()
 
 def print_aggregate_test_results():
     """Print a tabulized summary of test results."""
-    global gd_test_results
-    print "%-30s | %-15s" % ("Test name", "Result")
-    print "-" * 31 + "+" + "-" * 15
-    for s_test_name in gd_test_results.keys():
-        print "%-30s | %-15s" % (s_test_name, gd_test_results[s_test_name])
-
-"""
-Special commands:
-  store-variable('solution') will do the following:
-    saved{'solution'} = sanitize_print_result(get_child_response("p solution"))
-  check-stored-variable('solution') will do:
-    return saved{'solution'} == sanitize_print_result(get_child_response("p solution"))
-"""
 
 def start_session(l_cmd):
     """Start the given command line as a fred session."""
@@ -70,6 +62,7 @@ def end_session():
     """End the current debugger session."""
     global g_debugger
     fred.fredutil.fred_teardown()
+    fred.dmtcpmanager.manager_quit()
     g_debugger = None
 
 def execute_commands(l_cmds):
@@ -88,17 +81,23 @@ def check_stored_variable(s_name):
 
 def run_integration_tests():
     """Run all available integration tests."""
+    gdb_record_replay(2)
+    
+def gdb_record_replay(n_count=1):
     global gd_test_results
     l_cmd = ["gdb", "../test-programs/pthread-test"]
-    start_session(l_cmd)
-    execute_commands(["b main", "r", "fred-ckpt", "c"])
-    store_variable("solution")
-    execute_commands(["fred-restart", "c"])
-    if check_stored_variable("solution"):
-        gd_test_results["gdb record/replay"] = GS_PASSED_STRING
-    else:
-        gd_test_results["gdb record/replay"] = GS_FAILED_STRING
-    end_session()
+    for i in range(0, n_count):
+        print "%-30s | " % ("gdb record/replay " + str(i)),
+        sys.stdout.flush()
+        start_session(l_cmd)
+        execute_commands(["b main", "r", "fred-ckpt", "c"])
+        store_variable("solution")
+        execute_commands(["fred-restart", "c"])
+        if check_stored_variable("solution"):
+            print GS_PASSED_STRING
+        else:
+            print GS_FAILED_STRING
+        end_session()
 
 def run_unit_tests():
     """Run all available unit tests."""

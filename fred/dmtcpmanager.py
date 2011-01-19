@@ -63,6 +63,23 @@ currentCkptIndex           = -1
 numCheckpoints             = 0
 # ---------- End of Global variables
 
+def initialize_global_variables():
+    global childInTransition, ckptListFilePaths, openFilesListPaths, \
+           synchronizationLogListFiles, ckptIndexFilePath, ckptCounter, \
+           currentCkptIndex, numCheckpoints
+    childInTransition           = False # Child in irregular state
+    ckptListFilePaths           = [] # List of checkpoint list files
+    openFilesListPaths          = []
+    synchronizationLogListFiles = []
+    # Path to the checkpoint index file (contains total # of ckpt files)
+    ckptIndexFilePath           = ""
+    # Counter variable to append to ckpt files
+    ckptCounter                = -1
+    # The current checkpoint index
+    currentCkptIndex           = -1
+    # The global number of checkpoints
+    numCheckpoints             = 0
+
 class DMTCPManager:
     ''' This class manages all interaction with DMTCP (through "dmtcp_command"
         commands)'''
@@ -89,8 +106,6 @@ class DMTCPManager:
                 dprint("Got NUM_PEERS from DMTCP: " + numPeers)
                 return int(numPeers)
             else:
-                fredutil.fred_error("ERROR: Can't parse NUM_PEERS= output "
-                                    "from coordinator")
                 if output == "":
                     fredutil.fred_error("Output was NULL string")
                 return 0  # Heuristically guessing 0 peers, could be a problem
@@ -200,6 +215,8 @@ def manager_quit():
     childInTransition = True
     DMTCPManager.killPeers()
     remove_manager_root()
+    # Needed for fredtest.py multiple sessions:
+    initialize_global_variables()
     
 def initializeFiles(firstName):
     ''' Initalizes housekeeping files and directories. '''

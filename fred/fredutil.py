@@ -45,8 +45,10 @@ def last_n(s, source, n):
 
 def fred_info(message):
     """Print an info message to the screen with a fred-specific prefix."""
-    sys.stdout.write("FReD: %s\n" % message)
-    sys.stdout.flush()
+    # TODO: This is hackish:
+    if not fredio.gb_hide_output:
+        sys.stdout.write("FReD: %s\n" % message)
+        sys.stdout.flush()
 
 def fred_error(message):
     """Print an error message to the screen with a fred-specific prefix."""
