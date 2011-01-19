@@ -160,23 +160,33 @@ def handle_fred_command(s_command):
         fredutil.fred_error("Unknown FReD command '%s'" % s_command_name)
 
 def source_from_file(s_filename):
-   """Execute commands from given file."""
-   fredutil.fred_debug("Start sourcing from file '%s'" % s_filename)
-   try:
-       f = open(s_filename)
-   except IOError as (errno, strerror):
-       fredutil.fred_error("Error opening source file '%s': %s" % \
+    """Execute commands from given file."""
+    fredutil.fred_debug("Start sourcing from file '%s'" % s_filename)
+    try:
+        f = open(s_filename)
+    except IOError as (errno, strerror):
+        fredutil.fred_error("Error opening source file '%s': %s" % \
                            (s_filename, strerror))
-       return
-   for s_line in f:
-       s_line = s_line.strip()
-       if is_fred_command(s_line):
-          handle_fred_command(s_line)
-       else:
-          fredio.send_command(s_line)
-          g_debugger.log_command(s_line)
-   f.close()
-   fredutil.fred_debug("Finished sourcing from file '%s'" % s_filename)
+        return
+    for s_line in f:
+        s_line = s_line.strip()
+        if is_fred_command(s_line):
+            handle_fred_command(s_line)
+        else:
+            fredio.send_command(s_line)
+            g_debugger.log_command(s_line)
+    f.close()
+    fredutil.fred_debug("Finished sourcing from file '%s'" % s_filename)
+
+def source_from_list(ls_cmds):
+    """Execute commands from given list."""
+    for s_cmd in ls_cmds:
+        s_cmd = s_cmd.strip()
+        if is_fred_command(s_cmd):
+            handle_fred_command(s_cmd)
+        else:
+            fredio.send_command(s_cmd)
+            g_debugger.log_command(s_cmd)
 
 def is_fred_command(s_command):
     """Return True if the given command needs special handling."""
@@ -197,6 +207,13 @@ def set_up_debugger(s_debugger_name):
         fredutil.fred_fatal("Unimplemented debugger '%s'" % s_debugger_name)
     return (g_debugger.get_find_prompt_function(),
             g_debugger.get_prompt_string_function())
+
+def setup_environment_variables(s_dmtcp_port="7779", b_debug=False):
+    """Set up the given environment variables."""
+    os.environ['DMTCP_PORT'] = s_dmtcp_port
+    if b_debug:
+        fredutil.GB_DEBUG = True
+    os.environ['DMTCP_TMPDIR'] = GS_FRED_TMPDIR
 
 def parse_program_args():
     """Initialize command line options, and parse them.
@@ -221,10 +238,7 @@ def parse_program_args():
     if options.source_script != None:
         # Source script executed from main_io_loop().
         g_source_script = options.source_script
-    os.environ['DMTCP_PORT'] = str(options.dmtcp_port)
-    if options.debug == True:
-        fredutil.GB_DEBUG = True
-    os.environ['DMTCP_TMPDIR'] = GS_FRED_TMPDIR
+    setup_environment_variables(str(options.dmtcp_port), options.debug)
     return l_args
 
 def interactive_debugger_setup():
@@ -274,13 +288,17 @@ def cleanup_fred_files():
     remove_fred_tmpdir()
     dmtcpmanager.remove_manager_root()
 
-def main():
-    """Program execution starts here."""
+def fred_setup(l_cmd=[]):
+    """Perform any setup needed by FReD before entering an I/O loop."""
     global g_debugger
     # Remove any files from a previous run:
     cleanup_fred_files()
-    # Parse arguments
-    l_cmd = parse_program_args()
+    # Parse arguments, if none were provided.
+    if len(l_cmd) == 0:
+        l_cmd = parse_program_args()
+    else:
+        # Command provided: set up env vars with default values.
+        setup_environment_variables()
     # Set up the FReD global debugger
     (find_prompt_fnc, print_prompt_fnc) = set_up_debugger(l_cmd[0])
     # Set up I/O handling (with appropriate find_prompt())
@@ -289,6 +307,12 @@ def main():
                  l_cmd)
     # Set up DMTCP manager
     dmtcpmanager.start(l_cmd, int(os.environ['DMTCP_PORT']))
+    # We return the debugger instance for the sole purpose of fredtest.py.
+    return g_debugger
+
+def main():
+    """Program execution starts here."""
+    fred_setup()
     # Main input/output loop
     main_io_loop()
     # If we get here, quit.

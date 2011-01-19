@@ -535,7 +535,7 @@ class ReversibleDebugger(Debugger):
         
     def reverse_watch(self, s_expr):
         """Perform 'reverse-watch' command on expression."""
-        s_expr_val = self._evaluate_expression(s_expr)
+        s_expr_val = self.evaluate_expression(s_expr)
         fredutil.fred_debug("RW: Starting with expr value '%s'" % \
                             s_expr_val)
         # Find starting checkpoint using binary search:
@@ -566,7 +566,7 @@ class ReversibleDebugger(Debugger):
             n_diff = (n_right_ckpt - n_left_ckpt) / 2
             n_new_index = int(math.ceil(n_diff) + n_left_ckpt)
             self.do_restart(n_new_index)
-            s_expr_new_val = self._evaluate_expression(s_expr)
+            s_expr_new_val = self.evaluate_expression(s_expr)
             if s_expr_new_val != s_expr_val:
                 # correct
                 n_left_ckpt = n_new_index
@@ -587,7 +587,7 @@ class ReversibleDebugger(Debugger):
             n_count = (n_min + n_max) / 2
             self.do_restart(b_clear_history = True)
             self.replay_history(l_history, n_count)
-            if self._evaluate_expression(s_expr) == s_expr_val:
+            if self.evaluate_expression(s_expr) == s_expr_val:
                 fredutil.fred_debug("Setting max bound %d" % n_count)
                 n_max = n_count
             else:
@@ -597,7 +597,7 @@ class ReversibleDebugger(Debugger):
         self.do_restart(b_clear_history = True)
         l_history = l_history[:n_min+1]
         self.replay_history(l_history, n_min)
-        if n_min == 0 and self._evaluate_expression(s_expr) == s_expr_val:
+        if n_min == 0 and self.evaluate_expression(s_expr) == s_expr_val:
             fredutil.fred_error("Reverse-watch failed to search history.")
             return None
         fredutil.fred_assert(n_max - n_min == 1)
@@ -627,7 +627,7 @@ class ReversibleDebugger(Debugger):
         while l_history[-1].is_next():
             l_history[-1] = self._p.get_personality_cmd(fred_step_cmd())
             self.replay_history([self._p.get_personality_cmd(fred_step_cmd())])
-            if self._evaluate_expression(s_expr) == s_expr_val:
+            if self.evaluate_expression(s_expr) == s_expr_val:
                 # Done: return debugger at time: l_history[0:-1]
                 self.checkpoint.l_history = l_history[0:-1]
                 self.do_restart()
@@ -649,7 +649,7 @@ class ReversibleDebugger(Debugger):
         self.replay_history(l_expanded_history)
         l_history += l_expanded_history
         while self.program_is_running() and \
-              self._evaluate_expression(s_expr) != s_expr_val:
+              self.evaluate_expression(s_expr) != s_expr_val:
             self.replay_history(l_expanded_history)
             n_min = len(l_history)
             l_history += l_expanded_history
@@ -657,9 +657,8 @@ class ReversibleDebugger(Debugger):
         fredutil.fred_debug("Done next expansion: %s" % str(l_history))
         return self._binary_search_history(l_history, n_min, s_expr, s_expr_val)
 
-    def _evaluate_expression(self, s_expr):
-        """Returns sanitized value of expression in debugger. Used by
-        reverse-watch."""
+    def evaluate_expression(self, s_expr):
+        """Returns sanitized value of expression in debugger."""
         s_val = self.do_print(s_expr + "\n")
         s_val = self._p.sanitize_print_result(s_val)
         return s_val

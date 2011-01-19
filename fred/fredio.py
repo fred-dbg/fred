@@ -32,6 +32,9 @@ import threading
 
 import fredutil
 
+# Function beginning with an underscore ('_') should not be used outside of
+# this module.
+
 # Maximum length of a prompt string (from any debugger)
 GN_MAX_PROMPT_LENGTH = 32
 # Maximum length of a string for requesting additional user input
@@ -65,7 +68,7 @@ class ThreadedOutput(threading.Thread):
         # Used to detect when debugger needs additional user input
         last_printed_need_input = ""
         while 1:
-            output = get_child_output()
+            output = _get_child_output()
             if output != None:
                 last_printed = fredutil.last_n(last_printed, output,
                                                GN_MAX_PROMPT_LENGTH)
@@ -75,8 +78,8 @@ class ThreadedOutput(threading.Thread):
                 if gb_capture_output:
                     gs_captured_output += output
                     if gb_capture_output_multi_page:
-                        if match_needs_user_input(last_printed_need_input):
-                            send_child_input("\n")
+                        if _match_needs_user_input(last_printed_need_input):
+                            _send_child_input("\n")
                     if gb_capture_output_til_prompt:
                         if g_find_prompt_function(last_printed):
                             g_capture_output_event.set()
@@ -89,21 +92,21 @@ class ThreadedOutput(threading.Thread):
                     sys.stdout.flush()
             # Always keep these up-to-date:
             gb_prompt_ready = g_find_prompt_function(last_printed)
-            gb_need_user_input = match_needs_user_input(last_printed_need_input)
+            gb_need_user_input = _match_needs_user_input(last_printed_need_input)
 
-def start_output_thread():
+def _start_output_thread():
     """Start the output thread in daemon mode.
     A thread in daemon mode will not be joined upon program exit."""
     o = ThreadedOutput()
     o.daemon = True
     o.start()
 
-def send_child_input(input):
+def _send_child_input(input):
     """Write the given input string to the child process."""
     global gn_child_fd
     os.write(gn_child_fd, input)
         
-def get_child_output():
+def _get_child_output():
     """Read and return a string of output from the child process."""
     global gn_child_fd
     try:
@@ -121,13 +124,13 @@ def wait_for_prompt():
             # Happens when, for example, gdb prints more than one screen,
             # and the user must press 'return' to continue printing.
             user_input = raw_input().strip()
-            send_child_input(user_input + '\n')
+            _send_child_input(user_input + '\n')
             gb_need_user_input = False
         pass
     # Reset for next time
     gb_prompt_ready = False
 
-def start_output_capture(wait_for_prompt):
+def _start_output_capture(wait_for_prompt):
     """Start recording output from child into global gs_captured_output.
     wait_for_prompt flag will cause all output until the next debugger prompt
     to be saved."""
@@ -137,7 +140,7 @@ def start_output_capture(wait_for_prompt):
     gb_capture_output = True
     g_capture_output_event.clear()
 
-def wait_for_captured_output(b_wait_for_prompt, b_multi_page):
+def _wait_for_captured_output(b_wait_for_prompt, b_multi_page):
     """Wait until output capture is done, and return captured output.
     The actual output capture is done by the output thread, and placed into
     global gs_captured_output. This function resets that global string when
@@ -161,13 +164,13 @@ def get_child_response(s_input, hide=True, b_wait_for_prompt=False,
     global gb_hide_output
     b_orig_hide_state = gb_hide_output
     gb_hide_output = hide
-    start_output_capture(b_wait_for_prompt)
-    send_child_input(s_input)
-    response = wait_for_captured_output(b_wait_for_prompt, b_multi_page)
+    _start_output_capture(b_wait_for_prompt)
+    _send_child_input(s_input)
+    response = _wait_for_captured_output(b_wait_for_prompt, b_multi_page)
     gb_hide_output = b_orig_hide_state
     return response
 
-def set_max_needs_input_length():
+def _set_max_needs_input_length():
     """Sets correct value of gn_max_need_input_length."""
     global gn_max_need_input_length, gls_needs_user_input
     n_max = 0
@@ -176,7 +179,7 @@ def set_max_needs_input_length():
             n_max = len(item)
     gn_max_need_input_length = n_max
 
-def match_needs_user_input(s_str):
+def _match_needs_user_input(s_str):
     """Return True if any regexes in gls_needs_user_input match 's_str'."""
     global gls_needs_user_input
     for item in gls_needs_user_input:
@@ -184,7 +187,7 @@ def match_needs_user_input(s_str):
             return True
     return False
 
-def fred_completer(text, state):
+def _fred_completer(text, state):
     """Custom completer function called when the user presses TAB."""
     s_current_cmd = readline.get_line_buffer()
     # Write partial command+\t to debuggerso it can do the completion.
@@ -193,7 +196,7 @@ def fred_completer(text, state):
     result = result.replace(s_current_cmd, "")
     readline.insert_text(result)
 
-def spawn_child(argv):
+def _spawn_child(argv):
     """Spawn a child process using the given command array."""
     global gn_child_pid, gn_child_fd
     fredutil.fred_debug("Starting child '%s'" % str(argv))
@@ -202,7 +205,7 @@ def spawn_child(argv):
         sys.stderr = sys.stdout
         os.execvp(argv[0], argv)
 
-def kill_child():
+def _kill_child():
     """Kill the child process."""
     global gn_child_fd
     if gn_child_pid == -1:
@@ -237,12 +240,12 @@ def get_command():
 
 def send_command_nonblocking(command):
     """Send a command to the child process, and do not wait for prompt."""
-    send_child_input(command+'\n')
+    _send_child_input(command+'\n')
 
 def send_command(command):
     """Send a command to the child process and wait for the prompt."""
     global gb_prompt_ready, gb_need_user_input
-    send_child_input(command+'\n')
+    _send_child_input(command+'\n')
     gb_prompt_ready = False
     gb_need_user_input = False
     wait_for_prompt()
@@ -250,7 +253,7 @@ def send_command(command):
 def reexec(argv):
     """Replace the current child process with the new given one."""
     fredutil.fred_debug("Replacing current child with '%s'" % str(argv))
-    spawn_child(argv)
+    _spawn_child(argv)
 
 def setup(find_prompt_fnc, print_prompt_fnc, prompt_re, ls_needs_user_input,
           argv):
@@ -261,13 +264,13 @@ def setup(find_prompt_fnc, print_prompt_fnc, prompt_re, ls_needs_user_input,
     g_print_prompt_function = print_prompt_fnc
     gre_prompt = prompt_re
     gls_needs_user_input = ls_needs_user_input
-    set_max_needs_input_length()
+    _set_max_needs_input_length()
     # Enable tab completion (with our own 'completer' function)
     #readline.parse_and_bind('tab: complete')
-    #readline.set_completer(fred_completer)
-    spawn_child(["dmtcp_checkpoint", "--port", os.environ["DMTCP_PORT"]] + argv)
-    start_output_thread()
+    #readline.set_completer(_fred_completer)
+    _spawn_child(["dmtcp_checkpoint", "--port", os.environ["DMTCP_PORT"]] + argv)
+    _start_output_thread()
 
 def teardown():
     """Perform any cleanup associated with FReD exit."""
-    kill_child()
+    _kill_child()

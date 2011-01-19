@@ -103,9 +103,12 @@ def to_int(str, n_default=0):
         return retval
     except ValueError:
         return n_default
-        
-def fred_quit(exit_code):
-    """Perform any necessary cleanup and quits FReD."""
+
+def fred_teardown():
     fred_debug("FReD exiting.")
     fredio.teardown()
+    
+def fred_quit(exit_code):
+    """Perform any necessary cleanup and quits FReD."""
+    fred_teardown()
     sys.exit(exit_code)
