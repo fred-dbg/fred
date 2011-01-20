@@ -268,7 +268,7 @@ def setup(find_prompt_fnc, print_prompt_fnc, prompt_re, ls_needs_user_input,
     # Enable tab completion (with our own 'completer' function)
     #readline.parse_and_bind('tab: complete')
     #readline.set_completer(_fred_completer)
-    _spawn_child(["dmtcp_checkpoint", "--port", os.environ["DMTCP_PORT"]] + argv)
+    _spawn_child(["dmtcp_checkpoint", "--no-gzip", "--port", os.environ["DMTCP_PORT"]] + argv)
     _start_output_thread()
 
 def teardown():
