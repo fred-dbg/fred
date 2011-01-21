@@ -48,9 +48,9 @@ class PersonalityGdb(personality.Personality):
         self.GS_FINISH = "finish"
         self.GS_CURRENT_POS = "where 1"
         
-        self.gs_next_re = fredutil.getRE(self.GS_NEXT, 4) + "|^n"
-        self.gs_step_re = fredutil.getRE(self.GS_STEP, 4) + "|^s"
-        self.gs_continue_re = fredutil.getRE(self.GS_CONTINUE, 4) + "|^c"
+        self.gs_next_re = fredutil.getRE(self.GS_NEXT, 4) + "|^n$|^n\s+.*$"
+        self.gs_step_re = fredutil.getRE(self.GS_STEP, 4) + "|^s$|^s\s+.*$"
+        self.gs_continue_re = fredutil.getRE(self.GS_CONTINUE, 4) + "|^c$"
         self.gs_breakpoint_re = fredutil.getRE(self.GS_BREAKPOINT)
         self.gs_where_re = fredutil.getRE(self.GS_WHERE, 3) + "|^bt"
         self.gs_info_breakpoints_re = \
