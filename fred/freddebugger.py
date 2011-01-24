@@ -345,11 +345,33 @@ class ReversibleDebugger(Debugger):
             l_history = self._copy_fred_commands(self.checkpoint.l_history)
         if n == -1:
             n = len(l_history)
-        l_temp = self._coalesce_history(l_history)
+        l_temp = self.first_n_commands(self._coalesce_history(l_history), n)
         fredutil.fred_debug("Replaying the following history: %s" % \
-                            str(l_temp[0:n]))
-        for cmd in l_temp[0:n]:
+                            str(l_temp))
+        for cmd in l_temp:
             self.execute_fred_command(cmd)
+
+    def first_n_commands(self, l_history, n):
+        """Return the first 'n' commands from given history."""
+        # TODO: Clean this up a bit.
+        l_result = []
+        i = j = 0
+        while i < n:
+            # Make sure we do a copy of the command.
+            l_result.append(l_history[j].copy())
+            if l_history[j].b_count_cmd:
+                count = l_history[j].count()
+                if count != 1:
+                    if i + count < n:
+                        i += count
+                        j += 1
+                        continue
+                    else:
+                        l_result[-1].set_count(n - i)
+                        break
+            i += 1
+            j += 1
+        return l_result
 
     def trim_non_ignore(self, n):
         """Trim last n non-ignore commands.
@@ -594,13 +616,13 @@ class ReversibleDebugger(Debugger):
                 fredutil.fred_debug("Setting min bound %d" % n_count)
                 n_min = n_count
         # XXX: deviate here
+        fredutil.fred_assert(n_max - n_min == 1)
         self.do_restart(b_clear_history = True)
-        l_history = l_history[:n_min+1]
+        l_history = l_history[:n_max]
         self.replay_history(l_history, n_min)
         if n_min == 0 and self.evaluate_expression(s_expr) == s_expr_val:
             fredutil.fred_error("Reverse-watch failed to search history.")
             return None
-        fredutil.fred_assert(n_max - n_min == 1)
         fredutil.fred_debug("Done searching history.")
         return self._binary_search_expand_history(l_history, s_expr, s_expr_val)
 
@@ -661,7 +683,7 @@ class ReversibleDebugger(Debugger):
         """Returns sanitized value of expression in debugger."""
         s_val = self.do_print(s_expr + "\n")
         s_val = self._p.sanitize_print_result(s_val)
-        return s_val
+        return s_val.strip()
             
 class DebuggerState():
     """Represents the current state of a debugger.
