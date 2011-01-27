@@ -95,6 +95,8 @@ GS_FRED_TMPDIR = '/tmp/fred.' + os.environ['USER']
 # The global ReversibleDebugger instance.
 g_debugger = None
 g_source_script = None
+gb_record_commands = False
+gf_command_record_file = None
 ######################## End Global Variables #################################
 
 def fred_command_help():
@@ -113,6 +115,9 @@ def fred_command_help():
   fred-list:                  List the available checkpoint files.
   fred-help:                  Display this help message.
   fred-history:               Display your command history up to this point.
+  fred-debug:                 (*Experts only) Drop into a pdb prompt for FReD.
+  fred-start-record <FILE>:   Start recording your commands, writing to FILE.
+  fred-stop-record:           Stop a running recording session.
 """
    sys.stdout.flush()
 
@@ -156,6 +161,10 @@ def handle_fred_command(s_command):
         print g_debugger.history()
     elif s_command_name == "debug":
         pdb.set_trace()
+    elif s_command_name == "start-record":
+       start_command_recording(s_command_args)
+    elif s_command_name == "stop-record":
+       stop_command_recording()
     else:
         fredutil.fred_error("Unknown FReD command '%s'" % s_command_name)
 
@@ -187,6 +196,27 @@ def source_from_list(ls_cmds):
         else:
             fredio.send_command(s_cmd)
             g_debugger.log_command(s_cmd)
+
+def start_command_recording(s_filename):
+    """Start recording all user commands to file."""
+    global gb_record_commands, gf_command_record_file
+    fredutil.fred_info("Starting command recording to file '%s'" % s_filename)
+    try:
+       gf_command_record_file = open(s_filename, 'a')
+       gb_record_commands = True
+    except IOError as e:
+       fredutil.fred_error("Could not open file '%s': %s" %
+                           (s_filename, str(e)))
+
+def stop_command_recording():
+    """Stop recording all user commands."""
+    global gb_record_commands, gf_command_record_file
+    if not gb_record_commands:
+       fredutil.fred_info("Commands were not being recorded.")
+       return
+    fredutil.fred_info("Stopped command recording.")
+    gf_command_record_file.close()
+    gb_record_commands = False
 
 def is_fred_command(s_command):
     """Return True if the given command needs special handling."""
@@ -253,7 +283,7 @@ def interactive_debugger_setup():
 
 def main_io_loop():
     """Main I/O loop to get and handle user commands."""
-    global g_source_script
+    global g_source_script, gb_record_commands, gf_command_record_file
     fredio.wait_for_prompt()
     interactive_debugger_setup()
     while 1:
@@ -265,6 +295,8 @@ def main_io_loop():
             # commands too.
             if s_command == '':
                 s_command = s_last_command
+            if gb_record_commands:
+                gf_command_record_file.write(s_command + '\n')
             if is_fred_command(s_command):
                 handle_fred_command(s_command)
                 # TODO: Currently we do not log fred commands. Do we need to?
