@@ -23,12 +23,17 @@ import pdb
 import os
 import re
 import sys
+import time
 
 import fredio
 
 # Legal characters for a file path
 GS_FILE_PATH_RE = "[/a-zA-Z0-9_\-\.]+"
 GB_DEBUG = False
+# Set to true to enable timings display.
+# Internal use only -- no command line switch.
+GB_ENABLE_TIMINGS = False
+gd_timers = {}
 
 def last_n(s, source, n):
     """ Return the last n characters of the concatenation of s+source.
@@ -45,7 +50,8 @@ def last_n(s, source, n):
 
 def fred_info(message):
     """Print an info message to the screen with a fred-specific prefix."""
-    # TODO: This is hackish:
+    # TODO: This is hackish. Needed for testing framework to hide info messages
+    # during integration tests.
     if not fredio.gb_hide_output:
         sys.stdout.write("FReD: %s\n" % message)
         sys.stdout.flush()
@@ -75,6 +81,22 @@ def fred_assert(b_expr, msg="Assertion failed."):
     if not b_expr:
         fred_error(msg)
         pdb.set_trace()
+
+def fred_timer_start(s_timer_name):
+    """Start a timer with the given name."""
+    global GB_ENABLE_TIMINGS, gd_timers
+    if GB_ENABLE_TIMINGS:
+	gd_timers[s_timer_name] = time.time()
+        fred_debug("Starting timer '%s'." % s_timer_name)
+
+def fred_timer_stop(s_timer_name):
+    """Stop timer with the given name and report duration."""
+    global GB_ENABLE_TIMINGS, gd_timers
+    if GB_ENABLE_TIMINGS:
+	n_stop_time = time.time()
+        fred_info("'%s' took %.3f seconds." % \
+		  (s_timer_name, n_stop_time - gd_timers[s_timer_name]))
+        del gd_timers[s_timer_name]
 
 def getRE(str, idx=0):
     """Return a regular expression string matching the given string with a

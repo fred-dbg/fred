@@ -297,12 +297,14 @@ def main_io_loop():
                 s_command = s_last_command
             if gb_record_commands:
                 gf_command_record_file.write(s_command + '\n')
+            fredutil.fred_timer_start(s_command)
             if is_fred_command(s_command):
                 handle_fred_command(s_command)
                 # TODO: Currently we do not log fred commands. Do we need to?
             else:
                 fredio.send_command(s_command)
                 g_debugger.log_command(s_command)
+            fredutil.fred_timer_stop(s_command)
             s_last_command = s_command
         except KeyboardInterrupt:
             fredio.signal_child(signal.SIGINT)
