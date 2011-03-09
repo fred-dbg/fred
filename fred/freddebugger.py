@@ -201,20 +201,7 @@ class ReversibleDebugger(Debugger):
 
     def clear_history(self):
         """Clear the current checkpoint's history."""
-        del self.checkpoint.l_history[:]
-
-    def last_command(self):
-        """Return the last command of the current history."""
-        if len(self.checkpoint.l_history) == 0:
-            if self.checkpoint.previous != None:
-                fredutil.fred_assert(len(self.checkpoint.previous.l_history) > 0, \
-                       "Unimplemented.")
-                return self.checkpoint.previous.l_history[-1]
-            else:
-                fredutil.fred_assert(False, "Unimplemented branch.")
-        else:
-            return self.checkpoint.l_history[-1]
-            
+        del self.checkpoint.l_history[:]            
     
     def log_command(self, s_command):
         """Convert given command to FredCommand instance and add to current
@@ -373,6 +360,26 @@ class ReversibleDebugger(Debugger):
             j += 1
         return l_result
 
+    def last_command(self):
+        """Return the last command of the current history."""
+        if len(self.checkpoint.l_history) == 0:
+            if self.checkpoint.previous != None:
+                fredutil.fred_assert(len(self.checkpoint.previous.l_history) > 0, \
+                       "Unimplemented.")
+                return self.checkpoint.previous.l_history[-1]
+            else:
+                fredutil.fred_assert(False, "Unimplemented branch.")
+        else:
+            return self.checkpoint.l_history[-1]
+
+    def last_command_non_ignore(self):
+        """Return the last non-ignore command of the current history or None."""
+        for i in range(-1, -(len(self.checkpoint.l_history)+1), -1):
+            cmd = self.checkpoint.l_history[i]
+            if not cmd.b_ignore:
+                return cmd
+        return None
+    
     def trim_non_ignore(self, n):
         """Trim last n non-ignore commands.
         Also adjust things like 'next 5' to be 'next 4'."""
@@ -423,6 +430,7 @@ class ReversibleDebugger(Debugger):
 
     def reverse_next(self, n=1):
         """Perform n 'reverse-next' commands."""
+        pdb.set_trace()
         while n > 0:
             n -= 1
             self.update_state()
@@ -441,8 +449,8 @@ class ReversibleDebugger(Debugger):
                     fredutil.fred_debug("RN: SAME")
                     if self.state() == orig_state:
                         fredutil.fred_debug("RN: AT ORIG STATE")
-                        if self.last_command().is_next() or \
-                               self.last_command().is_step():
+                        if self.last_command_non_ignore().is_next() or \
+                               self.last_command_non_ignore().is_step():
                             fredutil.fred_debug("RN: AFTER NEXT OR STEP")
                             n_lvl = self.state().level()
                             self.undo()
@@ -480,7 +488,7 @@ class ReversibleDebugger(Debugger):
                     fredutil.fred_debug("RS: SAME")
                     if self.state() == orig_state:
                         fredutil.fred_debug("RS: AT ORIG STATE")
-                        if self.last_command().is_step():
+                        if self.last_command_non_ignore().is_step():
                             fredutil.fred_debug("RS: AFTER STEP")
                             self.undo()
                             break
@@ -646,12 +654,19 @@ class ReversibleDebugger(Debugger):
             fredutil.fred_debug("Last command continue.")
             l_history = \
                 self._binary_search_expand_with_next(l_history[0:-1], s_expr, s_expr_val)
+            return l_history
         while l_history[-1].is_next():
             l_history[-1] = self._p.get_personality_cmd(fred_step_cmd())
             self.replay_history([self._p.get_personality_cmd(fred_step_cmd())])
             if self.evaluate_expression(s_expr) == s_expr_val:
-                # Done: return debugger at time: l_history[0:-1]
-                self.checkpoint.l_history = l_history[0:-1]
+                # Done: return debugger at time when if 's' were executed, then
+                # expression would become true. We also change the final
+                # command to 'step' so the rest of the call stack knows we have
+                # gone as deep as possible (i.e. no further expansion is
+                # possible).
+                l_history = l_history[:-1]
+                l_history[-1] = self._p.get_personality_cmd(fred_step_cmd())
+                self.checkpoint.l_history = l_history
                 self.do_restart()
                 self.replay_history()
                 break

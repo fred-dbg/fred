@@ -295,7 +295,7 @@ def main_io_loop():
             # commands too.
             if s_command == '':
                 s_command = s_last_command
-            if gb_record_commands:
+            if gb_record_commands and s_command != "fred-stop-record":
                 gf_command_record_file.write(s_command + '\n')
             fredutil.fred_timer_start(s_command)
             if is_fred_command(s_command):
