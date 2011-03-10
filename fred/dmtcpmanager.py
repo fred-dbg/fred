@@ -133,6 +133,8 @@ class DMTCPManager:
         cmd = ["dmtcp_command", "--quiet", "--port", str(DMTCP_PORT), "k"]
         dprint("Sending command '%s'" % ' '.join(cmd))
         #executeShellCommand(['dmtcp_command','k'])
+        if fredio.GB_FRED_DEMO:
+	    print "===================== KILLING gdb ====================="
         pid = os.fork()
         if pid == 0:
             sys.stderr = sys.stdout
@@ -147,6 +149,8 @@ class DMTCPManager:
         for f in list:
             cmdstr.append(f)
         dprint("Executing restart command: %s" % str(cmdstr))
+        if fredio.GB_FRED_DEMO:
+	    print "===================== RESTARTING gdb ====================="
         fredio.reexec(cmdstr)
 
     @staticmethod

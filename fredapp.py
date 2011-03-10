@@ -252,7 +252,8 @@ def parse_program_args():
     parser = OptionParser(usage=GS_FRED_USAGE, version=GS_FRED_VERSION)
     parser.disable_interspersed_args()
     # Note that '-h' and '--help' are supported automatically.
-    parser.add_option("-p", "--port", dest="dmtcp_port", default=7779,
+    default_port = os.getenv("DMTCP_PORT") or 7779
+    parser.add_option("-p", "--port", dest="dmtcp_port", default=default_port,
                       help="Use PORT for DMTCP port number. (default %default)",
                       metavar="PORT")
     parser.add_option("-x", "--source", dest="source_script",
@@ -260,6 +261,10 @@ def parse_program_args():
     parser.add_option("--enable-debug", dest="debug", default=False,
                       action="store_true",
                       help="Enable FReD debugging messages.")
+    # ./fredapp.py --fred-demo gdb a.out
+    parser.add_option("--fred-demo", dest="fred_demo", default=False,
+                      action="store_true",
+                      help="Enable FReD demo.")
     (options, l_args) = parser.parse_args()
     # 'l_args' is the 'gdb ARGS ./a.out' list
     if len(l_args) == 0:
@@ -268,6 +273,8 @@ def parse_program_args():
     if options.source_script != None:
         # Source script executed from main_io_loop().
         g_source_script = options.source_script
+    if options.fred_demo:
+        fredio.GB_FRED_DEMO = True
     setup_environment_variables(str(options.dmtcp_port), options.debug)
     return l_args
 

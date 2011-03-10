@@ -32,6 +32,10 @@ import threading
 
 import fredutil
 
+GB_FRED_DEMO = False
+GB_FRED_DEMO_HIDE = ['info files\n', 'info breakpoints\n']
+GB_FRED_DEMO_UNHIDE_PREFIX = ['next', 'step']
+
 # Function beginning with an underscore ('_') should not be used outside of
 # this module.
 
@@ -162,6 +166,14 @@ def get_child_response(s_input, hide=True, b_wait_for_prompt=False,
     wait_for_prompt flag is True, collects output until the debugger prompt is
     ready."""
     global gb_hide_output
+    global GB_FRED_DEMO
+    global GB_FRED_DEMO_HIDE
+    global GB_FRED_DEMO_UNHIDE_PREFIX
+    if GB_FRED_DEMO and s_input in GB_FRED_DEMO_HIDE:
+        hide = True
+    if GB_FRED_DEMO and \
+       len([x for x in GB_FRED_DEMO_UNHIDE_PREFIX if s_input.startswith(x)])>0:
+        hide=False
     b_orig_hide_state = gb_hide_output
     gb_hide_output = hide
     _start_output_capture(b_wait_for_prompt)
