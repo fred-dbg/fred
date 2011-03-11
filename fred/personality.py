@@ -100,39 +100,39 @@ class Personality:
         The Match object should be a tuple (result of gre_backtrace_frame.)"""
         fredutil.fred_assert(False, "Must be implemented in subclass.")
         
+    def execute_command(self, s_cmd):
+        """Send the given string to debugger and return its output."""
+        # Ensure it has strictly one newline:
+        s_cmd = s_cmd.strip() + "\n"
+        return fredio.get_child_response(s_cmd, b_wait_for_prompt=True)
+
     def do_next(self, n):
         """Perform n 'next' commands. Returns output."""
-        return fredio.get_child_response(self.GS_NEXT + " " + str(n) + "\n",
-                                         b_wait_for_prompt=True)
+        return self.execute_command(self.GS_NEXT + " " + str(n))
         
     def do_step(self, n):
         """Perform n 'step' commands. Returns output."""
-        return fredio.get_child_response(self.GS_STEP + " " + str(n) + "\n",
-                                         b_wait_for_prompt=True)
+        return self.execute_command(self.GS_STEP + " " + str(n))
         
     def do_continue(self, n):
         """Perform n 'continue' commands. Returns output."""
-        return fredio.get_child_response(self.GS_CONTINUE + " " + str(n) + "\n",
-                                         b_wait_for_prompt=True)
+        return self.execute_command(self.GS_CONTINUE + " " + str(n))
         
     def do_breakpoint(self, expr):
         """Perform 'break expr' command. Returns output."""
-        return fredio.get_child_response(self.GS_BREAKPOINT + " " + str(expr) + "\n",
-                                         b_wait_for_prompt=True)
+        return self.execute_command(self.GS_BREAKPOINT + " " + str(expr))
 
     def do_where(self):
         """Perform 'where' command. Returns output."""
-        return fredio.get_child_response(self.GS_WHERE + "\n", b_wait_for_prompt=True)
+        return self.execute_command(self.GS_WHERE)
 
     def do_info_breakpoints(self):
         """Perform 'info_breakpoints' command. Returns output."""
-        return fredio.get_child_response(self.GS_INFO_BREAKPOINTS + "\n",
-                                         b_wait_for_prompt=True)
+        return self.execute_command(self.GS_INFO_BREAKPOINTS)
 
     def do_print(self, expr):
         """Perform 'print expr' command. Returns output."""
-        return fredio.get_child_response(self.GS_PRINT + " " + str(expr) + "\n",
-                                         b_wait_for_prompt=True)
+        return self.execute_command(self.GS_PRINT + " " + str(expr))
 
     def current_position(self):
         """Return a BacktraceFrame representing current debugger position."""
@@ -214,10 +214,6 @@ class Personality:
             fredutil.fred_debug("Don't know native representation of %s" % \
                                 fred_cmd)
             return ""
-
-    def execute_command(self, s_cmd):
-        """Send the given string to debugger and return its output."""
-        return fredio.get_child_response(s_cmd, b_wait_for_prompt=True)
 
     def sanitize_print_result(self, s_printed):
         """Sanitize the result of a debugger 'print' command.

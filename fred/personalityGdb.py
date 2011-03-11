@@ -99,30 +99,32 @@ class PersonalityGdb(personality.Personality):
           $XX = 16
         Where $XX changes with each command executed."""
         exp = "\$[0-9]+ = (.+)"
-        return re.search(exp, s_printed).group(1)
+        m = re.search(exp, s_printed)
+        if m == None:
+            return s_printed
+        else:
+            return m.group(1)
         
     def do_step(self, n):
         """Override generic do_step() from personality.py so we can avoid
         stepping into libc, etc."""
         global gs_inferior_name
         if gs_inferior_name == "":
-            fredutil.fred_assert(self.s_inferior_name != "", "Empty inferior name.")
+            fredutil.fred_assert(self.s_inferior_name != "",
+                                 "Empty inferior name.")
             gs_inferior_name = self.s_inferior_name
         # If the 'step' results in an address of something that is outside of
         # the user's code, execute a 'finish', and replace the 'step' in
         # history with a 'next', so on replay only the next is executed.
-        output = fredio.get_child_response(self.GS_STEP + " " + str(n) + "\n",
-                                           b_wait_for_prompt=True)
+        output = self.execute_command(self.GS_STEP + " " + str(n))
         bt = self.get_backtrace()
         cur_func = bt.l_frames[0].s_function
         n_cur_addr = parse_address(self.do_print("&" + cur_func))
         if not within_user_code(n_cur_addr):
-            fredio.get_child_response(self.GS_FINISH + "\n",
-                                      b_wait_for_prompt=True)
+            self.execute_command(self.GS_FINISH)
             # TODO: Think of more portable way to do this:
             return "DO-NOT-STEP"
         return output
-
 
     def _parse_backtrace_frame(self, match_obj):
         """Return a BacktraceFrame from the given re Match object.

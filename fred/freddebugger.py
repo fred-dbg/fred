@@ -696,7 +696,7 @@ class ReversibleDebugger(Debugger):
 
     def evaluate_expression(self, s_expr):
         """Returns sanitized value of expression in debugger."""
-        s_val = self.do_print(s_expr + "\n")
+        s_val = self.do_print(s_expr)
         s_val = self._p.sanitize_print_result(s_val)
         return s_val.strip()
             
