@@ -33,8 +33,9 @@ import threading
 import fredutil
 
 GB_FRED_DEMO = False
-GB_FRED_DEMO_HIDE = ['info files\n', 'info breakpoints\n']
+GB_FRED_DEMO_HIDE = ['info files\n', 'info breakpoints\n', 'where\n']
 GB_FRED_DEMO_UNHIDE_PREFIX = ['next', 'step']
+GB_FRED_DEMO_FROM_USER = False
 
 # Function beginning with an underscore ('_') should not be used outside of
 # this module.
@@ -166,14 +167,15 @@ def get_child_response(s_input, hide=True, b_wait_for_prompt=False,
     wait_for_prompt flag is True, collects output until the debugger prompt is
     ready."""
     global gb_hide_output
-    global GB_FRED_DEMO
-    global GB_FRED_DEMO_HIDE
-    global GB_FRED_DEMO_UNHIDE_PREFIX
-    if GB_FRED_DEMO and s_input in GB_FRED_DEMO_HIDE:
+    global GB_FRED_DEMO, GB_FRED_DEMO_HIDE, GB_FRED_DEMO_UNHIDE_PREFIX
+    global GB_FRED_DEMO_FROM_USER
+    if GB_FRED_DEMO and s_input in GB_FRED_DEMO_HIDE and \
+       not GB_FRED_DEMO_FROM_USER:
         hide = True
     if GB_FRED_DEMO and \
        len([x for x in GB_FRED_DEMO_UNHIDE_PREFIX if s_input.startswith(x)])>0:
         hide=False
+    GB_FRED_DEMO_FROM_USER = False # reset back to default, which is False
     b_orig_hide_state = gb_hide_output
     gb_hide_output = hide
     _start_output_capture(b_wait_for_prompt)
@@ -247,6 +249,7 @@ def get_child_pid():
 def get_command():
     """Get a command from the user using raw_input."""
     global g_print_prompt_function
+    GB_FRED_DEMO_FROM_USER = True
     return raw_input(g_print_prompt_function()).strip()
     #return raw_input("!").strip()
 
