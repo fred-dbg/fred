@@ -396,9 +396,10 @@ def restart_ckpt(index):
     DMTCPManager.restartWithCheckpointFiles(ckptFileList)
     dprint("Restart: waiting until %d peers." % numPeers)
     # Wait until every peer has finished resuming:
-    while DMTCPManager.getNumPeers() < numPeers:
+    while DMTCPManager.getNumPeers() < numPeers or not DMTCPManager.isRunning():
         time.sleep(0.1)
-    dprint("Done waiting. peers: %d" % DMTCPManager.getNumPeers())
+    dprint("Done waiting. peers: %d, running: %s" % \
+           (DMTCPManager.getNumPeers(), str(DMTCPManager.isRunning())))
     currentCkptIndex = index
     childInTransition = False
 

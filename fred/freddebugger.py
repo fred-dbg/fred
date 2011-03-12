@@ -430,7 +430,6 @@ class ReversibleDebugger(Debugger):
 
     def reverse_next(self, n=1):
         """Perform n 'reverse-next' commands."""
-        pdb.set_trace()
         while n > 0:
             n -= 1
             self.update_state()
@@ -454,8 +453,7 @@ class ReversibleDebugger(Debugger):
                             fredutil.fred_debug("RN: AFTER NEXT OR STEP")
                             n_lvl = self.state().level()
                             self.undo()
-                            if n_lvl >= self.state().level():
-                                break
+                            break
                         else:
                             fredutil.fred_debug("RN: NOT AFTER NEXT OR STEP")
                         self.undo()
