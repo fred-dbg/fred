@@ -169,9 +169,15 @@ class PersonalityGdb(personality.Personality):
 def parse_address(s_addr):
     """Parse the given address string from gdb and return a number."""
     # Example input: "$2 = (int (*)(item *)) 0x8048508 <list_len>"
+    global gn_user_code_min
     exp = ".+\(.+\) (0x[0-9A-Fa-f]+).+"
-    n_addr = int(re.search(exp, s_addr).group(1), 16)
-    return n_addr
+    m = re.search(exp, s_addr)
+    if m != None:
+        n_addr = int(m.group(1), 16)
+        return n_addr
+    # TODO: hackish: return an address within the user space to fool whoever
+    # is calling this.  need to investigate why m can be None.
+    return gn_user_code_min + 10
 
 def within_user_code(n_addr):
     """Return True if n_addr is within the user program's code segment."""

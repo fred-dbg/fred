@@ -31,6 +31,7 @@ import subprocess
 import string
 import time
 import re
+import pdb
 
 # Set this to True (or anything non-null) for lots of debugging messages.
 try:
@@ -43,18 +44,21 @@ SYNCHRONIZATION_LOG_HANDLING = True
 SYNC_LOG_BASENAME = "synchronization-"
 
 # ---------- Global constants
-DMTCP_MANAGER_ROOT = "/tmp/fred.%s/.fred-dmtcp-manager/" % os.environ["USER"]
+DMTCP_MANAGER_ROOT = "/tmp/fred.%s/fred-dmtcp-manager/" % os.environ["USER"]
 DMTCP_PORT   = 0
 TTYFD        = sys.stdin.fileno()  # stdin by default
 # ---------- End of Global constants 
 
 # ---------- Global variables
 childInTransition           = False # Child in irregular state
-ckptListFilePaths           = [] # List of checkpoint list files
-openFilesListPaths          = []
-synchronizationLogListFiles = []
-# Path to the checkpoint index file (contains total # of ckpt files)
-ckptIndexFilePath           = ""
+# List of different basenames for checkpoint files. Example:
+# ["ckpt_gdb_1cb82bdb80f31c4-7852-4d7d1d4c.dmtcp",
+#  "ckpt_mysqld_1cb82bdb80f31c4-7861-4d7d1d4c.dmtcp"]
+checkpoint_basenames          = []
+# The same thing but the ckpt_files_* directories:
+checkpoint_files_basenames    = []
+# The same but synchronization-log* files:
+synchronization_log_basenames = []
 # Counter variable to append to ckpt files
 ckptCounter                = -1
 # The current checkpoint index
@@ -64,15 +68,8 @@ numCheckpoints             = 0
 # ---------- End of Global variables
 
 def initialize_global_variables():
-    global childInTransition, ckptListFilePaths, openFilesListPaths, \
-           synchronizationLogListFiles, ckptIndexFilePath, ckptCounter, \
-           currentCkptIndex, numCheckpoints
+    global childInTransition, ckptCounter, currentCkptIndex, numCheckpoints
     childInTransition           = False # Child in irregular state
-    ckptListFilePaths           = [] # List of checkpoint list files
-    openFilesListPaths          = []
-    synchronizationLogListFiles = []
-    # Path to the checkpoint index file (contains total # of ckpt files)
-    ckptIndexFilePath           = ""
     # Counter variable to append to ckpt files
     ckptCounter                = -1
     # The current checkpoint index
@@ -224,70 +221,34 @@ def manager_quit():
     
 def initializeFiles(firstName):
     ''' Initalizes housekeeping files and directories. '''
-    global DMTCP_MANAGER_ROOT, ckptIndexFilePath, numCheckpoints
-
+    global DMTCP_MANAGER_ROOT, numCheckpoints
     dprint("Initializing files based on firstName: %s" % firstName)
-
     # Create DMTCP_MANAGER_ROOT if it doesn't exist
     if not fileExists(DMTCP_MANAGER_ROOT):
         dprint("%s doesn't exist; creating it now." % DMTCP_MANAGER_ROOT)
         os.makedirs(DMTCP_MANAGER_ROOT, 0755)
-
-    # Initialize checkpoint index file path: file which contains latest index
-    # of checkpoint.  We only care about the first program name because any
-    # parent/child relationships (i.e. multiple program names)
-    # have checkpoint indices that are the same
-    dprint("firstName is: %s" % firstName)
-    dprint("Initializing ckptIndexFilePath to: %s" % DMTCP_MANAGER_ROOT +
-           firstName)
-    ckptIndexFilePath = DMTCP_MANAGER_ROOT + firstName
-
-    # Based on that, load the file (if it exists) and get the value inside it
-    if fileExists(ckptIndexFilePath):
-        f = open(ckptIndexFilePath, 'r')
-        num = int(f.read()) if (f != None) else 0
-        f.close()
-    else:
-        # It doesn't exist, initialize num to 0
-        num = 0
-    numCheckpoints = num
-
-def readLineNumber(n, file):
-    ''' Returns nth line from file 'file'. NB: If used in conjunction with a
-        checkpoint index number, the caller should add 1 to n.
-        Checkpoint index 0 == line number 1. '''
-    dprint("Reading line %d from file %s" % (n, file))
-    f = open(file)
-    line = ""
-    for i in range(0, n):
-        line = f.readline()
-    f.close()
-    return line.rstrip()
+    numCheckpoints = 0
 
 def availableCkpts():
-    ''' Returns the list of available checkpoint indices. '''
-    global ckptListFilePaths
-    if len(ckptListFilePaths) > 0:
-        ckptFile = ckptListFilePaths[0]
+    ''' Returns the list of available checkpoints. '''
+    global numCheckpoints, checkpoint_basenames
+    if len(checkpoint_basenames) > 0:
+        ckptFile = checkpoint_basenames[0]
     else:
         dprint("No checkpoint list files available.")
         return
     ckpt_list = []
-    dprint("Opening list file: %s" % ckptFile)
-    f = open(ckptFile)
-    for line in f:
-        line = line.rstrip()
-        ckpt_list.append(line)
+    for i in range(0, numCheckpoints):
+        ckpt_list.append(ckptFile + ".%d" % i)
     dprint("Done loading ckpt list.")
     return ckpt_list    
 
 def ckptList(index):
     ''' Return the list of checkpoint files associated with a given index. '''
-    global ckptListFilePaths
+    global checkpoint_basenames
     ckptFileList = []
-    for item in ckptListFilePaths:
-        dprint("Opening ckpt list file: %s" % item)
-        ckpt = DMTCP_MANAGER_ROOT + readLineNumber(index+1, item)
+    for item in checkpoint_basenames:
+        ckpt = DMTCP_MANAGER_ROOT + item + ".%d" % index
         ckptFileList.append(ckpt)
     return ckptFileList
 
@@ -313,47 +274,45 @@ def removeFilePattern(path):
 def setupCheckpointSupportFiles(index):
     ''' Performs setup for support files associated with the given ckpt index:
           - ckpt_files_* directories, if any
-          - synchronization-log-* files, if SYNCHRONIZATION_LOG_HANDLING
-        by creating symbolic links from the DMTCP_MANAGER_ROOT directory to where
-        DMTCP expects to find the files. '''
-    global currentCkptIndex
+          - synchronization-log-* files, by creating symbolic links from the
+            DMTCP_MANAGER_ROOT directory to where DMTCP expects to find the
+            files. '''
+    global checkpoint_basenames, checkpoint_files_basenames, \
+           synchronization_log_basenames
     ckptDir = os.getenv('DMTCP_CHECKPOINT_DIR', '.')
     # Remove old 'ckpt_files_*' symlinks:
     removeFilePattern(ckptDir + "/ckpt_files_")
     # Create new 'ckpt_files_*' symlinks:
-    for item in openFilesListPaths:
-        dprint("Opening open files list file: %s" % item)
-        filesDir = readLineNumber(index+1, item)
+    for item in checkpoint_files_basenames:
+        filesDir = item + ".%d" % index
         # Files dir with no '.x' suffix:
-        filesDirNoSuffix = re.search('(.+)\.[0-9]+', filesDir).group(1)
+        filesDirNoSuffix = item
         dprint("Symlinking %s to %s/%s." % (DMTCP_MANAGER_ROOT + filesDir, \
                                             ckptDir, \
                                             filesDirNoSuffix))
         os.symlink(DMTCP_MANAGER_ROOT + filesDir, ckptDir + "/" + filesDirNoSuffix)
-    if SYNCHRONIZATION_LOG_HANDLING:
-        for item in synchronizationLogListFiles:
-            dprint("Opening synchronization log list file: %s" % item)
-            logfile = readLineNumber(index+1, item)
-            dprint("Got log name: %s" % logfile)
-            logfileNoSuffix = re.search('(.+)\.[0-9]+', logfile).group(1)
-            full_path = os.environ["DMTCP_TMPDIR"] + "/" + logfileNoSuffix
-            if os.path.islink(full_path):
-                # It is a link; we can safely just delete it.
-                os.remove(full_path)
-            else:
-                # It is not a link. This means DMTCP previously patched the log
-                # and created a new file. We should replace the old log we had
-                # under this index with the new version so we don't lose the
-                # patched version.
-                oldLog = DMTCP_MANAGER_ROOT + "/" + logfileNoSuffix + \
-                         "." + str(currentCkptIndex)
-                dprint("Replacing old log %s in favor of new (patched) log %s" \
-                       % (oldLog, full_path))
-                os.remove(oldLog)
-                shutil.move(full_path, oldLog)
-            # Create a new symlink for the target index's sync log:
-            dprint("Symlinking %s to %s." % (DMTCP_MANAGER_ROOT + logfile, full_path))
-            os.symlink(DMTCP_MANAGER_ROOT + logfile, full_path)
+
+    for item in synchronization_log_basenames:
+        logfile = item + ".%d" % index
+        logfileNoSuffix = item
+        full_path = os.environ["DMTCP_TMPDIR"] + "/" + logfileNoSuffix
+        if os.path.islink(full_path):
+            # It is a link; we can safely just delete it.
+            os.remove(full_path)
+        else:
+            # It is not a link. This means DMTCP previously patched the log
+            # and created a new file. We should replace the old log we had
+            # under this index with the new version so we don't lose the
+            # patched version.
+            oldLog = DMTCP_MANAGER_ROOT + "/" + logfileNoSuffix + "." + index
+            dprint("Replacing old log %s with new (patched) log %s" % \
+                       (oldLog, full_path))
+            os.remove(oldLog)
+            shutil.move(full_path, oldLog)
+        # Create a new symlink for the target index's sync log:
+        dprint("Symlinking %s to %s." % \
+                   (DMTCP_MANAGER_ROOT + logfile, full_path))
+        os.symlink(DMTCP_MANAGER_ROOT + logfile, full_path)
 
 def restart_last_ckpt():
     ''' Restart from the most recent checkpoint. '''
@@ -363,13 +322,12 @@ def restart_last_ckpt():
 
 def restart_ckpt(index):
     ''' Restart from the ckpt file(s) referenced by the given index. '''
-    global ckptListFilePaths, openFilesListPaths, DMTCP_MANAGER_ROOT
-    global childInTransition, ckptCounter, currentCkptIndex
+    global DMTCP_MANAGER_ROOT, childInTransition, currentCkptIndex
     dprint("Going to restart index %d" % index)
     childInTransition = True
     # Kill the currently connected peers:
-    #killChild() # XXX: hack: killPeers() doesn't do the job for Matlab.
     DMTCPManager.killPeers()
+    fredio.kill_child() # XXX: hack: killPeers() doesn't do the job for Matlab.
     # Wait until the peers are really gone
     while DMTCPManager.getNumPeers() != 0:
         time.sleep(0.1)
@@ -407,83 +365,25 @@ def erase_checkpoints(n_start_idx, n_end_idx):
     """Erase the given interval of checkpoints (inclusive)."""
     pass
 
-def getProgramNameFromCkpt(name):
-    ''' Returns the program name from the given checkpoint filename. '''
-    # TODO: consolidate into one regular expression
-    
-    #ckpt_simulate_gdb_30a1a199-20161-4a7f1436.dmtcp.1
-    s = re.search('ckpt_(.+)_[0-9a-z]+-[0-9a-z]+-[0-9a-z]+\.dmtcp.*', name)
-    if s != None:
-        return s.group(1)
-    else:
-        # Try with unique counter format
-        #ckpt_simulate_gdb_30a1a199-20161-4a7f1436_0001.dmtcp.1
-        s = re.search('ckpt_(.+)_[0-9a-z]+-[0-9a-z]+-[0-9a-z]+_[0-9]+\.dmtcp',
-                      name)
-        return s.group(1)
-
-def getProgramNameFromFilesDir(name):
-    ''' Returns the program name from the given "ckpt_files_*"
-        directory name. '''
-    # ckpt_files_mysqld_5f6d41e6-29643-4c7e6ad6
-    s = re.search('ckpt_files_(.+)_[0-9a-z]+-[0-9a-z]+-[0-9a-z]+', name)
-    return s.group(1)
-
 def updateHousekeeping(filename):
     ''' Updates the required housekeeping files to include the filename. '''
-    global DMTCP_MANAGER_ROOT, ckptCounter, ckptListFilePaths, ckptIndexFilePath
-
+    global DMTCP_MANAGER_ROOT, ckptCounter, checkpoint_files_basenames, \
+           checkpoint_basenames
     if fileExists(filename):
         # Add counter and move to DMTCP_MANAGER_ROOT
         dprint("Renaming \"%s\" to \"%s.%d\"" % (filename,
                DMTCP_MANAGER_ROOT + filename, ckptCounter))
         shutil.move(filename, "%s.%d" % (DMTCP_MANAGER_ROOT+filename, ckptCounter))
+        # Add to basenames if it's not there already
+        if filename.find("_files_") != -1:
+            if filename not in checkpoint_files_basenames:
+                checkpoint_files_basenames.append(filename)
+        else:
+            if filename not in checkpoint_basenames:
+                checkpoint_basenames.append(filename)
     else:
         dprint("File %s does not exist; skipping." % filename)
         return
-    progname = getProgramNameFromCkpt(filename)
-    dprint("Got program name from checkpoint file: %s" % progname)
-    listfilepath = DMTCP_MANAGER_ROOT + progname + "_list"
-    # Want to see if it exists first. If not, will add it to
-    # ckptListFilePaths
-    if not listfilepath in ckptListFilePaths:
-        dprint("Didn't find checkpoint list file. Adding new entry: %s"
-               % listfilepath)
-        ckptListFilePaths.append(listfilepath)
-
-    f = open(listfilepath, "a") # Append to end
-    f.write("%s.%d\n" % (filename, ckptCounter))
-    f.close()
-    f = open(ckptIndexFilePath, "w")  # Overwrite
-    f.write(str(numCheckpoints))
-    f.close()
-    dprint("Finished housekeeping for %s" % filename)
-
-def updateOpenFilesHousekeeping(filename):
-    ''' Updates the required housekeeping files to include the filename. '''
-    global DMTCP_MANAGER_ROOT, ckptCounter, openFilesListPaths
-
-    if fileExists(filename):
-        # Add counter and move to DMTCP_MANAGER_ROOT
-        dprint("Renaming \"%s\" to \"%s.%d\"" % (filename,
-               DMTCP_MANAGER_ROOT + filename, ckptCounter))
-        shutil.move(filename, "%s.%d" % (DMTCP_MANAGER_ROOT+filename, ckptCounter))
-    else:
-        dprint("File %s does not exist; skipping." % filename)
-        return
-    progname = getProgramNameFromFilesDir(filename)
-    dprint("Got program name from open files directory: %s" % progname)
-    listfilepath = DMTCP_MANAGER_ROOT + progname + "_files_list"
-    # Want to see if it exists first. If not, will add it to
-    # openFilesListPaths
-    if not listfilepath in openFilesListPaths:
-        dprint("Didn't find checkpoint list file. Adding new entry: %s"
-               % listfilepath)
-        openFilesListPaths.append(listfilepath)
-
-    f = open(listfilepath, "a") # Append to end
-    f.write("%s.%d\n" % (filename, ckptCounter))
-    f.close()
     dprint("Finished housekeeping for %s" % filename)
 
 def updateSyncHousekeeping(filename):
@@ -514,9 +414,7 @@ def updateSyncHousekeeping(filename):
 
     Some special consideration is needed for how DMTCP patches the log files.
     '''
-    global synchronizationLogListFiles
-    if not SYNCHRONIZATION_LOG_HANDLING:
-        return
+    global synchronization_log_basenames
     dprint("Updating housekeeping information for synchronization log %s" % \
            filename)
     full_filename = os.environ["DMTCP_TMPDIR"] + "/" + filename
@@ -537,62 +435,47 @@ def updateSyncHousekeeping(filename):
            (DMTCP_MANAGER_ROOT + filename, ckptCounter, full_filename))
     os.symlink("%s.%d" % (DMTCP_MANAGER_ROOT + filename, ckptCounter),
                full_filename)
-    listfilepath = DMTCP_MANAGER_ROOT + filename + "_list"
-    if not listfilepath in synchronizationLogListFiles:
-        dprint("Didn't find sync log list file. Adding new entry: %s"
-               % listfilepath)
-        synchronizationLogListFiles.append(listfilepath)
-    f = open(listfilepath, "a") # Append to end
-    f.write("%s.%d\n" % (filename, ckptCounter))
-    f.close()
+    # Add to basenames if it's not there already
+    if filename not in synchronization_log_basenames:
+        synchronization_log_basenames.append(filename)
 
 def do_checkpoint():
     ''' Do the checkpointing, and associated housekeeping. '''
     global ckptCounter, numCheckpoints, currentCkptIndex
-
     ckptCounter += 1
     numCheckpoints += 1
-
     numPeers = DMTCPManager.getNumPeers()
     dprint("Number of peers getting checkpointed: %d." % numPeers)
-    
     listDmtcpFilesBefore = \
         [x for x in executeShellCommand(["ls"]).split('\n') \
          if x.endswith(".dmtcp")]
     dprint("List of *.dmtcp files before: %s" % listDmtcpFilesBefore)
-    
     listCkptFileDirsBefore = \
         [x for x in executeShellCommand(["ls"]).split('\n') \
          if x.startswith("ckpt_files")]
     dprint("List of ckpt_files* before: %s" % listCkptFileDirsBefore)
-    
     dprint("Going to send blocking checkpoint command.")
     DMTCPManager.checkpoint()
-
     listDmtcpFilesAfter = [x for x in executeShellCommand(["ls"]).split('\n') \
                        if x.endswith(".dmtcp")]
     dprint("List of *.dmtcp files after: %s" % listDmtcpFilesAfter)
     dmtcpDiffs = listDiff(listDmtcpFilesBefore, listDmtcpFilesAfter)
     dprint("Differences are: %s" % dmtcpDiffs)
-    
     listCkptFileDirsAfter = \
         [x for x in executeShellCommand(["ls"]).split('\n') \
          if x.startswith("ckpt_files")]
     dprint("List of ckpt_files* after: %s" % listCkptFileDirsAfter)
     fileDiffs = listDiff(listCkptFileDirsBefore, listCkptFileDirsAfter)
     dprint("Differences are: %s" % fileDiffs)
-
     for diff in dmtcpDiffs:
         updateHousekeeping(diff)
     for diff in fileDiffs:
-        updateOpenFilesHousekeeping(diff)
-    if SYNCHRONIZATION_LOG_HANDLING:
-        listSyncLogs = \
-            [x for x in executeShellCommand(["ls", os.environ["DMTCP_TMPDIR"]]).split('\n') \
+        updateHousekeeping(diff)
+    listSyncLogs = \
+        [x for x in executeShellCommand(["ls", os.environ["DMTCP_TMPDIR"]]).split('\n') \
              if x.startswith(SYNC_LOG_BASENAME)]
-        for log in listSyncLogs:
-            updateSyncHousekeeping(log)
-
+    for diff in listSyncLogs:
+        updateSyncHousekeeping(diff)
     currentCkptIndex = ckptCounter
 
 def listDiff(one, two):

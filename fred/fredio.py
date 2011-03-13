@@ -219,7 +219,7 @@ def _spawn_child(argv):
         sys.stderr = sys.stdout
         os.execvp(argv[0], argv)
 
-def _kill_child():
+def kill_child():
     """Kill the child process."""
     global gn_child_fd
     if gn_child_pid == -1:
@@ -288,4 +288,4 @@ def setup(find_prompt_fnc, print_prompt_fnc, prompt_re, ls_needs_user_input,
 
 def teardown():
     """Perform any cleanup associated with FReD exit."""
-    _kill_child()
+    kill_child()
