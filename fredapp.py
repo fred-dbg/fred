@@ -179,11 +179,15 @@ def source_from_file(s_filename):
         return
     for s_line in f:
         s_line = s_line.strip()
+        if s_line == "":
+           continue
+        fredutil.fred_timer_start(s_line)
         if is_fred_command(s_line):
             handle_fred_command(s_line)
         else:
             fredio.send_command(s_line)
             g_debugger.log_command(s_line)
+        fredutil.fred_timer_stop(s_line)
     f.close()
     fredutil.fred_debug("Finished sourcing from file '%s'" % s_filename)
 
@@ -191,11 +195,13 @@ def source_from_list(ls_cmds):
     """Execute commands from given list."""
     for s_cmd in ls_cmds:
         s_cmd = s_cmd.strip()
+        fredutil.fred_timer_start(s_cmd)
         if is_fred_command(s_cmd):
             handle_fred_command(s_cmd)
         else:
             fredio.send_command(s_cmd)
             g_debugger.log_command(s_cmd)
+        fredutil.fred_timer_stop(s_cmd)
 
 def start_command_recording(s_filename):
     """Start recording all user commands to file."""
@@ -293,6 +299,7 @@ def main_io_loop():
     global g_source_script, gb_record_commands, gf_command_record_file
     fredio.wait_for_prompt()
     interactive_debugger_setup()
+    s_last_command = ""
     while 1:
         try:
             # Get one user command (blocking):

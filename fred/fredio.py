@@ -232,6 +232,8 @@ def signal_child(signum):
     """Send the signal to the child process."""
     global gn_child_pid
     os.kill(gn_child_pid, signum)
+    if signum == signal.SIGKILL:
+        os.waitpid(gn_child_pid, 0)
 
 def child_is_alive():
     """Return True if the child process is still alive; False if not."""

@@ -74,7 +74,7 @@ class PersonalityGdb(personality.Personality):
         # List of regexes that match debugger prompts for user input
         self.ls_needs_user_input = \
         [ "---Type <return> to continue, or q <return> to quit---",
-          ".+ \(y or n\)" ]
+          ".+ \(\[?y\]? or \[?n\]?\)" ]
         # Things like 'next 5' are allowed:
         self.b_has_count_commands = True
         self.b_coalesce_support = True

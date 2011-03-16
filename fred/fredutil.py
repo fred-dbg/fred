@@ -32,7 +32,7 @@ GS_FILE_PATH_RE = "[/a-zA-Z0-9_\-\.]+"
 GB_DEBUG = False
 # Set to true to enable timings display.
 # Internal use only -- no command line switch.
-GB_ENABLE_TIMINGS = False
+GB_ENABLE_TIMINGS = True
 gd_timers = {}
 
 def last_n(s, source, n):
