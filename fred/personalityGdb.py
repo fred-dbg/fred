@@ -44,9 +44,11 @@ class PersonalityGdb(personality.Personality):
         self.GS_BREAKPOINT = "break"
         self.GS_WHERE = "where"
         self.GS_INFO_BREAKPOINTS = "info breakpoints"
+        self.GS_INFO_THREADS = "info threads"
         self.GS_PRINT = "print"
         self.GS_FINISH = "finish"
         self.GS_CURRENT_POS = "where 1"
+        self.GS_SWITCH_THREAD = "thread"
         
         self.gs_next_re = fredutil.getRE(self.GS_NEXT, 4) + "|^n$|^n\s+.*$"
         self.gs_step_re = fredutil.getRE(self.GS_STEP, 4) + "|^s$|^s\s+.*$"
@@ -57,12 +59,13 @@ class PersonalityGdb(personality.Personality):
             fredutil.getRE(self.GS_INFO_BREAKPOINTS, 5) + "|^i b"
         self.gs_print_re = fredutil.getRE(self.GS_PRINT, 5) + "|^p(/\w)?"
         self.gs_program_not_running_re = "No stack."
+        self.gs_stack_move_re = "^up|^do(wn)?"
         
         self.GS_PROMPT = "(gdb) "
-        self.gre_prompt = re.compile("\(gdb\) $")
+        self.gre_prompt = re.compile("\(gdb\) ")
         # Basic stack trace format, matches this kind:
         # "#0  *__GI___libc_malloc (bytes=8) at malloc.c:3551"
-        self.gre_backtrace_frame = "^#(\d+)\s+(.+?)\s+\((.*?)\)\s+at\s+(" \
+        self.gre_backtrace_frame = "^#(\d+)\s+(0x[0-9a-f]+ in )?(.+?)\s+\((.*?)\)\s+at\s+(" \
                                    + fredutil.GS_FILE_PATH_RE + \
                                    "):(\d+)"
         self.gre_breakpoint = "(\d+)\s*(\w+)\s*(\w+)\s*(\w+)\s*" \
@@ -71,6 +74,8 @@ class PersonalityGdb(personality.Personality):
                               + fredutil.GS_FILE_PATH_RE + \
                               "):(\d+)\s+(?:breakpoint already hit " \
                               "(\d+) time)?"
+        # Matches gdb thread ids from "info threads":
+        self.gre_thread = "^(\*?)\s*(\d+)\s*Thread"
         # List of regexes that match debugger prompts for user input
         self.ls_needs_user_input = \
         [ "---Type <return> to continue, or q <return> to quit---",
@@ -104,15 +109,10 @@ class PersonalityGdb(personality.Personality):
             return s_printed
         else:
             return m.group(1)
-        
+
     def do_step(self, n):
         """Override generic do_step() from personality.py so we can avoid
         stepping into libc, etc."""
-        global gs_inferior_name
-        if gs_inferior_name == "":
-            fredutil.fred_assert(self.s_inferior_name != "",
-                                 "Empty inferior name.")
-            gs_inferior_name = self.s_inferior_name
         # If the 'step' results in an address of something that is outside of
         # the user's code, execute a 'finish', and replace the 'step' in
         # history with a 'next', so on replay only the next is executed.
@@ -120,7 +120,7 @@ class PersonalityGdb(personality.Personality):
         bt = self.get_backtrace()
         cur_func = bt.l_frames[0].s_function
         n_cur_addr = parse_address(self.do_print("&" + cur_func))
-        if not within_user_code(n_cur_addr):
+        if not self.within_user_code(n_cur_addr):
             self.execute_command(self.GS_FINISH)
             # TODO: Think of more portable way to do this:
             return "DO-NOT-STEP"
@@ -131,11 +131,19 @@ class PersonalityGdb(personality.Personality):
         The Match object should be a tuple (result of gre_backtrace_frame.)"""
         frame = freddebugger.BacktraceFrame()
         frame.n_frame_num = int(match_obj[0])
-        frame.s_function  = match_obj[1]
-        frame.s_args      = match_obj[2]
-        frame.s_file      = match_obj[3]
-        frame.n_line      = int(match_obj[4])
+        frame.s_addr      = match_obj[1]
+        frame.s_function  = match_obj[2]
+        frame.s_args      = match_obj[3]
+        frame.s_file      = match_obj[4]
+        frame.n_line      = int(match_obj[5])
         return frame
+
+    def _parse_one_thread(self, match_obj):
+        """Return a 2-tuple: (b_active, tid) from the given re Match object.
+        The Match object should be a tuple (the result of gre_thread).
+        b_active is True if the tid is the current active thread."""
+        b_active = (match_obj[0] != "")
+        return (b_active, int(match_obj[1]))
 
     def _parse_one_breakpoint(self, match_obj):
         """Return a Breakpoint from the given re Match object.
@@ -166,6 +174,23 @@ class PersonalityGdb(personality.Personality):
         global gn_user_code_min, gn_user_code_max
         gn_user_code_min = gn_user_code_max = 0
 
+    def within_user_code(self, n_addr=-1):
+        """Return True if n_addr is within the user program's code segment."""
+        # XXX: TODO: Need to check all user libraries too (firefox)
+        global gn_user_code_min, gn_user_code_max, gs_inferior_name
+        if gs_inferior_name == "":
+            fredutil.fred_assert(self.s_inferior_name != "",
+                                 "Empty inferior name.")
+            gs_inferior_name = self.s_inferior_name
+        if n_addr == -1:
+            bt = self.get_backtrace()
+            cur_func = bt.l_frames[0].s_function
+            n_addr = parse_address(self.do_print("&" + cur_func))
+        if gn_user_code_min == 0:
+            get_user_code_addresses()
+        return n_addr > gn_user_code_min and n_addr < gn_user_code_max
+
+
 def parse_address(s_addr):
     """Parse the given address string from gdb and return a number."""
     # Example input: "$2 = (int (*)(item *)) 0x8048508 <list_len>"
@@ -178,13 +203,6 @@ def parse_address(s_addr):
     # TODO: hackish: return an address within the user space to fool whoever
     # is calling this.  need to investigate why m can be None.
     return gn_user_code_min + 10
-
-def within_user_code(n_addr):
-    """Return True if n_addr is within the user program's code segment."""
-    global gn_user_code_min, gn_user_code_max
-    if gn_user_code_min == 0:
-        get_user_code_addresses()
-    return n_addr > gn_user_code_min and n_addr < gn_user_code_max
 
 def get_user_code_addresses():
     """Get user code ranges from /proc/pid/maps."""

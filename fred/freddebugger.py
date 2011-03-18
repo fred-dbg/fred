@@ -70,6 +70,10 @@ class Debugger():
         """Perform 'print expr' command. Returns output."""
         return self._p.do_print(expr)
 
+    def _finish(self):
+        """Perform 'finish' command. Returns output."""
+        return self._p.do_finish()
+    
     def at_breakpoint(self):
         """Return True if debugger is currently on a breakpoint."""
         bt_frame = self._p.current_position()
@@ -89,7 +93,11 @@ class Debugger():
     def update_state(self):
         """Update the underlying DebuggerState."""
         fredutil.fred_debug("Updating DebuggerState.")
-        self.state().backtrace     = self._p.get_backtrace()
+        fredutil.fred_debug("Getting current tid.")
+        self.state().n_current_tid = self._p.get_current_tid()
+        fredutil.fred_debug("Getting thread backtraces.")
+        self.state().d_backtraces  = self._p.get_all_backtraces()
+        fredutil.fred_debug("Getting breakpoints.")
         self.state().l_breakpoints = self._p.get_breakpoints()
 
     def get_find_prompt_function(self):
@@ -116,6 +124,16 @@ class Debugger():
     def program_is_running(self):
         """Return True if inferior is still running."""
         return self._p.program_is_running()
+
+    def get_current_tid(self):
+        """Return a gdb tid representing the currently active thread."""
+        self.state().n_current_tid = self._p.get_current_tid()
+        return self.state().n_current_tid
+
+    def switch_to_thread(self, n_tid):
+        """Given a tid, switches debugger to that thread."""
+        self._p.switch_to_thread(n_tid)
+        self.state().n_current_tid = n_tid
 
 class ReversibleDebugger(Debugger):
     """Represents control and management of a reversible Debugger.
@@ -219,15 +237,18 @@ class ReversibleDebugger(Debugger):
         if self.checkpoint != None:
             self.checkpoint.log_command(cmd)
     
-    def execute_fred_command(self, cmd):
+    def execute_fred_command(self, cmd, b_update=True):
         """Execute the given FredCommand."""
         if cmd.s_native == "":
             # This should never happen.
             fredutil.fred_fatal("FredCommand instance has null native string.")
         elif cmd.b_ignore:
+            fredutil.fred_debug("Skipping ignore command '%s'" % \
+                                    (cmd.s_native+ " " + cmd.s_args))
             return
         self._p.execute_command(cmd.s_native + " " + cmd.s_args + "\n")
-        self.update_state()
+        if b_update:
+            self.update_state()
 
     def do_next(self, n=1):
         """Perform n 'next' commands. Returns output."""
@@ -293,6 +314,10 @@ class ReversibleDebugger(Debugger):
         # side effects. Example: "print var++"
         return self._print(expr)
 
+    def do_finish(self):
+        """Perform 'finish' command. Returns output."""
+        return self._finish()
+
     def _copy_fred_commands(self, l_cmds):
         """Perform a deep copy on the given list of FredCommands."""
         l_result = []
@@ -336,7 +361,8 @@ class ReversibleDebugger(Debugger):
         fredutil.fred_debug("Replaying the following history: %s" % \
                             str(l_temp))
         for cmd in l_temp:
-            self.execute_fred_command(cmd)
+            self.execute_fred_command(cmd, b_update=False)
+        self.update_state()
 
     def first_n_commands(self, l_history, n):
         """Return the first 'n' commands from given history."""
@@ -615,7 +641,7 @@ class ReversibleDebugger(Debugger):
             n_count = (n_min + n_max) / 2
             self.do_restart(b_clear_history = True)
             self.replay_history(l_history, n_count)
-            if self.evaluate_expression(s_expr) == s_expr_val:
+            if self.test_in_all_threads(s_expr, s_expr_val):
                 fredutil.fred_debug("Setting max bound %d" % n_count)
                 n_max = n_count
             else:
@@ -623,10 +649,15 @@ class ReversibleDebugger(Debugger):
                 n_min = n_count
         # XXX: deviate here
         fredutil.fred_assert(n_max - n_min == 1)
+        if n_min == len(l_history) - 1:
+            fredutil.fred_warning("Unable to find command in history which "
+                                  "changed the value of the given expression "
+                                  "'%s'. Expanding last command anyway..." %
+                                  s_expr)
         self.do_restart(b_clear_history = True)
         l_history = l_history[:n_max]
         self.replay_history(l_history, n_min)
-        if n_min == 0 and self.evaluate_expression(s_expr) == s_expr_val:
+        if n_min == 0 and self.test_in_all_threads(s_expr, s_expr_val):
             fredutil.fred_error("Reverse-watch failed to search history.")
             return None
         fredutil.fred_debug("Done searching history.")
@@ -646,8 +677,21 @@ class ReversibleDebugger(Debugger):
         if l_history[-1].is_step():
             fredutil.fred_debug("Last command was step.")
             return l_history
+        # before we start expanding, switch to a thread which is not in a
+        # blocking call (pthread_join or select). then, repeatedly issue 'finish'
+        # until we reach user code again.
+        self.switch_to_controlled_thread()
+        # TODO: currently this function doesn't take into account user libraries:
+        while not self._p.within_user_code():
+            pdb.set_trace()
+            fredutil.fred_debug("Not within user code (thread was probably "
+                                "interrupted). Executing finish until in user "
+                                "code again.")
+            self._p.do_finish()
         fredutil.fred_assert(l_history[-1].is_next() or \
-                             l_history[-1].is_continue())
+                             l_history[-1].is_continue(),
+                             "Trying to expand a last command that is not "
+                             "'next' or 'continue': '%s'" % l_history[-1])
         if l_history[-1].is_continue():
             fredutil.fred_debug("Last command continue.")
             l_history = \
@@ -656,7 +700,7 @@ class ReversibleDebugger(Debugger):
         while l_history[-1].is_next():
             l_history[-1] = self._p.get_personality_cmd(fred_step_cmd())
             self.replay_history([self._p.get_personality_cmd(fred_step_cmd())])
-            if self.evaluate_expression(s_expr) == s_expr_val:
+            if self.test_expression(s_expr, s_expr_val):
                 # Done: return debugger at time when if 's' were executed, then
                 # expression would become true. We also change the final
                 # command to 'step' so the rest of the call stack knows we have
@@ -684,7 +728,7 @@ class ReversibleDebugger(Debugger):
         self.replay_history(l_expanded_history)
         l_history += l_expanded_history
         while self.program_is_running() and \
-              self.evaluate_expression(s_expr) != s_expr_val:
+              self.test_expression(s_expr, s_expr_val):
             self.replay_history(l_expanded_history)
             n_min = len(l_history)
             l_history += l_expanded_history
@@ -692,12 +736,44 @@ class ReversibleDebugger(Debugger):
         fredutil.fred_debug("Done next expansion: %s" % str(l_history))
         return self._binary_search_history(l_history, n_min, s_expr, s_expr_val)
 
+    def switch_to_controlled_thread(self):
+        # quick hack for firefox rw: switch to a thread which is not in the
+        # middle of a pthread_join or select, so that when we issue 'finish' to get
+        # back to user code, it doesn't hang on a blocking call.
+        for (tid,bt) in self.state().d_backtraces.items():
+            pdb.set_trace()
+            if bt.l_frames[self._p.n_top_backtrace_frame].s_function \
+                   not in ["pthread_join", "select"]:
+                fredutil.fred_debug("Switching to thread %d" % tid)
+                self.switch_to_thread(tid)
+                return
+
+    def test_in_all_threads(self, s_expr, s_expr_val):
+        """Return True if evaluated s_expr == s_expr_val in any thread."""
+        n_old_tid = self.get_current_tid()
+        for n_tid in self.state().list_current_threads():
+            self.switch_to_thread(n_tid)
+            if self.test_expression(s_expr, s_expr_val):
+                self.switch_to_thread(n_old_tid)
+                return True
+        self.switch_to_thread(n_old_tid)
+        return False
+
+    def test_expression(self, s_expr, s_expr_val):
+        s_result = self.evaluate_expression(s_expr)
+        if s_result == "1" and s_expr_val == "true":
+            return True
+        elif s_result == "0" and s_expr_val == "false":
+            return True
+        else:
+            return s_result == s_expr_val
+
     def evaluate_expression(self, s_expr):
         """Returns sanitized value of expression in debugger."""
         s_val = self.do_print(s_expr)
         s_val = self._p.sanitize_print_result(s_val)
         return s_val.strip()
-            
+
 class DebuggerState():
     """Represents the current state of a debugger.
     State of a debugger is represented by:
@@ -705,31 +781,43 @@ class DebuggerState():
       - current breakpoints, if any
     """
     def __init__(self):
-        # The current backtrace.
-        self.backtrace = Backtrace()
+        # The currently active thread id
+        self.n_current_tid = -1
+        # The current backtraces of all threads. Mapping tid->Backtrace
+        self.d_backtraces = {}
         # Current breakpoints (list of Breakpoint objects)
         self.l_breakpoints = []
 
     def __eq__(self, other):
-        return self.backtrace == other.backtrace and \
+        return self.current_thread_backtrace() == \
+                 other.current_thread_backtrace() and \
                self.l_breakpoints == other.l_breakpoints
 
     def __repr__(self):
-        s = "---Backtrace:---\n" +str(self.backtrace)+ "\n---Breakpoints:---\n"
+        s = "---Backtrace:---\n"+str(self.d_backtraces)+"\n---Breakpoints:---\n"
         s += str(self.l_breakpoints)
         return s
 
     def copy(self):
         """Return a deep copy of this instance."""
         new_state = DebuggerState()
-        new_state.backtrace = self.backtrace.copy()
+        for (tid,bt) in self.d_backtraces:
+            new_state.d_backtraces[tid] = bt.copy()
         for b in self.l_breakpoints:
             new_state.l_breakpoints.append(b.copy())
         return new_state
 
+    def list_current_threads(self):
+        """Return a list of all tids."""
+        return self.d_backtraces.keys()
+
+    def current_thread_backtrace(self):
+        """Return Backtrace of current thread."""
+        return self.d_backtraces[self.n_current_tid]
+
     def level(self):
-        """Return stack depth."""
-        return len(self.backtrace.l_frames)
+        """Return stack depth of current thread."""
+        return self.current_thread_backtrace().depth()
     
 class Breakpoint():
     """Represents one breakpoint in the debugger.
@@ -801,6 +889,10 @@ class Backtrace():
         new_bt = Backtrace()
         new_bt.l_frames = self._copy_frames(self.l_frames)
         return new_bt
+
+    def depth(self):
+        """Return the depth of this instance."""
+        return len(self.l_frames)
 
 class BacktraceFrame():
     """Represents one frame in the stack trace (backtrace).

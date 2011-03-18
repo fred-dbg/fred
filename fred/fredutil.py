@@ -61,6 +61,11 @@ def fred_error(message):
     sys.stderr.write("FReD error: %s\n" % message)
     sys.stderr.flush()
 
+def fred_warning(message):
+    """Print a warning message to the screen with a fred-specific prefix."""
+    sys.stderr.write("FReD warning: %s\n" % message)
+    sys.stderr.flush()
+
 def fred_fatal(message):
     """Kill FReD with given message."""
     sys.stderr.write("FReD fatal error: %s\n" % message)
