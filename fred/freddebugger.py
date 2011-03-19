@@ -35,7 +35,7 @@ class Debugger():
     If the semantics of personality-specific things change, we may change the
     usage here, and keep the interface unchanged."""
     def __init__(self, personality):
-        self._p = personality
+        self._p     = personality
         self._state = DebuggerState()
 
     def personality_name(self):
@@ -93,12 +93,9 @@ class Debugger():
     def update_state(self):
         """Update the underlying DebuggerState."""
         fredutil.fred_debug("Updating DebuggerState.")
-        fredutil.fred_debug("Getting current tid.")
-        self.state().n_current_tid = self._p.get_current_tid()
-        fredutil.fred_debug("Getting thread backtraces.")
-        self.state().d_backtraces  = self._p.get_all_backtraces()
-        fredutil.fred_debug("Getting breakpoints.")
-        self.state().l_breakpoints = self._p.get_breakpoints()
+        self.state().set_current_tid(self._p.get_current_tid())
+        self.state().set_backtraces(self._p.get_all_backtraces())
+        self.state().set_breakpoints(self._p.get_breakpoints())
 
     def get_find_prompt_function(self):
         """Return the 'contains_prompt_str' function from the personality."""
@@ -127,7 +124,7 @@ class Debugger():
 
     def get_current_tid(self):
         """Return a gdb tid representing the currently active thread."""
-        self.state().n_current_tid = self._p.get_current_tid()
+        self.state().set_current_tid(self._p.get_current_tid())
         return self.state().n_current_tid
 
     def switch_to_thread(self, n_tid):
@@ -649,11 +646,6 @@ class ReversibleDebugger(Debugger):
                 n_min = n_count
         # XXX: deviate here
         fredutil.fred_assert(n_max - n_min == 1)
-        if n_min == len(l_history) - 1:
-            fredutil.fred_warning("Unable to find command in history which "
-                                  "changed the value of the given expression "
-                                  "'%s'. Expanding last command anyway..." %
-                                  s_expr)
         self.do_restart(b_clear_history = True)
         l_history = l_history[:n_max]
         self.replay_history(l_history, n_min)
@@ -683,7 +675,6 @@ class ReversibleDebugger(Debugger):
         self.switch_to_controlled_thread()
         # TODO: currently this function doesn't take into account user libraries:
         while not self._p.within_user_code():
-            pdb.set_trace()
             fredutil.fred_debug("Not within user code (thread was probably "
                                 "interrupted). Executing finish until in user "
                                 "code again.")
@@ -728,7 +719,7 @@ class ReversibleDebugger(Debugger):
         self.replay_history(l_expanded_history)
         l_history += l_expanded_history
         while self.program_is_running() and \
-              self.test_expression(s_expr, s_expr_val):
+              not self.test_expression(s_expr, s_expr_val):
             self.replay_history(l_expanded_history)
             n_min = len(l_history)
             l_history += l_expanded_history
@@ -741,7 +732,6 @@ class ReversibleDebugger(Debugger):
         # middle of a pthread_join or select, so that when we issue 'finish' to get
         # back to user code, it doesn't hang on a blocking call.
         for (tid,bt) in self.state().d_backtraces.items():
-            pdb.set_trace()
             if bt.l_frames[self._p.n_top_backtrace_frame].s_function \
                    not in ["pthread_join", "select"]:
                 fredutil.fred_debug("Switching to thread %d" % tid)
@@ -788,32 +778,56 @@ class DebuggerState():
         # Current breakpoints (list of Breakpoint objects)
         self.l_breakpoints = []
 
+    def set_current_tid(self, n_tid):
+        self.n_current_tid = n_tid
+
+    def get_current_tid(self):
+        return self.n_current_tid
+
+    def set_backtraces(self, d_bts):
+        self.d_backtraces = d_bts
+
+    def get_backtraces(self,):
+        return self.d_backtraces
+
+    def add_backtrace(self, n_tid, bt):
+        self.d_backtraces[n_tid] = bt
+
+    def set_breakpoints(self, l_bps):
+        self.l_breakpoints = []
+
+    def get_breakpoints(self):
+        return self.l_breakpoints
+
+    def add_breakpoint(self, bp):
+        self.l_breakpoints.append(bp)
+
     def __eq__(self, other):
         return self.current_thread_backtrace() == \
                  other.current_thread_backtrace() and \
-               self.l_breakpoints == other.l_breakpoints
+               self.get_breakpoints() == other.get_breakpoints()
 
     def __repr__(self):
-        s = "---Backtrace:---\n"+str(self.d_backtraces)+"\n---Breakpoints:---\n"
-        s += str(self.l_breakpoints)
+        s = "---Backtrace:---\n%s\n---Breakpoints:---\n%s\n" % \
+            (str(self.get_backtraces()), str(self.get_breakpoints()))
         return s
 
     def copy(self):
         """Return a deep copy of this instance."""
         new_state = DebuggerState()
-        for (tid,bt) in self.d_backtraces:
-            new_state.d_backtraces[tid] = bt.copy()
-        for b in self.l_breakpoints:
-            new_state.l_breakpoints.append(b.copy())
+        for (n_tid, bt) in self.get_backtraces():
+            new_state.add_backtrace(tid, bt.copy())
+        for b in self.get_breakpoints():
+            new_state.add_breakpoint(b.copy())
         return new_state
 
     def list_current_threads(self):
         """Return a list of all tids."""
-        return self.d_backtraces.keys()
+        return self.get_backtraces().keys()
 
     def current_thread_backtrace(self):
         """Return Backtrace of current thread."""
-        return self.d_backtraces[self.n_current_tid]
+        return self.get_backtraces()[self.n_current_tid]
 
     def level(self):
         """Return stack depth of current thread."""
@@ -854,15 +868,15 @@ class Breakpoint():
     def copy(self):
         """Return a deep copy of this instance."""
         bp = Breakpoint()
-        bp.n_number = self.n_number
-        bp.s_type = self.s_type
-        bp.s_display = self.s_display
-        bp.s_enable = self.s_enable
-        bp.s_address = self.s_address
+        bp.n_number   = self.n_number
+        bp.s_type     = self.s_type
+        bp.s_display  = self.s_display
+        bp.s_enable   = self.s_enable
+        bp.s_address  = self.s_address
         bp.s_function = self.s_function
-        bp.s_file = self.s_file
-        bp.n_line = self.n_line
-        bp.n_count = self.n_count
+        bp.s_file     = self.s_file
+        bp.n_line     = self.n_line
+        bp.n_count    = self.n_count
         return bp
 
 class Backtrace():
@@ -996,15 +1010,6 @@ class FredCommand():
 
     def is_breakpoint(self):
         return self.s_name == fred_breakpoint_cmd().s_name
-
-    def is_where(self):
-        return self.s_name == fred_where_cmd().s_name
-
-    def is_info_breakpoints(self):
-        return self.s_name == fred_info_breakpoints_cmd().s_name
-
-    def is_print(self):
-        return self.s_name == fred_print_cmd().s_name
 
     def count(self):
         """Return integer representation of 'count' argument."""
