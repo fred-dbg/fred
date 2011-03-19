@@ -270,7 +270,7 @@ def fred_setup(l_cmd=[]):
     """Perform any setup needed by FReD before entering an I/O loop."""
     global g_debugger
     # Remove any files from a previous run:
-    cleanup_fred_files()
+    #cleanup_fred_files() # TODO: make this less annoying
     # Parse arguments, if none were provided.
     if len(l_cmd) == 0:
         l_cmd = parse_program_args()
