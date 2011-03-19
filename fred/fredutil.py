@@ -133,6 +133,16 @@ def to_int(str, n_default=0):
     except ValueError:
         return n_default
 
+def open_file(s_filename):
+    """Open given filename and return file instance, or None on error."""
+    f = None
+    try:
+        f = open(s_filename)
+    except IOError as (errno, strerror):
+        fredutil.fred_error("Error opening source file '%s': %s" % \
+                           (s_filename, strerror))
+    return f
+
 def fred_teardown():
     fred_debug("FReD exiting.")
     fredio.teardown()

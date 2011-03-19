@@ -95,8 +95,6 @@ GS_FRED_TMPDIR = '/tmp/fred.' + os.environ['USER']
 # The global ReversibleDebugger instance.
 g_debugger = None
 g_source_script = None
-gb_record_commands = False
-gf_command_record_file = None
 ######################## End Global Variables #################################
 
 def fred_command_help():
@@ -116,14 +114,18 @@ def fred_command_help():
   fred-help:                  Display this help message.
   fred-history:               Display your command history up to this point.
   fred-debug:                 (*Experts only) Drop into a pdb prompt for FReD.
-  fred-start-record <FILE>:   Start recording your commands, writing to FILE.
-  fred-stop-record:           Stop a running recording session.
 """
    sys.stdout.flush()
 
 def is_quit_command(s_command):
     """Return True if s_command is a debugger 'quit' command."""
     return s_command in ["q", "quit", "exit"]
+
+def is_fred_command(s_command):
+    """Return True if the given command needs special handling."""
+    global GS_FRED_COMMAND_PREFIX
+    return s_command.startswith(GS_FRED_COMMAND_PREFIX) or \
+           is_quit_command(s_command)
 
 def handle_fred_command(s_command):
     """Performs handling of 'special' (non-debugger) commands."""
@@ -161,33 +163,31 @@ def handle_fred_command(s_command):
         print g_debugger.history()
     elif s_command_name == "debug":
         pdb.set_trace()
-    elif s_command_name == "start-record":
-       start_command_recording(s_command_args)
-    elif s_command_name == "stop-record":
-       stop_command_recording()
     else:
         fredutil.fred_error("Unknown FReD command '%s'" % s_command_name)
+
+def dispatch_command(s_command):
+    """Given a user command, dispatches and executes it in the right way."""
+    fredutil.fred_timer_start(s_command)
+    if is_fred_command(s_command):
+        handle_fred_command(s_command)
+    # TODO: Currently we do not log fred commands. Do we need to?
+    else:
+        fredio.send_command(s_command)
+        g_debugger.log_command(s_command)
+    fredutil.fred_timer_stop(s_command)
 
 def source_from_file(s_filename):
     """Execute commands from given file."""
     fredutil.fred_debug("Start sourcing from file '%s'" % s_filename)
-    try:
-        f = open(s_filename)
-    except IOError as (errno, strerror):
-        fredutil.fred_error("Error opening source file '%s': %s" % \
-                           (s_filename, strerror))
+    f = fredutil.open_file(s_filename)
+    if f == None:
         return
     for s_line in f:
         s_line = s_line.strip()
         if s_line == "":
            continue
-        fredutil.fred_timer_start(s_line)
-        if is_fred_command(s_line):
-            handle_fred_command(s_line)
-        else:
-            fredio.send_command(s_line)
-            g_debugger.log_command(s_line)
-        fredutil.fred_timer_stop(s_line)
+        dispatch_command(s_line)
     f.close()
     fredutil.fred_debug("Finished sourcing from file '%s'" % s_filename)
 
@@ -195,61 +195,8 @@ def source_from_list(ls_cmds):
     """Execute commands from given list."""
     for s_cmd in ls_cmds:
         s_cmd = s_cmd.strip()
-        fredutil.fred_timer_start(s_cmd)
-        if is_fred_command(s_cmd):
-            handle_fred_command(s_cmd)
-        else:
-            fredio.send_command(s_cmd)
-            g_debugger.log_command(s_cmd)
-        fredutil.fred_timer_stop(s_cmd)
+        dispatch_command(s_cmd)
 
-def start_command_recording(s_filename):
-    """Start recording all user commands to file."""
-    global gb_record_commands, gf_command_record_file
-    fredutil.fred_info("Starting command recording to file '%s'" % s_filename)
-    try:
-       gf_command_record_file = open(s_filename, 'a')
-       gb_record_commands = True
-    except IOError as e:
-       fredutil.fred_error("Could not open file '%s': %s" %
-                           (s_filename, str(e)))
-
-def stop_command_recording():
-    """Stop recording all user commands."""
-    global gb_record_commands, gf_command_record_file
-    if not gb_record_commands:
-       fredutil.fred_info("Commands were not being recorded.")
-       return
-    fredutil.fred_info("Stopped command recording.")
-    gf_command_record_file.close()
-    gb_record_commands = False
-
-def is_fred_command(s_command):
-    """Return True if the given command needs special handling."""
-    global GS_FRED_COMMAND_PREFIX
-    return s_command.startswith(GS_FRED_COMMAND_PREFIX) or \
-           is_quit_command(s_command)
-
-def set_up_debugger(s_debugger_name):
-    """Initialize global ReversibleDebugger instance g_debugger.
-    Return the personality's find prompt function to pass to fredio."""
-    global g_debugger
-    if s_debugger_name == "gdb":
-        fredutil.fred_debug("Using gdb personality.")
-        from fred.personalityGdb import PersonalityGdb
-        g_debugger = freddebugger.ReversibleDebugger(PersonalityGdb())
-        del PersonalityGdb
-    else:
-        fredutil.fred_fatal("Unimplemented debugger '%s'" % s_debugger_name)
-    return (g_debugger.get_find_prompt_function(),
-            g_debugger.get_prompt_string_function())
-
-def setup_environment_variables(s_dmtcp_port="7779", b_debug=False):
-    """Set up the given environment variables."""
-    os.environ['DMTCP_PORT'] = s_dmtcp_port
-    if b_debug:
-        fredutil.GB_DEBUG = True
-    os.environ['DMTCP_TMPDIR'] = GS_FRED_TMPDIR
 
 def parse_program_args():
     """Initialize command line options, and parse them.
@@ -267,10 +214,9 @@ def parse_program_args():
     parser.add_option("--enable-debug", dest="debug", default=False,
                       action="store_true",
                       help="Enable FReD debugging messages.")
-    # ./fredapp.py --fred-demo gdb a.out
     parser.add_option("--fred-demo", dest="fred_demo", default=False,
                       action="store_true",
-                      help="Enable FReD demo.")
+                      help="Enable FReD demo mode.")
     (options, l_args) = parser.parse_args()
     # 'l_args' is the 'gdb ARGS ./a.out' list
     if len(l_args) == 0:
@@ -284,6 +230,32 @@ def parse_program_args():
     setup_environment_variables(str(options.dmtcp_port), options.debug)
     return l_args
 
+def setup_debugger(s_debugger_name):
+    """Initialize global ReversibleDebugger instance g_debugger."""
+    global g_debugger
+    if s_debugger_name == "gdb":
+        fredutil.fred_debug("Using gdb personality.")
+        from fred.personalityGdb import PersonalityGdb
+        g_debugger = freddebugger.ReversibleDebugger(PersonalityGdb())
+        del PersonalityGdb
+    else:
+        fredutil.fred_fatal("Unimplemented debugger '%s'" % s_debugger_name)
+
+def setup_environment_variables(s_dmtcp_port="7779", b_debug=False):
+    """Set up the given environment variables."""
+    os.environ['DMTCP_PORT'] = s_dmtcp_port
+    fredutil.GB_DEBUG = b_debug
+    os.environ['DMTCP_TMPDIR'] = GS_FRED_TMPDIR
+
+def setup_fredio(l_cmd):
+    """Set up I/O handling."""
+    global g_debugger
+    fredio.g_find_prompt_function  = g_debugger.get_find_prompt_function()
+    fredio.g_print_prompt_function = g_debugger.get_prompt_string_function()
+    fredio.gre_prompt              = g_debugger.get_prompt_regex()
+    fredio.gls_needs_user_input    = g_debugger.get_ls_needs_input()
+    fredio.setup(l_cmd)
+
 def interactive_debugger_setup():
     """Perform any debugger setup that requires a debugger prompt."""
     global g_debugger, g_source_script
@@ -293,48 +265,6 @@ def interactive_debugger_setup():
     # If the user gave a source script file, execute it now.
     if g_source_script != None:
         source_from_file(g_source_script)
-
-def main_io_loop():
-    """Main I/O loop to get and handle user commands."""
-    global g_source_script, gb_record_commands, gf_command_record_file
-    fredio.wait_for_prompt()
-    interactive_debugger_setup()
-    s_last_command = ""
-    while 1:
-        try:
-            # Get one user command (blocking):
-            s_command = fredio.get_command()
-            # Special case: user just entered '\n', meaning execute last
-            # command again. We want to preserve that functionality for fred
-            # commands too.
-            if s_command == '':
-                s_command = s_last_command
-            if gb_record_commands and s_command != "fred-stop-record":
-                gf_command_record_file.write(s_command + '\n')
-            fredutil.fred_timer_start(s_command)
-            if is_fred_command(s_command):
-                handle_fred_command(s_command)
-                # TODO: Currently we do not log fred commands. Do we need to?
-            else:
-                fredio.send_command(s_command)
-                g_debugger.log_command(s_command)
-            fredutil.fred_timer_stop(s_command)
-            s_last_command = s_command
-        except KeyboardInterrupt:
-            fredio.signal_child(signal.SIGINT)
-
-def remove_fred_tmpdir():
-    """Remove FReD temporary directory and contents."""
-    fredutil.fred_debug("Removing temporary directory '%s'" % \
-                        GS_FRED_TMPDIR)
-    # Safety feature: assert that the directory contains "/tmp", just in case.
-    fredutil.fred_assert(GS_FRED_TMPDIR.find("/tmp") != -1)
-    shutil.rmtree(GS_FRED_TMPDIR, ignore_errors=True)
-
-def cleanup_fred_files():
-    """Remove any FReD-related temporary files."""
-    remove_fred_tmpdir()
-    dmtcpmanager.remove_manager_root()
 
 def fred_setup(l_cmd=[]):
     """Perform any setup needed by FReD before entering an I/O loop."""
@@ -348,15 +278,42 @@ def fred_setup(l_cmd=[]):
         # Command provided: set up env vars with default values.
         setup_environment_variables()
     # Set up the FReD global debugger
-    (find_prompt_fnc, print_prompt_fnc) = set_up_debugger(l_cmd[0])
-    # Set up I/O handling (with appropriate find_prompt())
-    fredio.setup(find_prompt_fnc, print_prompt_fnc,
-                 g_debugger.get_prompt_regex(), g_debugger.get_ls_needs_input(),
-                 l_cmd)
+    setup_debugger(l_cmd[0])
+    # Set up I/O handling
+    setup_fredio(l_cmd)
     # Set up DMTCP manager
     dmtcpmanager.start(l_cmd, int(os.environ['DMTCP_PORT']))
     # We return the debugger instance for the sole purpose of fredtest.py.
     return g_debugger
+
+def cleanup_fred_files():
+    """Remove FReD temporary directory and contents."""
+    global GS_FRED_TMPDIR
+    fredutil.fred_info("Remove temporary directory '%s'? (y or n) ")
+    user_input = raw_input().strip().tolower()
+    if user_input == "y":
+        fredutil.fred_debug("Removing temporary directory '%s'" % \
+                                GS_FRED_TMPDIR)
+        fredutil.fred_assert(GS_FRED_TMPDIR.find("/tmp") != -1)
+        shutil.rmtree(GS_FRED_TMPDIR, ignore_errors=True)
+
+def main_io_loop():
+    """Main I/O loop to get and handle user commands."""
+    global g_source_script
+    fredio.wait_for_prompt()
+    interactive_debugger_setup()
+    s_last_command = ""
+    while 1:
+        try:
+            # Get one user command (blocking):
+            s_command = fredio.get_command()
+            # Special case: user entered '\n' => execute last command again.
+            if s_command == '':
+                s_command = s_last_command
+            dispatch_command(s_command)
+            s_last_command = s_command
+        except KeyboardInterrupt:
+            fredio.signal_child(signal.SIGINT)
 
 def main():
     """Program execution starts here."""
