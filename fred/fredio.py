@@ -279,15 +279,8 @@ def reexec(argv):
     fredutil.fred_debug("Replacing current child with '%s'" % str(argv))
     _spawn_child(argv)
 
-def setup(find_prompt_fnc, print_prompt_fnc, prompt_re, ls_needs_user_input,
-          argv):
+def setup(argv):
     """Perform any setup needed to do i/o with the child process."""
-    global g_find_prompt_function, g_print_prompt_function, gre_prompt, \
-           gls_needs_user_input
-    g_find_prompt_function = find_prompt_fnc
-    g_print_prompt_function = print_prompt_fnc
-    gre_prompt = prompt_re
-    gls_needs_user_input = ls_needs_user_input
     _set_max_needs_input_length()
     # Enable tab completion (with our own 'completer' function)
     #readline.parse_and_bind('tab: complete')

@@ -289,8 +289,12 @@ def fred_setup(l_cmd=[]):
 def cleanup_fred_files():
     """Remove FReD temporary directory and contents."""
     global GS_FRED_TMPDIR
-    fredutil.fred_info("Remove temporary directory '%s'? (y or n) ")
-    user_input = raw_input().strip().tolower()
+    if not os.path.exists(GS_FRED_TMPDIR):
+       return
+    sys.stdout.write("FReD: Remove temporary directory '%s'? (y or n) " % \
+                        GS_FRED_TMPDIR)
+    sys.stdout.flush()
+    user_input = raw_input().strip().lower()
     if user_input == "y":
         fredutil.fred_debug("Removing temporary directory '%s'" % \
                                 GS_FRED_TMPDIR)
@@ -303,7 +307,7 @@ def main_io_loop():
     fredio.wait_for_prompt()
     interactive_debugger_setup()
     s_last_command = ""
-    while 1:
+    while True:
         try:
             # Get one user command (blocking):
             s_command = fredio.get_command()
