@@ -22,7 +22,7 @@
 import fredio
 import freddebugger
 import fredutil
-
+import pdb
 import re
 
 class Personality:
@@ -67,7 +67,8 @@ class Personality:
     def get_current_tid(self):
         """Return a gdb tid representing the currently active thread."""
         l_thread_ids = self._parse_thread_ids(self.do_info_threads())
-        n_current_thread = [x[1] for x in l_thread_ids if x[0]]
+        # TODO: clever, but non-maintainable:
+        n_current_thread = [x[1] for x in l_thread_ids if x[0]][0]
         return n_current_thread
 
     def get_all_backtraces(self):
@@ -225,6 +226,9 @@ class Personality:
         else:
             cmd = freddebugger.fred_unknown_cmd()
         cmd.set_native(s_command.partition(' ')[0])
+        cmd.s_args = s_command.partition(' ')[2]
+        if cmd.b_count_cmd and cmd.s_args != "":
+            cmd.set_count(int(cmd.s_args))
         return cmd        
 
     def get_native(self, fred_cmd):

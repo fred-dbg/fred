@@ -22,6 +22,10 @@
 import math
 import pdb
 
+# Note we don't import fredio here. We should not load fredio unless absolutely
+# necessary. This helps preserve modularity. Typically anything you want to do
+# here with fredio should in fact be done in personality.py or
+# personalityGdb.py.
 import dmtcpmanager
 import fredutil
 
@@ -78,7 +82,7 @@ class Debugger():
         """Return True if debugger is currently on a breakpoint."""
         bt_frame = self._p.current_position()
         self.update_state()
-        for breakpoint in self.state().l_breakpoints:
+        for breakpoint in self.state().get_breakpoints():
             if breakpoint.s_function == bt_frame.s_function and \
                breakpoint.s_file == bt_frame.s_file and \
                breakpoint.n_line == bt_frame.n_line:
@@ -125,12 +129,13 @@ class Debugger():
     def get_current_tid(self):
         """Return a gdb tid representing the currently active thread."""
         self.state().set_current_tid(self._p.get_current_tid())
-        return self.state().n_current_tid
+        return self.state().get_current_tid()
 
     def switch_to_thread(self, n_tid):
         """Given a tid, switches debugger to that thread."""
+        fredutil.fred_debug("Switching to thread %d" % n_tid)
         self._p.switch_to_thread(n_tid)
-        self.state().n_current_tid = n_tid
+        self.state().set_current_tid(n_tid)
 
 class ReversibleDebugger(Debugger):
     """Represents control and management of a reversible Debugger.
@@ -149,28 +154,24 @@ class ReversibleDebugger(Debugger):
 
     def do_checkpoint(self):
         """Perform a new checkpoint."""
-        n_new_index = -1
-        if self.checkpoint != None:
-            n_new_index = self.checkpoint.n_index + 1
-            new_ckpt = Checkpoint(n_new_index)
-            self.checkpoint.next = new_ckpt
+        if self.checkpoint == None:
+            new_ckpt = Checkpoint(0)
         else:
-            n_new_index = 0
-            new_ckpt = Checkpoint(n_new_index)            
-        new_ckpt.previous = self.checkpoint
+            new_ckpt = Checkpoint(self.checkpoint.n_index + 1)
+        self.checkpoint = new_ckpt
         self.l_checkpoints.append(new_ckpt)
-        self.checkpoint = self.l_checkpoints[new_ckpt.n_index]
         dmtcpmanager.do_checkpoint()
         fredutil.fred_info("Created checkpoint #%d." % new_ckpt.n_index)
-        self.update_state()
 
     def reset_on_restart(self):
         """Perform any reset functions that should happen on restart."""
         if self.personality_name() == "gdb":
+            self._p.execute_command("signal SIGKILL")
             self._p.reset_user_code_interval()
 
     def do_restart(self, n_index=-1, b_clear_history=False):
-        """Restart from the current or specified checkpoint."""
+        """Restart from the current or specified checkpoint.
+        n_index defaults to -1, which means restart from current checkpoint."""
         if len(self.l_checkpoints) == 0:
             fredutil.fred_error("No checkpoints available for restart.")
             return
@@ -178,7 +179,6 @@ class ReversibleDebugger(Debugger):
         if n_index == -1:
             fredutil.fred_debug("Restarting from checkpoint index %d." % \
                                 self.checkpoint.n_index)
-            # Restart from current checkpoint.
             dmtcpmanager.restart_ckpt(self.checkpoint.n_index)
         else:
             if n_index > len(self.l_checkpoints) - 1:
@@ -194,12 +194,7 @@ class ReversibleDebugger(Debugger):
 
     def do_restart_previous(self):
         """Restart from the previous checkpoint."""
-        self.checkpoint = self.l_checkpoints[self.checkpoint.n_index - 1]
-        fredutil.fred_debug("Restarting from checkpoint index %d." % \
-                            self.checkpoint.n_index)
-        self.reset_on_restart()
-        dmtcpmanager.restart_ckpt(self.checkpoint.n_index)
-        self.update_state()
+        self.do_restart(self.checkpoint.n_index - 1)
         
     def list_checkpoints(self):
         """Return the list of available Checkpoint files."""
@@ -221,11 +216,8 @@ class ReversibleDebugger(Debugger):
     def log_command(self, s_command):
         """Convert given command to FredCommand instance and add to current
         history."""
-        # identify_command() sets native repr.
+        # identify_command() sets native representation
         cmd = self._p.identify_command(s_command)
-        cmd.s_args = s_command.partition(' ')[2]
-        if cmd.b_count_cmd and cmd.s_args != "":
-            cmd.set_count(int(cmd.s_args))
         if self.checkpoint != None:
             self.checkpoint.log_command(cmd)
 
@@ -237,11 +229,10 @@ class ReversibleDebugger(Debugger):
     def execute_fred_command(self, cmd, b_update=True):
         """Execute the given FredCommand."""
         if cmd.s_native == "":
-            # This should never happen.
             fredutil.fred_fatal("FredCommand instance has null native string.")
         elif cmd.b_ignore:
             fredutil.fred_debug("Skipping ignore command '%s'" % \
-                                    (cmd.s_native+ " " + cmd.s_args))
+                                (cmd.s_native + " " + cmd.s_args))
             return
         self._p.execute_command(cmd.s_native + " " + cmd.s_args + "\n")
         if b_update:
@@ -297,14 +288,6 @@ class ReversibleDebugger(Debugger):
         self.update_state()
         return output
     
-    def do_where(self):
-        """Perform 'where' command. Returns output."""
-        return self._where()
-
-    def do_info_breakpoints(self):
-        """Perform 'info_breakpoints' command. Returns output."""
-        return self._info_breakpoints()
-
     def do_print(self, expr):
         """Perform 'print expr' command. Returns output."""
         # TODO: We should log some print statements, since they can contain
@@ -383,57 +366,15 @@ class ReversibleDebugger(Debugger):
             j += 1
         return l_result
 
-    def last_command(self):
-        """Return the last command of the current history."""
-        if len(self.checkpoint.l_history) == 0:
-            if self.checkpoint.previous != None:
-                fredutil.fred_assert(len(self.checkpoint.previous.l_history) > 0, \
-                       "Unimplemented.")
-                return self.checkpoint.previous.l_history[-1]
-            else:
-                fredutil.fred_assert(False, "Unimplemented branch.")
-        else:
-            return self.checkpoint.l_history[-1]
-
-    def last_command_non_ignore(self):
-        """Return the last non-ignore command of the current history or None."""
-        for i in range(-1, -(len(self.checkpoint.l_history)+1), -1):
-            cmd = self.checkpoint.l_history[i]
-            if not cmd.b_ignore:
-                return cmd
-        return None
-    
-    def trim_non_ignore(self, n):
-        """Trim last n non-ignore commands.
-        Also adjust things like 'next 5' to be 'next 4'."""
-        while n > 0:
-            if not self.last_command().b_ignore:
-                if self.last_command().b_count_cmd:
-                    count = self.last_command().count()
-                    if count != 1:
-                        self.last_command().set_count(count - 1)
-                        n -= 1
-                        continue
-                n -= 1
-            self.checkpoint.l_history.pop()
-
-    def number_non_ignore_cmds(self):
-        """Return the number of non-ignore cmds from current history."""
-        n = 0
-        for cmd in self.checkpoint.l_history:
-            if not cmd.b_ignore:
-                n += 1 if not cmd.b_count_cmd else cmd.count()
-        return n
-
     def undo(self, n=1):
         """Undo the last n commands."""
         b_restart = True
         fredutil.fred_debug("Undoing %d command(s)." % n)
-        while n > self.number_non_ignore_cmds():
+        while n > self.checkpoint.number_non_ignore_cmds():
             b_restart = False
-            n -= self.number_non_ignore_cmds()
+            n -= self.checkpoint.number_non_ignore_cmds()
             # Back up to previous checkpoint
-            if self.checkpoint.previous == None:
+            if self.checkpoint.n_index == 0:
                 fredutil.fred_error("No undo possible (empty command history "
                                     "and no previous checkpoints).")
                 return
@@ -444,11 +385,10 @@ class ReversibleDebugger(Debugger):
         # Trim history by n non-ignore commands
         self.trim_non_ignore(n)
         self.replay_history()
-        # Erase everything from the future:
+        # Erase everything from the future (TODO: currently no-op)
         dmtcpmanager.erase_checkpoints(self.checkpoint.n_index+1,
                                        len(self.l_checkpoints))
         del self.l_checkpoints[self.checkpoint.n_index+1:]
-        self.update_state()
         fredutil.fred_debug("Done undoing %d command(s)." % n)
 
     def reverse_next(self, n=1):
@@ -471,8 +411,8 @@ class ReversibleDebugger(Debugger):
                     fredutil.fred_debug("RN: SAME")
                     if self.state() == orig_state:
                         fredutil.fred_debug("RN: AT ORIG STATE")
-                        if self.last_command_non_ignore().is_next() or \
-                               self.last_command_non_ignore().is_step():
+                        if self.checkpoint.last_command_non_ignore().is_next() or \
+                               self.checkpoint.last_command_non_ignore().is_step():
                             fredutil.fred_debug("RN: AFTER NEXT OR STEP")
                             n_lvl = self.state().level()
                             self.undo()
@@ -509,7 +449,7 @@ class ReversibleDebugger(Debugger):
                     fredutil.fred_debug("RS: SAME")
                     if self.state() == orig_state:
                         fredutil.fred_debug("RS: AT ORIG STATE")
-                        if self.last_command_non_ignore().is_step():
+                        if self.checkpoint.last_command_non_ignore().is_step():
                             fredutil.fred_debug("RS: AFTER STEP")
                             self.undo()
                             break
@@ -539,18 +479,7 @@ class ReversibleDebugger(Debugger):
         fredutil.fred_debug("Reverse finish finished.")
         
     def reverse_continue(self):
-        """Perform 'reverse-continue' command.
-
-        REVERSE CONTINUE():
-          BEGIN: Restore last checkpoint
-          Reply commands until ORIG_STATE
-          if N (> 0) previous breakpoint(s) found
-            Restore last checkpoint and replay until breakpoint N
-          If no previous breakpoint found,
-            set ORIG_STATE to state (time) as of last checkpoint
-            Restore checkpoint previous to last checkpoint
-            GOTO BEGIN
-        """
+        """Perform 'reverse-continue' command. """
         self.update_state()
         orig_state = self.state().copy()
         n_to_restart = self.checkpoint.n_index
@@ -734,7 +663,6 @@ class ReversibleDebugger(Debugger):
         for (tid,bt) in self.state().d_backtraces.items():
             if bt.l_frames[self._p.n_top_backtrace_frame].s_function \
                    not in ["pthread_join", "select"]:
-                fredutil.fred_debug("Switching to thread %d" % tid)
                 self.switch_to_thread(tid)
                 return
 
@@ -1024,11 +952,9 @@ class FredCommand():
         self.s_args = str(n)
 
 class Checkpoint():
-    """ This class will represent a linked list of checkpoints.  A
-    checkpoint has an index number and a command history."""
+    """ This class will represent a checkpoint.  A checkpoint has an
+    index number and a command history."""
     def __init__(self, idx=-1):
-        self.previous   = None # Pointer to the previous Checkpoint
-        self.next       = None # Pointer to next Checkpoint
         self.n_index    = idx  # Index number
         # The history is a list of FredCommands sent to the debugger
         # from the beginning of this checkpoint.
@@ -1040,6 +966,45 @@ class Checkpoint():
     def log_command(self, cmd):
         """Adds the given FredCommand to the history."""
         self.l_history.append(cmd)
+
+    def number_non_ignore_cmds(self):
+        """Return the number of non-ignore cmds from the history."""
+        n = 0
+        for cmd in self.l_history:
+            if not cmd.b_ignore:
+                n += 1 if not cmd.b_count_cmd else cmd.count()
+        return n
+
+    def last_command(self):
+        """Return the last command of the history or None."""
+        if len(self.l_history) == 0:
+            return None
+        else:
+            return self.l_history[-1]
+
+    def last_command_non_ignore(self):
+        """Return the last non-ignore command of the history or None."""
+        for i in range(-1, -(len(self.l_history)+1), -1):
+            cmd = self.l_history[i]
+            if not cmd.b_ignore:
+                return cmd
+        return None
+    
+    def trim_non_ignore(self, n):
+        """Trim last n non-ignore commands.
+        Also adjust things like 'next 5' to be 'next 4'."""
+        while n > 0:
+            if not self.last_command().b_ignore:
+                if self.last_command().b_count_cmd:
+                    count = self.last_command().count()
+                    if count != 1:
+                        self.last_command().set_count(count - 1)
+                        n -= 1
+                        continue
+                n -= 1
+            self.l_history.pop()
+
+
 
 # These will be the abstract commands that should be used *everywhere*. The
 # only place which does not operate on these commands is the personalityXXX.py

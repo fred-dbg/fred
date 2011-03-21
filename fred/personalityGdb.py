@@ -167,6 +167,9 @@ class PersonalityGdb(personality.Personality):
                                                  b_multi_page=True,
                                                  b_wait_for_prompt=True)
         match = re.search(exp, s_info_files, re.MULTILINE)
+        if match == None:
+            fredutil.fred_fatal("Unable to get name of inferior process. "
+                                "Is executable available?")
         self.s_inferior_name = match.group(1).strip()
 
     def reset_user_code_interval(self):
