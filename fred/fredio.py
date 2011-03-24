@@ -53,6 +53,7 @@ gb_hide_output = False
 gb_capture_output = False
 gb_capture_output_til_prompt = False
 gb_capture_output_multi_page = False
+gb_output_thread_alive = False
 gs_captured_output = ""
 g_capture_output_event = threading.Event()
 gre_prompt = ""
@@ -104,9 +105,11 @@ class ThreadedOutput(threading.Thread):
 def _start_output_thread():
     """Start the output thread in daemon mode.
     A thread in daemon mode will not be joined upon program exit."""
+    global gb_output_thread_alive
     o = ThreadedOutput()
     o.daemon = True
     o.start()
+    gb_output_thread_alive = True
 
 def _send_child_input(input):
     """Write the given input string to the child process."""
@@ -219,7 +222,9 @@ def _fred_completer(text, state):
 
 def _spawn_child(argv):
     """Spawn a child process using the given command array."""
-    global gn_child_pid, gn_child_fd
+    global gn_child_pid, gn_child_fd, gb_output_thread_alive
+    if not gb_output_thread_alive:
+        _start_output_thread()
     fredutil.fred_debug("Starting child '%s'" % str(argv))
     (gn_child_pid, gn_child_fd) = pty.fork()
     if gn_child_pid == 0:
@@ -279,14 +284,14 @@ def reexec(argv):
     fredutil.fred_debug("Replacing current child with '%s'" % str(argv))
     _spawn_child(argv)
 
-def setup(argv):
+def setup(argv, b_spawn_child=True):
     """Perform any setup needed to do i/o with the child process."""
     _set_max_needs_input_length()
     # Enable tab completion (with our own 'completer' function)
     #readline.parse_and_bind('tab: complete')
     #readline.set_completer(_fred_completer)
-    _spawn_child(["dmtcp_checkpoint", "--no-gzip", "--port", os.environ["DMTCP_PORT"]] + argv)
-    _start_output_thread()
+    if b_spawn_child:
+        _spawn_child(["dmtcp_checkpoint", "--quiet", "--no-gzip", "--port", os.environ["DMTCP_PORT"]] + argv)
 
 def teardown():
     """Perform any cleanup associated with FReD exit."""

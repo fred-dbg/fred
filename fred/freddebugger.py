@@ -152,6 +152,13 @@ class ReversibleDebugger(Debugger):
         self.checkpoint = None
         self.l_checkpoints = []
 
+    def setup_from_resume(self):
+        """Set up data structures from a resume."""
+        for i in range(0, dmtcpmanager.numCheckpoints):
+            self.l_checkpoints.append(Checkpoint(i))
+        self.checkpoint = self.l_checkpoints[-1]
+        self.update_state()
+
     def do_checkpoint(self):
         """Perform a new checkpoint."""
         if self.checkpoint == None:

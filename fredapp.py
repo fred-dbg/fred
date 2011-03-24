@@ -95,6 +95,7 @@ GS_FRED_TMPDIR = '/tmp/fred.' + os.environ['USER']
 # The global ReversibleDebugger instance.
 g_debugger = None
 g_source_script = None
+gs_resume_dir_path = None
 ######################## End Global Variables #################################
 
 def fred_command_help():
@@ -201,7 +202,7 @@ def source_from_list(ls_cmds):
 def parse_program_args():
     """Initialize command line options, and parse them.
     Return the user's inferior to execute as a list."""
-    global GS_FRED_USAGE, g_source_script
+    global GS_FRED_USAGE, g_source_script, gs_resume_dir_path
     parser = OptionParser(usage=GS_FRED_USAGE, version=GS_FRED_VERSION)
     parser.disable_interspersed_args()
     # Note that '-h' and '--help' are supported automatically.
@@ -217,9 +218,13 @@ def parse_program_args():
     parser.add_option("--fred-demo", dest="fred_demo", default=False,
                       action="store_true",
                       help="Enable FReD demo mode.")
+    parser.add_option("--resume", dest="resume_dir",
+                      help="Resume session from directory DIR containing "
+                      "FReD support files: checkpoint images, "
+                      "synchronization logs, etc.", metavar="DIR")
     (options, l_args) = parser.parse_args()
     # 'l_args' is the 'gdb ARGS ./a.out' list
-    if len(l_args) == 0:
+    if len(l_args) == 0 and options.resume_dir == None:
         parser.print_help()
         fredutil.fred_quit(1)
     if options.source_script != None:
@@ -227,12 +232,15 @@ def parse_program_args():
         g_source_script = options.source_script
     if options.fred_demo:
         fredio.GB_FRED_DEMO = True
+    if options.resume_dir != None:
+        # Resume session from given directory.
+        gs_resume_dir_path = options.resume_dir
     setup_environment_variables(str(options.dmtcp_port), options.debug)
     return l_args
 
 def setup_debugger(s_debugger_name):
     """Initialize global ReversibleDebugger instance g_debugger."""
-    global g_debugger
+    global g_debugger, gs_resume_dir_path
     if s_debugger_name == "gdb":
         fredutil.fred_debug("Using gdb personality.")
         from fred.personalityGdb import PersonalityGdb
@@ -247,14 +255,14 @@ def setup_environment_variables(s_dmtcp_port="7779", b_debug=False):
     fredutil.GB_DEBUG = b_debug
     os.environ['DMTCP_TMPDIR'] = GS_FRED_TMPDIR
 
-def setup_fredio(l_cmd):
+def setup_fredio(l_cmd, b_spawn_child=True):
     """Set up I/O handling."""
     global g_debugger
     fredio.g_find_prompt_function  = g_debugger.get_find_prompt_function()
     fredio.g_print_prompt_function = g_debugger.get_prompt_string_function()
     fredio.gre_prompt              = g_debugger.get_prompt_regex()
     fredio.gls_needs_user_input    = g_debugger.get_ls_needs_input()
-    fredio.setup(l_cmd)
+    fredio.setup(l_cmd, b_spawn_child)
 
 def interactive_debugger_setup():
     """Perform any debugger setup that requires a debugger prompt."""
@@ -268,7 +276,7 @@ def interactive_debugger_setup():
 
 def fred_setup(l_cmd=[]):
     """Perform any setup needed by FReD before entering an I/O loop."""
-    global g_debugger
+    global g_debugger, gs_resume_dir_path
     # Remove any files from a previous run:
     #cleanup_fred_files() # TODO: make this less annoying
     # Parse arguments, if none were provided.
@@ -280,9 +288,16 @@ def fred_setup(l_cmd=[]):
     # Set up the FReD global debugger
     setup_debugger(l_cmd[0])
     # Set up I/O handling
-    setup_fredio(l_cmd)
+    # (only spawn if we are not resuming:)
+    b_spawn_child = gs_resume_dir_path == None
+    setup_fredio(l_cmd, b_spawn_child)
     # Set up DMTCP manager
-    dmtcpmanager.start(l_cmd, int(os.environ['DMTCP_PORT']))
+    if gs_resume_dir_path != None:
+        dmtcpmanager.resume(l_cmd, int(os.environ['DMTCP_PORT']),
+                            gs_resume_dir_path)
+        g_debugger.setup_from_resume()
+    else:
+        dmtcpmanager.start(l_cmd, int(os.environ['DMTCP_PORT']))
     # We return the debugger instance for the sole purpose of fredtest.py.
     return g_debugger
 
@@ -301,10 +316,13 @@ def cleanup_fred_files():
         fredutil.fred_assert(GS_FRED_TMPDIR.find("/tmp") != -1)
         shutil.rmtree(GS_FRED_TMPDIR, ignore_errors=True)
 
-def main_io_loop():
+def main_io_loop(b_skip_prompt=False):
     """Main I/O loop to get and handle user commands."""
     global g_source_script
-    fredio.wait_for_prompt()
+    if not b_skip_prompt:
+       # This is true typically on resume. gdb doesn't print the prompt when
+       # resuming from a checkpoint, so we don't wait for it here.
+       fredio.wait_for_prompt()
     interactive_debugger_setup()
     s_last_command = ""
     while True:
@@ -321,9 +339,12 @@ def main_io_loop():
 
 def main():
     """Program execution starts here."""
+    global gs_resume_dir_path
     fred_setup()
     # Main input/output loop
-    main_io_loop()
+    # skip the prompt waiting if we are resuming:
+    b_skip_prompt = gs_resume_dir_path != None
+    main_io_loop(b_skip_prompt)
     # If we get here, quit.
     fredutil.fred_quit(0)
     

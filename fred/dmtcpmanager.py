@@ -162,43 +162,72 @@ def start(argv, dmtcp_port):
     global childInTransition, DMTCP_PORT
     dprint("Starting from start().")
     childInTransition = True
-
     dprint("Using port %d for DMTCP." % dmtcp_port)
     DMTCP_PORT = dmtcp_port
-
     # Use DMTCP_GZIP=0 : fast checkpoint/restart, but larger checkpoint files
     os.environ["DMTCP_GZIP"] = '0'
     os.environ["DMTCP_QUIET"] = '2'
-
     # Don't do anything if we can't find DMTCP.
     if not DMTCPManager.checkPath():
         fredutil.fred_fatal("No DMTCP binaries available in your PATH.\n")
-
-    if len(argv) < 2: # Default case, no arguments
-        fredutil.fred_fatal("Wrong number of arguments to invoke "
-                            "DMTCP Manager.")
-    
-    #spawnChild(argv)
-
-    # Define the "first" program to be the first argument to dmtcp_checkpoint
-    # that doesn't begin with a hyphen.
-    for arg in argv[1:]:
-        if arg.startswith('-'):
-            continue
-        else:
-            first = arg
-            break
-    # Get the basename if there are / present:
-    if first.find('/') >= 0:
-        # path to file, split on slashes and take the text after the last slash
-        exp = '.*/(.+)$'
-        firstName = re.search(exp, first).group(1)
-    else:
-        firstName = first
-    dprint("Got firstName to be: %s" % firstName)
-    initializeFiles(firstName)
+    initializeFiles()
     childInTransition = False
     return 0
+
+def resume(argv, dmtcp_port, s_resume_dir):
+    '''Initializes and starts the child, resuming session from given path,
+    and restarting from latest checkpoint in resume directory.'''
+    global SYNC_LOG_BASENAME, checkpoint_basenames, checkpoint_files_basenames,\
+           synchronization_log_basenames, ckptCounter, numCheckpoints
+    if not os.path.exists(s_resume_dir):
+        fredutil.fred_fatal("Cannot resume: %s doesn't exist." % s_resume_dir)
+    start(argv, dmtcp_port)
+    # Build lists of relevant files:
+    list_ckpt_files = []
+    list_ckpt_file_files = []
+    list_sync_files = []
+    for item in executeShellCommand(["ls", s_resume_dir]).split("\n"):
+        item = os.path.basename(item)
+        if item.find(".dmtcp.") != -1:
+            list_ckpt_files.append(item)
+            continue
+        elif item.startswith("ckpt_files"):
+            list_ckpt_file_files.append(item)
+            continue
+        elif item.startswith(SYNC_LOG_BASENAME):
+            list_sync_files.append(item)
+    ckptCounter = -1
+    # Initialize number of checkpoint files, and basenames.
+    fredutil.fred_info("Copying files for session resume. This could take a "
+                       "few minutes if the checkpoint images are large.")
+    for item in list_ckpt_files:
+        full_src_path = os.path.join(s_resume_dir, item)
+        executeShellCommandAndWait(["cp", full_src_path, DMTCP_MANAGER_ROOT])
+        # Keep track of the maximum '.x' suffix found:
+        i = int(item[item.rfind(".")+1:])
+        if i > ckptCounter:
+            ckptCounter = i
+        item = item[:item.rfind(".")]
+        if item not in checkpoint_basenames:
+            checkpoint_basenames.append(item)
+    numCheckpoints = ckptCounter + 1 # the .x suffixes count from 0.
+    ckptCounter += 1
+    for item in list_ckpt_file_files:
+        full_src_path = os.path.join(s_resume_dir, item)
+        executeShellCommandAndWait(["cp", full_src_path, DMTCP_MANAGER_ROOT])
+        item = item[:item.rfind(".")]
+        if item not in checkpoint_files_basenames:
+            checkpoint_files_basenames.append(item)
+    for item in list_sync_files:
+        full_src_path = os.path.join(s_resume_dir, item)
+        executeShellCommandAndWait(["cp", full_src_path, DMTCP_MANAGER_ROOT])
+        item = item[:item.rfind(".")]
+        if item not in synchronization_log_basenames:
+            synchronization_log_basenames.append(item)
+    # Restart from the latest checkpoint, and go:
+    fredutil.fred_info("Resuming session from most recent checkpoint.")
+    restart_last_ckpt()
+
 
 def remove_manager_root():
     """Remove manager root directory and contents."""
@@ -219,10 +248,9 @@ def manager_quit():
     # Needed for fredtest.py multiple sessions:
     initialize_global_variables()
     
-def initializeFiles(firstName):
+def initializeFiles():
     ''' Initalizes housekeeping files and directories. '''
     global DMTCP_MANAGER_ROOT, numCheckpoints
-    dprint("Initializing files based on firstName: %s" % firstName)
     # Create DMTCP_MANAGER_ROOT if it doesn't exist
     if not fileExists(DMTCP_MANAGER_ROOT):
         dprint("%s doesn't exist; creating it now." % DMTCP_MANAGER_ROOT)
@@ -296,7 +324,11 @@ def setupCheckpointSupportFiles(index):
         logfile = item + ".%d" % index
         logfileNoSuffix = item
         full_path = os.environ["DMTCP_TMPDIR"] + "/" + logfileNoSuffix
-        if os.path.islink(full_path):
+        if not os.path.exists(full_path):
+            # If it doesn't exist, this is probably a resume. Just ignore it.
+            fredutil.fred_debug("path %s does not exist. Ignoring." % \
+                                    full_path)
+        elif os.path.islink(full_path):
             # It is a link; we can safely just delete it.
             os.remove(full_path)
         else:
@@ -304,7 +336,8 @@ def setupCheckpointSupportFiles(index):
             # and created a new file. We should replace the old log we had
             # under this index with the new version so we don't lose the
             # patched version.
-            oldLog = DMTCP_MANAGER_ROOT + "/" + logfileNoSuffix + "." + index
+            oldLog = "%s/%s.%d" % \
+                (DMTCP_MANAGER_ROOT, logfileNoSuffix, index)
             dprint("Replacing old log %s with new (patched) log %s" % \
                        (oldLog, full_path))
             os.remove(oldLog)
