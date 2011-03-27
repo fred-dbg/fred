@@ -29,6 +29,32 @@ import pdb
 import dmtcpmanager
 import fredutil
 
+# Set GB_DEBUG to True to see fred_debug messages.
+# Convention for variable names:
+#    list: l_XXX, string: s_XXX, number: n_XXX, boolean: b_XXX
+# Gene - d_XXX appears only with backtraces.  What is "d_"?
+# Gene - It appears to be used for a list of backtraces.
+# Classes:  Debugger, ReversibleDebugger(Debugger), DebuggerState(),
+#	    Breakpoint, Backtrace, BacktraceFrame, FredCommand, Checkpoint
+# Subclasses:
+#    ReversibleDebugger is subclass of Debugger.
+# Constructors:
+#    Debugger and ReversibleDebugger constructors require personality argument.
+#    Checkpoint constructor requires checkpoint index argument.
+#    FredCommand constructor requires name and args arguments.
+# Class variables:
+#    Debugger:       _p (personality), _state (DebuggerState)
+#      ReversibleDebugger: checkpoint (current ckpt), l_checkpoints (all ckpts)
+#    DebuggerState:  n_current_tid, d_backtraces, l_breakpoints
+#    Breakpoint:  n_number, s_type, s_display, s_enable, s_address,
+#		  s_function, s_file, n_line, n_count
+#    Backtrace:  l_frames
+#    BacktraceFrame:  n_current_tid, d_backtraces, l_breakpoints, n_frame_num,
+#                     s_addr, s_function, s_args, s_file, n_line
+#    FredCommand:  s_name, s_args, s_native, b_ignore, b_count_cmd,
+#    Checkpoint:  n_index (index into l_checkpoints), l_history (since ckpt)
+
+
 class Debugger():
     """Represents control and management of an actual debugger.
 
@@ -39,6 +65,7 @@ class Debugger():
     If the semantics of personality-specific things change, we may change the
     usage here, and keep the interface unchanged."""
     def __init__(self, personality):
+	# Gene - Can we change the name _p to _personality ??
         self._p     = personality
         self._state = DebuggerState()
 
@@ -529,8 +556,9 @@ class ReversibleDebugger(Debugger):
         self._binary_search_checkpoints(s_expr, s_expr_val)
 
         self.checkpoint.l_history = \
-            self._binary_search_history(self._copy_fred_commands(self.checkpoint.l_history),
-                                        0, s_expr, s_expr_val)
+            self._binary_search_history(
+		self._copy_fred_commands(self.checkpoint.l_history),
+                0, s_expr, s_expr_val)
 
         self.update_state()
         fredutil.fred_debug("Reverse watch finished.")
@@ -547,8 +575,9 @@ class ReversibleDebugger(Debugger):
         n_left_ckpt = 0
         # Repeat until the interval is 1 checkpoint long. That means the left
         # checkpoint has the "correct" value and the right one has the
-        # "incorrect" value. "Incorrect" in this case means the same as the
-        # start value.
+        # "incorrect" value. "Incorrect" in this case means different
+	# from the "correct" value.  The start value is also guaranteed
+	# different from the "correct" value.
         while (n_right_ckpt - n_left_ckpt) != 1:
             n_diff = (n_right_ckpt - n_left_ckpt) / 2
             n_new_index = int(math.ceil(n_diff) + n_left_ckpt)
@@ -599,15 +628,15 @@ class ReversibleDebugger(Debugger):
              or [..., 'n'] -> [..., 's', 'n', ...]
              
         Returns history such that s_expr != s_expr_val at end of
-        history, and if 's' were executed, then s_expr_val would be
+        history, and if 's' were executed, then s_expr == s_expr_val would be
         True."""
         fredutil.fred_debug("Start expanding history: %s" % str(l_history))
         if l_history[-1].is_step():
             fredutil.fred_debug("Last command was step.")
             return l_history
-        # before we start expanding, switch to a thread which is not in a
-        # blocking call (pthread_join or select). then, repeatedly issue 'finish'
-        # until we reach user code again.
+        # Before we start expanding, switch to a thread which is not in a
+        # blocking call (pthread_join or select).
+	# Then, repeatedly issue 'finish' until we reach user code again.
         self.switch_to_controlled_thread()
         # TODO: currently this function doesn't take into account user libraries:
         while not self._p.within_user_code():
@@ -665,14 +694,16 @@ class ReversibleDebugger(Debugger):
 
     def switch_to_controlled_thread(self):
         # quick hack for firefox rw: switch to a thread which is not in the
-        # middle of a pthread_join or select, so that when we issue 'finish' to get
-        # back to user code, it doesn't hang on a blocking call.
+        # middle of a pthread_join or select, so that when we issue 'finish'
+        # to get back to user code, it doesn't hang on a blocking call.
         for (tid,bt) in self.state().d_backtraces.items():
             if bt.l_frames[self._p.n_top_backtrace_frame].s_function \
                    not in ["pthread_join", "select"]:
                 self.switch_to_thread(tid)
                 return
 
+    # Gene - Is compare_expressions_in_all_threads a better name
+    #  than test_in_all_Threads ?
     def test_in_all_threads(self, s_expr, s_expr_val):
         """Return True if evaluated s_expr == s_expr_val in any thread."""
         n_old_tid = self.get_current_tid()
@@ -684,6 +715,10 @@ class ReversibleDebugger(Debugger):
         self.switch_to_thread(n_old_tid)
         return False
 
+    # Gene - We should generalize this.  self.evaluate_expression could
+    #  convert "1" to "true" and "0" to "false".  Then test_expression
+    #  does:  return self.evaluate_expression(s_expr) == s_expr_val
+    #  Also, is compare_expressions a better name than test_expression ?
     def test_expression(self, s_expr, s_expr_val):
         s_result = self.evaluate_expression(s_expr)
         if s_result == "1" and s_expr_val == "true":
