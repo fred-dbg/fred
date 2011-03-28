@@ -22,6 +22,12 @@
 import math
 import pdb
 
+#========================================================
+# NOTE:  IF THIS DOESN'T WORK FOR YOU, LOOK FOR STATEMENT BELOW THIS COMMENT:
+#            		STILL TESTING:  When "if False" branch works well, ...
+#	AND TRY CHANGING False TO True IN THE STATEMENT.
+#========================================================
+
 # Note we don't import fredio here. We should not load fredio unless absolutely
 # necessary. This helps preserve modularity. Typically anything you want to do
 # here with fredio should in fact be done in personality.py or
@@ -555,7 +561,8 @@ class ReversibleDebugger(Debugger):
         # Find starting checkpoint using binary search:
         self._binary_search_checkpoints(s_expr, s_expr_val)
 
-	if True:
+# STILL TESTING:  When "if False" branch works well, it will become permanent.
+	if False:
           self.checkpoint.l_history = \
             self._binary_search_history(
 		self._copy_fred_commands(self.checkpoint.l_history),
@@ -575,12 +582,15 @@ class ReversibleDebugger(Debugger):
     def NEW_binary_search_since_last_checkpoint(self,
 					 l_history, n_min, s_expr, s_expr_val):
         testIfTooFar = lambda: self.test_expression(s_expr, s_expr_val)
+	return self.NEW_binary_search_since_last_checkpoint_helper(l_history,
+							 n_min, testIfTooFar)
+    def NEW_binary_search_since_last_checkpoint_helper(self,
+						l_history, n_min, testIfTooFar):
         l_history = self.NEW_binary_search_history(l_history,
 						   n_min, testIfTooFar)
 	# l_history[-1] now guaranteed to be 'c', 'n', or 's' and testIfTooFar
         #   changes upon executing l_history[-1]
-	return self.NEW_binary_search_expand_history(l_history,
-						     n_min, testIfTooFar)
+	return self.NEW_binary_search_expand_history(l_history, testIfTooFar)
 
     def NEW_binary_search_history(self, l_history, n_min, testIfTooFar):
         """Perform binary search on given history to identify time where
@@ -606,9 +616,14 @@ class ReversibleDebugger(Debugger):
 			     or l_history[-1].is_continue())
         self.do_restart(b_clear_history = True)
         l_history = l_history[:n_max]
+        self.replay_history(l_history, n_min)
+        if n_min == 0 and self.NEW_test_in_all_threads(testIfTooFar):
+            fredutil.fred_error("Reverse-XXX failed to search history.")
+            return None
+        fredutil.fred_debug("Done searching history.")
 	return l_history
 
-    def NEW_binary_search_expand_history(self, l_history, n_min, testIfTooFar):
+    def NEW_binary_search_expand_history(self, l_history, testIfTooFar):
         """On entry, current time is history[0:-1] and expr will change upon
         executing last command, history[-1]. Last command must be 'c', 'n', or
         's'.
@@ -617,11 +632,6 @@ class ReversibleDebugger(Debugger):
              
         Returns history such that testIfTooFar() == False at end of history,
 	and if 's' were executed, then testIfTooFar() would be True."""
-        self.replay_history(l_history, n_min)
-        if n_min == 0 and self.NEW_test_in_all_threads(testIfTooFar):
-            fredutil.fred_error("Reverse-XXX failed to search history.")
-            return None
-        fredutil.fred_debug("Done searching history.")
         fredutil.fred_debug("Start expanding history: %s" % str(l_history))
         if l_history[-1].is_step():
             fredutil.fred_debug("Last command was step.")
@@ -680,7 +690,8 @@ class ReversibleDebugger(Debugger):
             l_history += l_expanded_history
             l_expanded_history += l_expanded_history
         fredutil.fred_debug("Done next expansion: %s" % str(l_history))
-        return self.NEW_binary_search_history(l_history, n_min, testIfTooFar)
+        return self.NEW_binary_search_since_last_checkpoint_helper(l_history,
+							 n_min, testIfTooFar)
 
     def NEW_test_in_all_threads(self, test):
         """Return True if evaluated test evaluates to True in any thread."""
