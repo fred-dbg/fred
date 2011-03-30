@@ -44,11 +44,9 @@ class PersonalityGdb(personality.Personality):
         self.GS_BREAKPOINT = "break"
         self.GS_WHERE = "where"
         self.GS_INFO_BREAKPOINTS = "info breakpoints"
-        self.GS_INFO_THREADS = "info threads"
         self.GS_PRINT = "print"
         self.GS_FINISH = "finish"
         self.GS_CURRENT_POS = "where 1"
-        self.GS_SWITCH_THREAD = "thread"
         
         self.gs_next_re = fredutil.getRE(self.GS_NEXT, 4) + "|^n$|^n\s+.*$"
         self.gs_step_re = fredutil.getRE(self.GS_STEP, 4) + "|^s$|^s\s+.*$"
@@ -59,10 +57,9 @@ class PersonalityGdb(personality.Personality):
             fredutil.getRE(self.GS_INFO_BREAKPOINTS, 5) + "|^i b"
         self.gs_print_re = fredutil.getRE(self.GS_PRINT, 5) + "|^p(/\w)?"
         self.gs_program_not_running_re = "No stack."
-        self.gs_stack_move_re = "^up|^do(wn)?"
         
         self.GS_PROMPT = "(gdb) "
-        self.gre_prompt = re.compile("\(gdb\) ")
+        self.gre_prompt = re.compile("\(gdb\) $")
         # Basic stack trace format, matches this kind:
         # "#0  *__GI___libc_malloc (bytes=8) at malloc.c:3551"
         self.gre_backtrace_frame = "^#(\d+)\s+(0x[0-9a-f]+ in )?(.+?)\s+\((.*?)\)\s+at\s+(" \
@@ -74,8 +71,6 @@ class PersonalityGdb(personality.Personality):
                               + fredutil.GS_FILE_PATH_RE + \
                               "):(\d+)\s+(?:breakpoint already hit " \
                               "(\d+) time)?"
-        # Matches gdb thread ids from "info threads":
-        self.gre_thread = "^(\*?)\s*(\d+)\s*Thread"
         # List of regexes that match debugger prompts for user input
         self.ls_needs_user_input = \
         [ "---Type <return> to continue, or q <return> to quit---",
@@ -138,13 +133,6 @@ class PersonalityGdb(personality.Personality):
         frame.n_line      = int(match_obj[5])
         return frame
 
-    def _parse_one_thread(self, match_obj):
-        """Return a 2-tuple: (b_active, tid) from the given re Match object.
-        The Match object should be a tuple (the result of gre_thread).
-        b_active is True if the tid is the current active thread."""
-        b_active = (match_obj[0] != "")
-        return (b_active, int(match_obj[1]))
-
     def _parse_one_breakpoint(self, match_obj):
         """Return a Breakpoint from the given re Match object.
         The Match object should be a tuple (the result of gre_breakpoint)."""
@@ -193,6 +181,10 @@ class PersonalityGdb(personality.Personality):
             get_user_code_addresses()
         return n_addr > gn_user_code_min and n_addr < gn_user_code_max
 
+    def set_scheduler_locking(self, b_value):
+        """Set gdb scheduler locking to b_value."""
+        s_value = "on" if b_value else "off"
+        self.execute_command("set scheduler-locking %s" % s_value)
 
 def parse_address(s_addr):
     """Parse the given address string from gdb and return a number."""

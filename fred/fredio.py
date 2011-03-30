@@ -35,8 +35,8 @@ import fredutil
 
 GB_FRED_DEMO = False
 GB_FRED_DEMO_FROM_USER = False
-GL_FRED_DEMO_HIDE = ['info files\n', 'info breakpoints\n', 'where\n']
-GL_FRED_DEMO_UNHIDE_PREFIX = ['next', 'step']
+GB_FRED_DEMO_HIDE = ['info files\n', 'info breakpoints\n', 'where\n']
+GB_FRED_DEMO_UNHIDE_PREFIX = ['next', 'step']
 
 # Function beginning with an underscore ('_') should not be used outside of
 # this module.
@@ -61,25 +61,24 @@ g_find_prompt_function = None
 g_print_prompt_function = None
 gls_needs_user_input = []
 gb_need_user_input = False
-gs_last_printed = ""
 
 class ThreadedOutput(threading.Thread):
     def run(self):
         global gb_prompt_ready, gb_capture_output, gs_captured_output, \
                g_capture_output_event, gb_capture_output_til_prompt, \
                gb_hide_output, gn_max_need_input_length, gb_need_user_input, \
-               gb_capture_output_multi_page, gs_last_printed
+               gb_capture_output_multi_page
         # Last printed will be the last 'n' characters printed from child. This
         # is so we can know when the debugger prompt has been printed to
         # screen.
-        gs_last_printed = ""
+        last_printed = ""
         # Used to detect when debugger needs additional user input
         last_printed_need_input = ""
         while 1:
             output = _get_child_output()
             if output != None:
-                gs_last_printed = fredutil.last_n(gs_last_printed, output,
-                                               600)
+                last_printed = fredutil.last_n(last_printed, output,
+                                               GN_MAX_PROMPT_LENGTH)
                 last_printed_need_input = \
                     fredutil.last_n(last_printed_need_input, output,
                                     gn_max_need_input_length)
@@ -89,7 +88,7 @@ class ThreadedOutput(threading.Thread):
                         if _match_needs_user_input(last_printed_need_input):
                             _send_child_input("\n")
                     if gb_capture_output_til_prompt:
-                        if g_find_prompt_function(gs_last_printed):
+                        if g_find_prompt_function(last_printed):
                             g_capture_output_event.set()
                     else:
                         g_capture_output_event.set()
@@ -99,7 +98,7 @@ class ThreadedOutput(threading.Thread):
                     sys.stdout.write(output)
                     sys.stdout.flush()
             # Always keep these up-to-date:
-            gb_prompt_ready = g_find_prompt_function(gs_last_printed)
+            gb_prompt_ready = g_find_prompt_function(last_printed)
             gb_need_user_input = _match_needs_user_input(last_printed_need_input)
 
 def _start_output_thread():
@@ -128,7 +127,7 @@ def _get_child_output():
 def wait_for_prompt():
     """Spin until the global gb_prompt_ready flag has been set to True.
     gb_prompt_ready is set by the output thread."""
-    global gb_prompt_ready, gb_need_user_input, gs_last_printed
+    global gb_prompt_ready, gb_need_user_input
     while not gb_prompt_ready:
         if gb_need_user_input:
             # Happens when, for example, gdb prints more than one screen,
@@ -139,7 +138,6 @@ def wait_for_prompt():
         pass
     # Reset for next time
     gb_prompt_ready = False
-    gs_last_printed = ""
     
 def _start_output_capture(wait_for_prompt):
     """Start recording output from child into global gs_captured_output.
@@ -172,26 +170,22 @@ def get_child_response(s_input, hide=True, b_wait_for_prompt=False,
     If hide flag is True (default), suppresses echoing from child.  If
     wait_for_prompt flag is True, collects output until the debugger prompt is
     ready."""
-    global gb_hide_output, gs_last_printed
-    global GB_FRED_DEMO, GL_FRED_DEMO_HIDE, GL_FRED_DEMO_UNHIDE_PREFIX, \
-           GB_FRED_DEMO_FROM_USER
-    if GB_FRED_DEMO and s_input in GL_FRED_DEMO_HIDE and \
+    global gb_hide_output
+    global GB_FRED_DEMO, GB_FRED_DEMO_HIDE, GB_FRED_DEMO_UNHIDE_PREFIX
+    global GB_FRED_DEMO_FROM_USER
+    if GB_FRED_DEMO and s_input in GB_FRED_DEMO_HIDE and \
        not GB_FRED_DEMO_FROM_USER:
         hide = True
     if GB_FRED_DEMO and \
-       len([x for x in GL_FRED_DEMO_UNHIDE_PREFIX if s_input.startswith(x)])>0:
+       len([x for x in GB_FRED_DEMO_UNHIDE_PREFIX if s_input.startswith(x)])>0:
         hide=False
     GB_FRED_DEMO_FROM_USER = False # reset back to default, which is False
     b_orig_hide_state = gb_hide_output
     gb_hide_output = hide
-    # Reset since we want to wait for a new prompt
-    gs_last_printed = ""
-    #pdb.set_trace()
     _start_output_capture(b_wait_for_prompt)
     _send_child_input(s_input)
     response = _wait_for_captured_output(b_wait_for_prompt, b_multi_page)
     gb_hide_output = b_orig_hide_state
-    #gs_last_printed = ""
     return response
 
 def _set_max_needs_input_length():

@@ -34,11 +34,9 @@ class Personality:
         self.GS_BREAKPOINT = None
         self.GS_WHERE = None
         self.GS_INFO_BREAKPOINTS = None
-        self.GS_INFO_THREADS = None
         self.GS_PRINT = None
         self.GS_FINISH = None
         self.GS_CURRENT_POS = None
-        self.GS_SWITCH_THREAD = None
 
         self.gs_next_re = None
         self.gs_step_re = None
@@ -49,7 +47,6 @@ class Personality:
         self.gre_prompt = None
         self.gre_backtrace_frame = None
         self.gre_breakpoint = None
-        self.gre_thread = None
         # List of regexes that match debugger prompts for user input:
         self.ls_needs_user_input = []
         # Things like 'next 5' are allowed:
@@ -60,29 +57,6 @@ class Personality:
         # backtraces. -2 is to check for initialization.
         self.n_top_backtrace_frame = -2
         
-    def switch_to_thread(self, n_tid):
-        """Given a tid, switches debugger to that thread."""
-        self.execute_command(self.GS_SWITCH_THREAD + " " + str(n_tid))
-
-    def get_current_tid(self):
-        """Return a gdb tid representing the currently active thread."""
-        l_thread_ids = self._parse_thread_ids(self.do_info_threads())
-        # TODO: clever, but non-maintainable:
-        n_current_thread = [x[1] for x in l_thread_ids if x[0]][0]
-        return n_current_thread
-
-    def get_all_backtraces(self):
-        """Return mapping of tid->Backtrace representing backtraces from all
-        threads."""
-        d_backtraces = {}
-        l_thread_ids = self._parse_thread_ids(self.do_info_threads())
-        n_orig_thread = self.get_current_tid()
-        for (b_active, n_tid) in l_thread_ids:
-            self.switch_to_thread(n_tid)
-            d_backtraces[n_tid] = self.get_backtrace()
-        self.switch_to_thread(n_orig_thread)
-        return d_backtraces
-
     def get_backtrace(self):
         """Return a Backtrace object representing the current backtrace."""
         return self._parse_backtrace(self.do_where())
@@ -90,21 +64,6 @@ class Personality:
     def get_breakpoints(self):
         """Return a list of Breakpoint objects for the current breakpoints."""
         return self._parse_breakpoints(self.do_info_breakpoints())
-
-    def _parse_thread_ids(self, s_threads):
-        """Return a list of 2-tuples (b_active, integer) where b_active is True
-        for the currently active thread, and the integer is the gdb thread id
-        (NOT system tid) parsed from output of 'info threads' cmd."""
-        l_threads = []
-        l_matches = re.findall(self.gre_thread, s_threads, re.MULTILINE)
-        for i in range(0, len(l_matches)):
-            l_threads.append(self._parse_one_thread(l_matches[i]))
-        return l_threads        
-
-    def _parse_one_thread(self, match_obj):
-        """Return a thread id from the given re Match object.
-        The Match object should be a tuple (the result of gre_thread)."""
-        fredutil.fred_assert(False, "Must be implemented in subclass.")
 
     def _parse_breakpoints(self, info_str):
         """Return a list of Breakpoint objects parsed from output of 'info
@@ -167,17 +126,9 @@ class Personality:
         """Perform 'info_breakpoints' command. Returns output."""
         return self.execute_command(self.GS_INFO_BREAKPOINTS)
 
-    def do_info_threads(self):
-        """Perform 'info_threads' command. Returns output."""
-        return self.execute_command(self.GS_INFO_THREADS)
-
     def do_print(self, expr):
         """Perform 'print expr' command. Returns output."""
         return self.execute_command(self.GS_PRINT + " " + str(expr))
-
-    def do_finish(self):
-        """Perform 'finish' command. Returns output."""
-        return self.execute_command(self.GS_FINISH)
 
     def current_position(self):
         """Return a BacktraceFrame representing current debugger position."""
