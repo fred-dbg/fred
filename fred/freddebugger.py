@@ -542,7 +542,8 @@ class ReversibleDebugger(Debugger):
         # Find starting checkpoint using binary search:
         self._binary_search_checkpoints(s_expr, s_expr_val)
 
-# STILL TESTING:  When "if False" branch works well, it will become permanent.
+# STILL TESTING:  When "else" branch works well, it will become permanent,
+#  and the remaining branch of "if" can be removed.
 	if False:
           self.checkpoint.l_history = \
             self._binary_search_history(
@@ -550,6 +551,7 @@ class ReversibleDebugger(Debugger):
                 0, s_expr, s_expr_val)
 	else:
 	  l_history_copy = self._copy_fred_commands(self.checkpoint.l_history)
+	  # Gene - Do we need self._copy_fred_commands() as in above?
 	  self.checkpoint.l_history = \
 	    self.NEW_binary_search_since_last_checkpoint(l_history_copy,
 							 0, s_expr, s_expr_val)
@@ -696,69 +698,6 @@ class ReversibleDebugger(Debugger):
             # TODO: Why not just use NEW_binary_search_repeat_next() here?
 	    l_history = self.NEW_binary_search_until(l_history, repeatCmd,
 						     testIfTooFar, itersToLive)
-
-#OBSOLETE:
-    def NEW_binary_search_expand_history(self, l_history, testIfTooFar):
-        """On entry, current time is history[0:-1] and expr will change upon
-        executing last command, history[-1]. Last command must be 'c', 'n', or
-        's'.
-        Expands [..., 'c'] -> [..., 'n', ...]
-             or [..., 'n'] -> [..., 's', 'n', ...]
-             
-        Returns history such that testIfTooFar() == False at end of history,
-	and if 's' were executed, then testIfTooFar() would be True."""
-        fredutil.fred_debug("Start expanding history: %s" % str(l_history))
-        if l_history[-1].is_step():
-            fredutil.fred_debug("Last command was step.")
-            return l_history
-        fredutil.fred_assert(l_history[-1].is_next() or \
-                             l_history[-1].is_continue(),
-                             "Trying to expand a last command that is not "
-                             "'next' or 'continue': '%s'" % l_history[-1])
-        if l_history[-1].is_continue():
-            fredutil.fred_debug("Last command continue.")
-            l_history = self.NEW_binary_search_expand_with_next(l_history[0:-1],
-							        testIfTooFar)
-            return l_history
-        while l_history[-1].is_next():
-            l_history[-1] = self._p.get_personality_cmd(fred_step_cmd())
-            self.replay_history([self._p.get_personality_cmd(fred_step_cmd())])
-            if testIfTooFar():
-                # Done: return debugger at time when if 's' were executed, then
-                # expression would become true. We also change the final
-                # command to 'step' so the rest of the call stack knows we have
-                # gone as deep as possible (i.e. no further expansion is
-                # possible).
-                l_history = l_history[:-1]
-                l_history[-1] = self._p.get_personality_cmd(fred_step_cmd())
-                self.checkpoint.l_history = l_history
-                self.do_restart()
-# DANGEROUS:  default python variables are unnatural
-                self.replay_history()
-                break
-            else:
-                self.do_restart(b_clear_history = True)
-                self.replay_history(l_history)
-                l_history = self.NEW_binary_search_expand_with_next(l_history,
-								  testIfTooFar)
-        return l_history
-
-#OBSOLETE:
-    def NEW_binary_search_expand_with_next(self, l_history, testIfTooFar):
-        fredutil.fred_debug("Starting expansion with next on %s" % \
-                            str(l_history))
-        n_min = len(l_history)
-        l_expanded_history = [self._p.get_personality_cmd(fred_next_cmd())]
-        self.replay_history(l_expanded_history)
-        l_history += l_expanded_history
-        while self.program_is_running() and not testIfTooFar():
-            self.replay_history(l_expanded_history)
-            n_min = len(l_history)
-            l_history += l_expanded_history
-            l_expanded_history += l_expanded_history
-        fredutil.fred_debug("Done next expansion: %s" % str(l_history))
-        return self.NEW_binary_search_since_last_checkpoint_helper(l_history,
-							 n_min, testIfTooFar)
 
     #END OF NEW:  Will replace other methods later
     #====
