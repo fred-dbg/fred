@@ -80,7 +80,6 @@ class PersonalityGdb(personality.Personality):
         self.b_coalesce_support = True
         # Gdb orders backtraces with topmost at the beginning (list idx 0):
         self.n_top_backtrace_frame = 0
-
         # GDB only: name of inferior process.
         self.s_inferior_name = ""
         

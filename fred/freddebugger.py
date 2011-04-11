@@ -36,11 +36,10 @@ import pdb
 import dmtcpmanager
 import fredutil
 
-# Set GB_DEBUG to True to see fred_debug messages.
+# Use "--enable-debug" CLI flag to see debugging messages.
 # Convention for variable names:
 #    list: l_XXX, string: s_XXX, number: n_XXX, boolean: b_XXX
-# Gene - d_XXX appears only with backtraces.  What is "d_"? python dictionary
-# Gene - It appears to be used for a list of backtraces.
+#    python dictionary: d_XXX
 # Classes:  Debugger, ReversibleDebugger(Debugger), DebuggerState(),
 #	    Breakpoint, Backtrace, BacktraceFrame, FredCommand, Checkpoint
 # Subclasses:
@@ -52,12 +51,11 @@ import fredutil
 # Class instance variables:
 #    Debugger:       _p (personality), _state (DebuggerState)
 #      ReversibleDebugger: checkpoint (current ckpt), l_checkpoints (all ckpts)
-#    DebuggerState:  n_current_tid, d_backtraces, l_breakpoints
+#    DebuggerState:  backtrace, l_breakpoints
 #    Breakpoint:  n_number, s_type, s_display, s_enable, s_address,
 #		  s_function, s_file, n_line, n_count
 #    Backtrace:  l_frames
-#    BacktraceFrame:  n_current_tid, d_backtraces, l_breakpoints, n_frame_num,
-#                     s_addr, s_function, s_args, s_file, n_line
+#    BacktraceFrame:  n_frame_num, s_addr, s_function, s_args, s_file, n_line
 #    FredCommand:  s_name, s_args, s_native, b_ignore, b_count_cmd,
 #    Checkpoint:  n_index (index into l_checkpoints), l_history (since ckpt)
 
@@ -108,10 +106,6 @@ class Debugger():
     def _print(self, expr):
         """Perform 'print expr' command. Returns output."""
         return self._p.do_print(expr)
-
-    def _finish(self):
-        """Perform 'finish' command. Returns output."""
-        return self._p.do_finish()
     
     def at_breakpoint(self):
         """Return True if debugger is currently on a breakpoint."""
@@ -132,8 +126,7 @@ class Debugger():
     def update_state(self):
         """Update the underlying DebuggerState."""
         fredutil.fred_debug("Updating DebuggerState.")
-        self.state().set_current_tid(self._p.get_current_tid())
-        self.state().set_backtraces(self._p.get_all_backtraces())
+        self.state().set_backtrace(self._p.get_backtrace())
         self.state().set_breakpoints(self._p.get_breakpoints())
 
     def get_find_prompt_function(self):
@@ -160,17 +153,6 @@ class Debugger():
     def program_is_running(self):
         """Return True if inferior is still running."""
         return self._p.program_is_running()
-
-    def get_current_tid(self):
-        """Return a gdb tid representing the currently active thread."""
-        self.state().set_current_tid(self._p.get_current_tid())
-        return self.state().get_current_tid()
-
-    def switch_to_thread(self, n_tid):
-        """Given a tid, switches debugger to that thread."""
-        fredutil.fred_debug("Switching to thread %d" % n_tid)
-        self._p.switch_to_thread(n_tid)
-        self.state().set_current_tid(n_tid)
 
 class ReversibleDebugger(Debugger):
     """Represents control and management of a reversible Debugger.
@@ -335,10 +317,6 @@ class ReversibleDebugger(Debugger):
         # TODO: We should log some print statements, since they can contain
         # side effects. Example: "print var++"
         return self._print(expr)
-
-    def do_finish(self):
-        """Perform 'finish' command. Returns output."""
-        return self._finish()
 
     def _copy_fred_commands(self, l_cmds):
         """Perform a deep copy on the given list of FredCommands."""
@@ -599,7 +577,8 @@ class ReversibleDebugger(Debugger):
 	    l_history = self.NEW_binary_search_repeat_next(l_history,
 							   testIfTooFar)
 	if l_history[-1].is_next():
-	    l_history = self.NEW_binary_search_repeat_step(l_history)
+	    l_history = self.NEW_binary_search_repeat_step(l_history,
+                                                           testIfTooFar)
         fredutil.fred_assert(l_history[-1].is_step())
 	l_history = l_history[:-1]
         self.do_restart()
@@ -627,19 +606,14 @@ class ReversibleDebugger(Debugger):
 	    # Gene - why do we need to clear the history here?
             self.do_restart(b_clear_history = True)
             self.replay_history(l_history, n_count)
-	    if self.NEW_test_in_all_threads(testIfTooFar):
+	    if testIfTooFar():
                 fredutil.fred_debug("Setting max bound %d" % n_count)
                 n_max = n_count
             else:
                 fredutil.fred_debug("Setting min bound %d" % n_count)
                 n_min = n_count
 # DEBUGGING:
-            if testIfTooFar() != self.NEW_test_in_all_threads(testIfTooFar):
-		print "==== This is associated with the bug. ===="
-		print "====  testIfTooFar and test_in_all_threads diagree ===="
-		pdb.set_trace()
-# DEBUGGING:
-            if n_min > 2 and (n_min > 24 or n_max < 25):
+            if False and n_min > 2 and (n_min > 24 or n_max < 25):
 		print "==== This is associated with the bug. ===="
 		print "==== Assuming 'fred-rw list_len(head)<7' and ===="
 		print "====   b 30 was done and list is [b 30, 'n', ... ] ===="
@@ -653,7 +627,7 @@ class ReversibleDebugger(Debugger):
         l_history = l_history[:n_max]
         self.do_restart(b_clear_history = True)
         self.replay_history(l_history, n_min)
-        if n_min == 0 and self.NEW_test_in_all_threads(testIfTooFar):
+        if n_min == 0 and testIfTooFar():
             fredutil.fred_error("Reverse-XXX failed to search history.")
             return None
         fredutil.fred_debug("Done searching history.")
@@ -688,39 +662,38 @@ class ReversibleDebugger(Debugger):
 
     def NEW_binary_search_repeat_next(self, l_history, testIfTooFar,
 				      itersToLive = -1):
-        """On entry, l_history[-1] == 'c' and testIfTooFar() is True.
-	Expands [..., 'c'] -> [..., 'n', ...] such that testIfTooFar() becomes
-	True upon executing last 'n' of l_history.  Returns final l_history."""
+        """On entry, l_history[-1] == 'c' and testIfTooFar() is True.  Expands
+	[..., 'c'] -> [..., 'n', ...] such that testIfTooFar() becomes True
+	upon executing last 'n' of l_history.  Returns at point in time such
+	that testIfTooFar() == False and if 'next' were executed once more,
+	then testIfTooFar() would be True. However, it returns l_history that
+	includes that last 'next'."""
         fredutil.fred_assert(l_history[-1].is_continue())
 	repeatCmd = self._p.get_personality_cmd(fred_next_cmd())
 	l_history = l_history[:-1]
         self.do_restart(b_clear_history = True)
         self.replay_history(l_history)
-	l_history = self.NEW_binary_search_until(l_history, repeatCmd,
+	return self.NEW_binary_search_until(l_history, repeatCmd,
 						 testIfTooFar, itersToLive)
-        return l_history + [repeatCmd]
 
-    def NEW_binary_search_repeat_step(self, l_history, itersToLive = -1):
-        """On entry, l_history[-1] == 'n' and test is true.
-	Expands [..., 'n'] -> [..., 's'] and test is still true, or
-	else expands [..., 'n'] -> [..., 's', 's/n', ..., 's'] such that level
-	of stack is less than current level at [..., 's'] and reaches current
-	level only at last step.  (Note that level stays same or increases when
-	'n' executes.)  Returns l_history with testIfTooFar() true at end,
-	which is equivalent to reaching original level on executing last 's'."""
+    def NEW_binary_search_repeat_step(self, l_history, testIfTooFar,
+                                      itersToLive = -1):
+        """On entry, l_history[-1] == 'n' and testIfTooFar() is True. Expands
+	[..., 'n'] -> [..., 's', 'n', ...]. After expanding the 'next' commands,
+        repeats the expansion. Returns history something like this:
+          [..., 'n', 's', 'n', ..., 's', 'n', ..., 's']."""
 	repeatCmd = self._p.get_personality_cmd(fred_next_cmd())
         fredutil.fred_assert(l_history[-1].is_next())
-        self.update_state()
-	finalLevel = self.state().level()
-	testIfTooFar = lambda: finalLevel == self.state().level()
-        self.do_restart()
+        self.do_restart(b_clear_history = True)
         self.replay_history(l_history[:-1])
 	while True:
 	    l_history[-1] = self._p.get_personality_cmd(fred_step_cmd())
+            # TODO: should just call do_step() or equivalent here:
             self.replay_history([l_history[-1]])
             self.update_state()
 	    if testIfTooFar():
 		return l_history
+            # TODO: Why not just use NEW_binary_search_repeat_next() here?
 	    l_history = self.NEW_binary_search_until(l_history, repeatCmd,
 						     testIfTooFar, itersToLive)
 
@@ -738,16 +711,6 @@ class ReversibleDebugger(Debugger):
         if l_history[-1].is_step():
             fredutil.fred_debug("Last command was step.")
             return l_history
-        # Before we start expanding, switch to a thread which is not in a
-        # blocking call (pthread_join or select).
-	# Then, repeatedly issue 'finish' until we reach user code again.
-        self.switch_to_controlled_thread()
-        # TODO: currently this function doesn't take into account user libraries:
-        while not self._p.within_user_code():
-            fredutil.fred_debug("Not within user code (thread was probably "
-                                "interrupted). Executing finish until in user "
-                                "code again.")
-            self._p.do_finish()
         fredutil.fred_assert(l_history[-1].is_next() or \
                              l_history[-1].is_continue(),
                              "Trying to expand a last command that is not "
@@ -797,17 +760,6 @@ class ReversibleDebugger(Debugger):
         return self.NEW_binary_search_since_last_checkpoint_helper(l_history,
 							 n_min, testIfTooFar)
 
-    def NEW_test_in_all_threads(self, test):
-        """Return True if test evaluates to True in any thread."""
-        n_old_tid = self.get_current_tid()
-        for n_tid in self.state().list_current_threads():
-            self.switch_to_thread(n_tid)
-            if test():
-                self.switch_to_thread(n_old_tid)
-                return True
-        self.switch_to_thread(n_old_tid)
-        return False
-
     #END OF NEW:  Will replace other methods later
     #====
 
@@ -853,7 +805,7 @@ class ReversibleDebugger(Debugger):
             n_count = (n_min + n_max) / 2
             self.do_restart(b_clear_history = True)
             self.replay_history(l_history, n_count)
-            if self.test_in_all_threads(s_expr, s_expr_val):
+            if self.test_expression(s_expr, s_expr_val):
                 fredutil.fred_debug("Setting max bound %d" % n_count)
                 n_max = n_count
             else:
@@ -864,7 +816,7 @@ class ReversibleDebugger(Debugger):
         self.do_restart(b_clear_history = True)
         l_history = l_history[:n_max]
         self.replay_history(l_history, n_min)
-        if n_min == 0 and self.test_in_all_threads(s_expr, s_expr_val):
+        if n_min == 0 and self.test_expression(s_expr, s_expr_val):
             fredutil.fred_error("Reverse-watch failed to search history.")
             return None
         fredutil.fred_debug("Done searching history.")
@@ -884,16 +836,6 @@ class ReversibleDebugger(Debugger):
         if l_history[-1].is_step():
             fredutil.fred_debug("Last command was step.")
             return l_history
-        # Before we start expanding, switch to a thread which is not in a
-        # blocking call (pthread_join or select).
-	# Then, repeatedly issue 'finish' until we reach user code again.
-        self.switch_to_controlled_thread()
-        # TODO: currently this function doesn't take into account user libraries:
-        while not self._p.within_user_code():
-            fredutil.fred_debug("Not within user code (thread was probably "
-                                "interrupted). Executing finish until in user "
-                                "code again.")
-            self._p.do_finish()
         fredutil.fred_assert(l_history[-1].is_next() or \
                              l_history[-1].is_continue(),
                              "Trying to expand a last command that is not "
@@ -942,27 +884,6 @@ class ReversibleDebugger(Debugger):
         fredutil.fred_debug("Done next expansion: %s" % str(l_history))
         return self._binary_search_history(l_history, n_min, s_expr, s_expr_val)
 
-    def switch_to_controlled_thread(self):
-        # quick hack for firefox rw: switch to a thread which is not in the
-        # middle of a pthread_join or select, so that when we issue 'finish'
-        # to get back to user code, it doesn't hang on a blocking call.
-        for (tid,bt) in self.state().d_backtraces.items():
-            if bt.l_frames[self._p.n_top_backtrace_frame].s_function \
-                   not in ["pthread_join", "select"]:
-                self.switch_to_thread(tid)
-                return
-
-    def test_in_all_threads(self, s_expr, s_expr_val):
-        """Return True if evaluated s_expr == s_expr_val in any thread."""
-        n_old_tid = self.get_current_tid()
-        for n_tid in self.state().list_current_threads():
-            self.switch_to_thread(n_tid)
-            if self.test_expression(s_expr, s_expr_val):
-                self.switch_to_thread(n_old_tid)
-                return True
-        self.switch_to_thread(n_old_tid)
-        return False
-
     # Gene - We should generalize this.  self.evaluate_expression could
     #  convert "1" to "true" and "0" to "false".  Then test_expression
     #  does:  return self.evaluate_expression(s_expr) == s_expr_val
@@ -989,27 +910,16 @@ class DebuggerState():
       - current breakpoints, if any
     """
     def __init__(self):
-        # The currently active thread id
-        self.n_current_tid = -1
-        # The current backtraces of all threads. Mapping tid->Backtrace
-        self.d_backtraces = {}
+        # The current backtrace.
+        self.backtrace = Backtrace()
         # Current breakpoints (list of Breakpoint objects)
         self.l_breakpoints = []
 
-    def set_current_tid(self, n_tid):
-        self.n_current_tid = n_tid
+    def set_backtrace(self, bt):
+        self.backtrace = bt
 
-    def get_current_tid(self):
-        return self.n_current_tid
-
-    def set_backtraces(self, d_bts):
-        self.d_backtraces = d_bts
-
-    def get_backtraces(self,):
-        return self.d_backtraces
-
-    def add_backtrace(self, n_tid, bt):
-        self.d_backtraces[n_tid] = bt
+    def get_backtrace(self,):
+        return self.backtrace
 
     def set_breakpoints(self, l_bps):
         self.l_breakpoints = []
@@ -1021,35 +931,25 @@ class DebuggerState():
         self.l_breakpoints.append(bp)
 
     def __eq__(self, other):
-        return self.current_thread_backtrace() == \
-                 other.current_thread_backtrace() and \
+        return self.backtrace == other.backtrace and \
                self.get_breakpoints() == other.get_breakpoints()
 
     def __repr__(self):
         s = "---Backtrace:---\n%s\n---Breakpoints:---\n%s\n" % \
-            (str(self.get_backtraces()), str(self.get_breakpoints()))
+            (str(self.get_backtrace()), str(self.get_breakpoints()))
         return s
 
     def copy(self):
         """Return a deep copy of this instance."""
         new_state = DebuggerState()
-        for (n_tid, bt) in self.get_backtraces():
-            new_state.add_backtrace(tid, bt.copy())
+        new_state.set_backtrace(bt.copy())
         for b in self.get_breakpoints():
             new_state.add_breakpoint(b.copy())
         return new_state
 
-    def list_current_threads(self):
-        """Return a list of all tids."""
-        return self.get_backtraces().keys()
-
-    def current_thread_backtrace(self):
-        """Return Backtrace of current thread."""
-        return self.get_backtraces()[self.n_current_tid]
-
     def level(self):
-        """Return stack depth of current thread."""
-        return self.current_thread_backtrace().depth()
+        """Return stack depth."""
+        return self.backtrace.depth()
     
 class Breakpoint():
     """Represents one breakpoint in the debugger.
