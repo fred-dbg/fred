@@ -548,7 +548,6 @@ class ReversibleDebugger(Debugger):
                 0, s_expr, s_expr_val)
 	else:
 	  l_history_copy = self._copy_fred_commands(self.checkpoint.l_history)
-	  # Gene - Do we need self._copy_fred_commands() as in above?
 	  self.checkpoint.l_history = \
 	    self.NEW_binary_search_since_last_checkpoint(l_history_copy,
 							 0, s_expr, s_expr_val)
@@ -576,7 +575,7 @@ class ReversibleDebugger(Debugger):
 	#   next_or_breakpoint COMMANDS OF l_history IMMEDIATELY AFTER THIS.
 	if l_history[-1].is_continue():
 	    (l_history, n_min) = \
-		    self.NEW_binary_search_repeat_next(l_history, testIfTooFar)
+		self.NEW_binary_search_expand_continue(l_history, testIfTooFar)
 	    # l_history == l_history[0:n_min] + (len(l_history)-n_min)*['n']
 	    if len(l_history) - n_min > 1:
         	l_history = self.NEW_binary_search_history(l_history, n_min,
@@ -592,7 +591,7 @@ class ReversibleDebugger(Debugger):
 	    testIfTooFar2 = \
 		lambda: self.state().level() <= level or testIfTooFar()
 	    (l_history, n_min) = \
-		self.NEW_binary_search_repeat_step(l_history, testIfTooFar2)
+		self.NEW_binary_search_expand_next(l_history, testIfTooFar2)
             l_history = self.NEW_binary_search_history(l_history, n_min,
 						       testIfTooFar2)
         fredutil.fred_assert(l_history[-1].is_step())
@@ -632,8 +631,9 @@ class ReversibleDebugger(Debugger):
         fredutil.fred_assert(l_history[-1].is_step() or l_history[-1].is_next()
 			     or l_history[-1].is_continue())
         l_history = l_history[:n_max]
-        self.do_restart(b_clear_history = True)
-        self.replay_history(l_history, n_min)
+	if n_min != n_count:  # This was already done for n_count
+            self.do_restart(b_clear_history = True)
+            self.replay_history(l_history, n_min)
         if n_min == 0 and testIfTooFar():
             fredutil.fred_error("Reverse-XXX failed to search history.")
             return None
@@ -667,8 +667,8 @@ class ReversibleDebugger(Debugger):
 	return (l_history, n_min)
 
     # Gene - binary_search_expand_continue() is a better name.
-    def NEW_binary_search_repeat_next(self, l_history, testIfTooFar,
-				      itersToLive = -1):
+    def NEW_binary_search_expand_continue(self, l_history, testIfTooFar,
+					  itersToLive = -1):
         """On entry, l_history[-1] == 'c' and testIfTooFar() is True.  Expands
 	[..., 'c'] -> [..., 'n', ...] such that testIfTooFar() becomes True
 	upon executing last 'n' of l_history.  Returns at point in time such
@@ -685,8 +685,7 @@ class ReversibleDebugger(Debugger):
 	return self.NEW_binary_search_until(l_history, repeatNextCmd,
 					    testIfTooFar, itersToLive)
 
-    # Gene - binary_search_expand_next() is a better name.
-    def NEW_binary_search_repeat_step(self, l_history, testIfTooFar,
+    def NEW_binary_search_expand_next(self, l_history, testIfTooFar,
                                       itersToLive = -1):
         """On entry, l_history[-1] == 'n' and testIfTooFar() is True. Expands
 	[..., 'n'] -> [..., 's', 'n', ...]. After expanding the 'next' commands,
@@ -700,9 +699,9 @@ class ReversibleDebugger(Debugger):
 	# I agree with your comments, Tyler.  Feel free to go ahead,
 	#   if I don't get to this soon.  We want to replace the while
 	#   loop below with something like the follow.  - Gene
-	# IDEA:     do_step(); if testIfTooFar():
-	#           return (l_history, len(l_history)-1)
-        #           else:  return self.NEW_binary_search_repeat_next()
+	# IDEA:     do_step()
+	#	    if testIfTooFar():  return (l_history, len(l_history)-1)
+        #           else:  return self.NEW_binary_search_expand_continue()
 	while True:
 	    l_history[-1] = self._p.get_personality_cmd(fred_step_cmd())
             # TODO: should just call do_step() or equivalent here:
@@ -710,7 +709,7 @@ class ReversibleDebugger(Debugger):
             self.update_state()
 	    if testIfTooFar():
 		return (l_history, n_min)
-            # TODO: Why not just use NEW_binary_search_repeat_next() here?
+            # TODO: Why not just use NEW_binary_search_expand_continue() here?
 	    (l_history, n_min) = \
 		self.NEW_binary_search_until(l_history, repeatNextCmd,
 					     testIfTooFar, itersToLive)
@@ -718,6 +717,8 @@ class ReversibleDebugger(Debugger):
     #END OF NEW:  Will replace other methods later
     #====
 
+    # Gene - This method calls do_restart() before returning.
+    #        Is that necessary?  It makes FReD slower.
     def _binary_search_checkpoints(self, s_expr, s_expr_val):
         """Perform binary search over checkpoints to identify interval where
         expression changes value."""
