@@ -139,7 +139,7 @@ def open_file(s_filename):
     try:
         f = open(s_filename)
     except IOError as (errno, strerror):
-        fredutil.fred_error("Error opening source file '%s': %s" % \
+        fred_error("Error opening source file '%s': %s" % \
                            (s_filename, strerror))
     return f
 
