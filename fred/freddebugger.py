@@ -400,7 +400,7 @@ class ReversibleDebugger(Debugger):
         if b_restart:
             self.do_restart()
         # Trim history by n non-ignore commands
-        self.trim_non_ignore(n)
+        self.checkpoint.trim_non_ignore(n)
         self.replay_history()
         # Erase everything from the future (TODO: currently no-op)
         dmtcpmanager.erase_checkpoints(self.checkpoint.n_index+1,
@@ -898,7 +898,7 @@ class DebuggerState():
     def copy(self):
         """Return a deep copy of this instance."""
         new_state = DebuggerState()
-        new_state.set_backtrace(bt.copy())
+        new_state.set_backtrace(self.get_backtrace().copy())
         for b in self.get_breakpoints():
             new_state.add_breakpoint(b.copy())
         return new_state
