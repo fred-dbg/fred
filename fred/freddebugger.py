@@ -172,16 +172,13 @@ class ReversibleDebugger(Debugger):
     def setup_from_resume(self):
         """Set up data structures from a resume."""
         for i in range(0, dmtcpmanager.numCheckpoints):
-            self.l_checkpoints.append(Checkpoint(i))
+            self.l_checkpoints.append(Checkpoint())
         self.checkpoint = self.l_checkpoints[-1]
         self.update_state()
 
     def do_checkpoint(self):
         """Perform a new checkpoint."""
-        if self.checkpoint == None:
-            new_ckpt = Checkpoint(0)
-        else:
-            new_ckpt = Checkpoint(self.checkpoint.n_index + 1)
+        new_ckpt = Checkpoint()
         self.checkpoint = new_ckpt
         self.l_checkpoints.append(new_ckpt)
         dmtcpmanager.do_checkpoint()
@@ -240,9 +237,9 @@ class ReversibleDebugger(Debugger):
     def log_command(self, s_command):
         """Convert given command to FredCommand instance and add to current
         history."""
-        # identify_command() sets native representation
-        cmd = self._p.identify_command(s_command)
         if self.checkpoint != None:
+            # identify_command() sets native representation
+            cmd = self._p.identify_command(s_command)
             self.checkpoint.log_command(cmd)
 
     def log_fred_command(self, cmd):
@@ -981,6 +978,14 @@ class Backtrace():
         new_bt.l_frames = self._copy_frames(self.l_frames)
         return new_bt
 
+    def add_frame(self, frame):
+        """Add the given frame to this instance."""
+        self.l_frames.append(frame)
+
+    def get_frames(self):
+        """Return the list of frames."""
+        return self.l_frames
+
     def depth(self):
         """Return the depth of this instance."""
         return len(self.l_frames)
@@ -1103,8 +1108,15 @@ class FredCommand():
 class Checkpoint():
     """ This class will represent a checkpoint.  A checkpoint has an
     index number and a command history."""
-    def __init__(self, idx=-1):
-        self.n_index    = idx  # Index number
+
+    # Class-private "static" variable:
+    # (make sure you don't access it as a member of a specifc instance)
+    n_next_index = 0
+    
+    def __init__(self):
+        # Index number:
+        self.n_index = Checkpoint.n_next_index
+        Checkpoint.n_next_index += 1
         # The history is a list of FredCommands sent to the debugger
         # from the beginning of this checkpoint.
         self.l_history  = []

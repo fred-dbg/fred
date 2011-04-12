@@ -70,8 +70,8 @@ class Personality:
         breakpoints' cmd."""
         l_breakpoints = []
         l_matches = re.findall(self.gre_breakpoint, info_str, re.MULTILINE)
-        for i in range(0, len(l_matches)):
-            l_breakpoints.append(self._parse_one_breakpoint(l_matches[i]))
+        for m in l_matches:
+            l_breakpoints.append(self._parse_one_breakpoint(m))
         return l_breakpoints
 
     def _parse_one_breakpoint(self, match_obj):
@@ -84,11 +84,9 @@ class Personality:
         backtrace = re.sub(self.gre_prompt, '', where_str)
         bt_list = re.findall(self.gre_backtrace_frame,
                              backtrace, re.MULTILINE | re.DOTALL)
-        frame_list = []
         bt = freddebugger.Backtrace()
-        for i in range(0, len(bt_list)):
-            frame_list.append(self._parse_backtrace_frame(bt_list[i]))
-        bt.l_frames = frame_list
+        for f in bt_list:
+            bt.add_frame(self._parse_backtrace_frame(f))
         return bt
 
     def _parse_backtrace_frame(self, match_obj):
@@ -132,9 +130,8 @@ class Personality:
 
     def current_position(self):
         """Return a BacktraceFrame representing current debugger position."""
-        bt = self.get_backtrace()
         fredutil.fred_assert(self.n_top_backtrace_frame != -2)
-        return bt.l_frames[self.n_top_backtrace_frame]
+        return self.get_backtrace().get_frames()[self.n_top_backtrace_frame]
 
     def contains_prompt_str(self, string):
         """Return True if given string matches the prompt string."""
@@ -191,9 +188,9 @@ class Personality:
         elif fred_cmd.is_continue():
             return self.GS_CONTINUE
         else:
-            fredutil.fred_debug("Don't know native representation of %s" % \
-                                fred_cmd)
-            return ""
+            fredutil.fred_assert(False,
+                                 "Don't know native representation of %s" %
+                                 fred_cmd)
 
     def sanitize_print_result(self, s_printed):
         """Sanitize the result of a debugger 'print' command.
