@@ -38,19 +38,14 @@ try:
     DEBUG = os.environ['DMTCP_MANAGER_DEBUG']
 except KeyError:
     DEBUG = None
-# Set to True to perform housekeeping for 'synchronization-log*' files
-# created by DMTCP.
-SYNCHRONIZATION_LOG_HANDLING = True
-SYNC_LOG_BASENAME = "synchronization-"
 
 # ---------- Global constants
+SYNC_LOG_BASENAME = "synchronization-"
 DMTCP_MANAGER_ROOT = "/tmp/fred.%s/fred-dmtcp-manager/" % os.environ["USER"]
 DMTCP_PORT   = 0
-TTYFD        = sys.stdin.fileno()  # stdin by default
 # ---------- End of Global constants 
 
 # ---------- Global variables
-childInTransition           = False # Child in irregular state
 # List of different basenames for checkpoint files. Example:
 # ["ckpt_gdb_1cb82bdb80f31c4-7852-4d7d1d4c.dmtcp",
 #  "ckpt_mysqld_1cb82bdb80f31c4-7861-4d7d1d4c.dmtcp"]
@@ -68,8 +63,7 @@ numCheckpoints             = 0
 # ---------- End of Global variables
 
 def initialize_global_variables():
-    global childInTransition, ckptCounter, currentCkptIndex, numCheckpoints
-    childInTransition           = False # Child in irregular state
+    global ckptCounter, currentCkptIndex, numCheckpoints
     # Counter variable to append to ckpt files
     ckptCounter                = -1
     # The current checkpoint index
@@ -159,9 +153,8 @@ class DMTCPManager:
 
 def start(argv, dmtcp_port):
     '''Initializes and starts the child.'''
-    global childInTransition, DMTCP_PORT
+    global DMTCP_PORT
     dprint("Starting from start().")
-    childInTransition = True
     dprint("Using port %d for DMTCP." % dmtcp_port)
     DMTCP_PORT = dmtcp_port
     # Use DMTCP_GZIP=0 : fast checkpoint/restart, but larger checkpoint files
@@ -171,7 +164,6 @@ def start(argv, dmtcp_port):
     if not DMTCPManager.checkPath():
         fredutil.fred_fatal("No DMTCP binaries available in your PATH.\n")
     initializeFiles()
-    childInTransition = False
     return 0
 
 def resume(argv, dmtcp_port, s_resume_dir):
@@ -240,9 +232,8 @@ def remove_manager_root():
 def manager_quit():
     ''' Used when manager is in module mode to kill the child, and perform any
     cleanup. '''
-    global childInTransition, DMTCP_MANAGER_ROOT
+    global DMTCP_MANAGER_ROOT
     fredutil.fred_debug("DMTCP Manager exiting.")
-    childInTransition = True
     DMTCPManager.killPeers()
     remove_manager_root()
     # Needed for fredtest.py multiple sessions:
@@ -355,9 +346,8 @@ def restart_last_ckpt():
 
 def restart_ckpt(index):
     ''' Restart from the ckpt file(s) referenced by the given index. '''
-    global DMTCP_MANAGER_ROOT, childInTransition, currentCkptIndex
+    global DMTCP_MANAGER_ROOT, currentCkptIndex
     dprint("Going to restart index %d" % index)
-    childInTransition = True
     # Kill the currently connected peers:
     DMTCPManager.killPeers()
     fredio.kill_child() # XXX: hack: killPeers() doesn't do the job for Matlab.
@@ -392,7 +382,6 @@ def restart_ckpt(index):
     dprint("Done waiting. peers: %d, running: %s" % \
            (DMTCPManager.getNumPeers(), str(DMTCPManager.isRunning())))
     currentCkptIndex = index
-    childInTransition = False
 
 def erase_checkpoints(n_start_idx, n_end_idx):
     """Erase the given interval of checkpoints (inclusive)."""
