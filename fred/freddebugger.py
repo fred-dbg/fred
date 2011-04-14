@@ -703,7 +703,8 @@ class ReversibleDebugger(Debugger):
                                       itersToLive = -1):
         """On entry, l_history[-1] == 'n' and testIfTooFar() is True.
 	Expands [..., 'n'] -> [..., 's', 'n', ...].  Returns (l_history, n_min).
-	Note that the returned l_history often goes beyond original l_history.
+	Note that the returned l_history often goes beyond original l_history,
+	while at n_min, will be at earlier point for which not testIfTooFar().
 	You will probably want to call binary_search_history() afterward."""
         fredutil.fred_assert(l_history[-1].is_next())
 	n_min = len(l_history) - 1
@@ -732,6 +733,12 @@ class ReversibleDebugger(Debugger):
                 fredutil.fred_error("No checkpoints found for reverse-step.")
                 return
 	    l_history = self._copy_fred_commands(self.checkpoint.l_history)
+	    while len(l_history)>0 and not l_history[-1].is_step() and \
+		  not l_history[-1].is_next() and \
+		  not l_history[-1].is_continue():
+		del l_history[-1]
+	    if len(l_history) == 0:
+		break
 	    if l_history[-1].is_continue():
 		# Since we last executed 'continue', we must be at a breakpoint.
 		# Use that to expand the last 'continue' command until we
@@ -754,8 +761,15 @@ class ReversibleDebugger(Debugger):
 		if not l_history[-1].is_step():
 		    l_history = self.NEW_binary_search_history(l_history, n_min,
 						               testIfTooFar)
-	    if l_history[-1].is_step():
-		l_history = l_history[0:-1]
+            
+            fredutil.fred_assert(l_history[-1].is_step())
+	    l_history = l_history[0:-1]
+	# Gene - Am I using the next four lines correctly?
+	self.checkpoint.l_history = l_history
+	self.do_restart()
+	self.replay_history()
+	self.update_state()
+	fredutil.fred_debug("Reverse step finished.")
 
     #END OF NEW:  Will replace other methods later
     #====
