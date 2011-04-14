@@ -275,6 +275,8 @@ def send_command(command):
     
 def reexec(argv):
     """Replace the current child process with the new given one."""
+    if GB_FRED_DEMO:
+        print "===================== RESTARTING gdb ====================="
     fredutil.fred_debug("Replacing current child with '%s'" % str(argv))
     _spawn_child(argv)
 

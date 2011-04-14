@@ -88,7 +88,8 @@ GS_FRED_VERSION="Version: %prog 0.99-r277 (Nov. 12 2010)"
 GS_FRED_USAGE="USAGE: %prog [options] xdb [ARGS] a.out [A.OUT ARGS]\n" + \
                "Replace `xdb' with the name of the target debugger"
 GS_FRED_COMMAND_PREFIX="fred-"
-GS_FRED_TMPDIR = '/tmp/fred.' + os.environ['USER']
+GS_FRED_TMPDIR = "/tmp/fred.%s" % os.environ['USER']
+GS_DMTCP_TMPDIR = GS_FRED_TMPDIR + "/dmtcp_tmpdir"
 ######################## End Global Constants #################################
 
 ######################## Global Variables #####################################
@@ -252,9 +253,15 @@ def setup_debugger(s_debugger_name):
 
 def setup_environment_variables(s_dmtcp_port="7779", b_debug=False):
     """Set up the given environment variables."""
-    os.environ['DMTCP_PORT'] = s_dmtcp_port
     fredutil.GB_DEBUG = b_debug
-    os.environ['DMTCP_TMPDIR'] = GS_FRED_TMPDIR
+    os.environ["DMTCP_PORT"] = s_dmtcp_port
+    os.environ["DMTCP_TMPDIR"] = GS_DMTCP_TMPDIR
+    os.environ["DMTCP_CHECKPOINT_DIR"] = GS_DMTCP_TMPDIR
+    os.environ["DMTCP_GZIP"] = '0'
+    os.environ["DMTCP_QUIET"] = '2'
+    # Create the DMTCP tmpdir if it doesn't exist:
+    if not os.path.exists(GS_DMTCP_TMPDIR):
+       os.makedirs(GS_DMTCP_TMPDIR, 0755)
 
 def setup_fredio(l_cmd, b_spawn_child=True):
     """Set up I/O handling."""
@@ -277,9 +284,11 @@ def interactive_debugger_setup():
 
 def fred_setup(l_cmd=[]):
     """Perform any setup needed by FReD before entering an I/O loop."""
-    global g_debugger, gs_resume_dir_path
-    # Remove any files from a previous run:
-    #cleanup_fred_files() # TODO: make this less annoying
+    global g_debugger, gs_resume_dir_path, GS_FRED_TMPDIR
+    cleanup_fred_files()
+    # Don't do anything if we can't find DMTCP.
+    if not dmtcpmanager.is_dmtcp_in_path():
+        fredutil.fred_fatal("No DMTCP binaries available in your PATH.\n")
     # Parse arguments, if none were provided.
     if len(l_cmd) == 0:
         l_cmd = parse_program_args()
@@ -292,13 +301,9 @@ def fred_setup(l_cmd=[]):
     # (only spawn if we are not resuming:)
     b_spawn_child = gs_resume_dir_path == None
     setup_fredio(l_cmd, b_spawn_child)
-    # Set up DMTCP manager
     if gs_resume_dir_path != None:
-        dmtcpmanager.resume(l_cmd, int(os.environ['DMTCP_PORT']),
-                            gs_resume_dir_path)
+        dmtcpmanager.resume(GS_FRED_TMPDIR, gs_resume_dir_path)
         g_debugger.setup_from_resume()
-    else:
-        dmtcpmanager.start(l_cmd, int(os.environ['DMTCP_PORT']))
     # We return the debugger instance for the sole purpose of fredtest.py.
     return g_debugger
 
@@ -307,15 +312,10 @@ def cleanup_fred_files():
     global GS_FRED_TMPDIR
     if not os.path.exists(GS_FRED_TMPDIR):
        return
-    sys.stdout.write("FReD: Remove temporary directory '%s'? (y or n) " % \
-                        GS_FRED_TMPDIR)
-    sys.stdout.flush()
-    user_input = raw_input().strip().lower()
-    if user_input == "y":
-        fredutil.fred_debug("Removing temporary directory '%s'" % \
-                                GS_FRED_TMPDIR)
-        fredutil.fred_assert(GS_FRED_TMPDIR.find("/tmp") != -1)
-        shutil.rmtree(GS_FRED_TMPDIR, ignore_errors=True)
+    fredutil.fred_info("Removing previous temporary directory '%s'" % \
+                       GS_FRED_TMPDIR)
+    fredutil.fred_assert(GS_FRED_TMPDIR.find("/tmp") != -1)
+    shutil.rmtree(GS_FRED_TMPDIR, ignore_errors=True)
 
 def main_io_loop(b_skip_prompt=False):
     """Main I/O loop to get and handle user commands."""
