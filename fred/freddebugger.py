@@ -53,6 +53,7 @@ import fredutil
 #    FredCommand:  s_name, s_args, s_native, b_ignore, b_count_cmd,
 #    Checkpoint:  n_index (index into l_checkpoints), l_history (since ckpt)
 
+# This code does not yet handle search inside gdb's finish and until commands.
 
 class Debugger():
     """Represents control and management of an actual debugger.
@@ -605,8 +606,9 @@ class ReversibleDebugger(Debugger):
 	    #          current time, and require next fnc to do_restart().
 	    (l_history, n_min) = \
 		self.NEW_binary_search_expand_next(l_history, testIfTooFar2)
-            l_history = self.NEW_binary_search_history(l_history, n_min,
-						       testIfTooFar2)
+	    if len(l_history) - n_min > 1:
+                l_history = self.NEW_binary_search_history(l_history, n_min,
+						           testIfTooFar2)
 
         fredutil.fred_assert(l_history[-1].is_step())
 	l_history = l_history[:-1]
@@ -645,7 +647,7 @@ class ReversibleDebugger(Debugger):
         fredutil.fred_assert(l_history[-1].is_step() or l_history[-1].is_next()
 			     or l_history[-1].is_continue())
         l_history = l_history[:n_max]
-	if n_min != n_count:  # This was already done for n_count
+	if n_min != n_count:  # This was already done for n_min == n_count
             self.do_restart(b_clear_history = True)
             self.replay_history(l_history, n_min)
         if n_min == 0 and testIfTooFar():
@@ -683,12 +685,11 @@ class ReversibleDebugger(Debugger):
     # Gene - binary_search_expand_continue() is a better name.
     def NEW_binary_search_expand_continue(self, l_history, testIfTooFar,
 					  itersToLive = -1):
-        """On entry, l_history[-1] == 'c' and testIfTooFar() is True.  Expands
-	[..., 'c'] -> [..., 'n', ...] such that testIfTooFar() becomes True
-	upon executing last 'n' of l_history.  Returns at point in time such
-	that testIfTooFar() == False and if 'next' were executed once more,
-	then testIfTooFar() would be True. However, it returns l_history that
-	includes that last 'next'."""
+        """On entry, l_history[-1] == 'c' and testIfTooFar() is True.
+	Expands [..., 'c'] -> [..., 'n', ...].  Returns (l_history, n_min).
+	Note that the returned l_history often goes beyond original l_history,
+	while at n_min, will be at earlier point for which not testIfTooFar().
+	You will probably want to call binary_search_history() afterward."""
         fredutil.fred_assert(l_history[-1].is_continue())
 	# The assert above guarantees that we're at a brakpoint
 	# So, repeated 'next' commands will never take us beyond current time.
@@ -935,7 +936,7 @@ class DebuggerState():
         return self.backtrace
 
     def set_breakpoints(self, l_bps):
-        self.l_breakpoints = []
+        self.l_breakpoints = l_bps
 
     def get_breakpoints(self):
         return self.l_breakpoints
