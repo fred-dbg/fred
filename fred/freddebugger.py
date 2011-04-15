@@ -53,7 +53,17 @@ import fredutil
 #    FredCommand:  s_name, s_args, s_native, b_ignore, b_count_cmd,
 #    Checkpoint:  n_index (index into l_checkpoints), l_history (since ckpt)
 
-# This code does not yet handle search inside gdb's finish and until commands.
+# NOTE: This code does not yet handle search inside gdb's 'finish'
+#   and 'until' commands.  These commands can be replayed, but not expanded
+#   into smaller commands.
+# BUG:  In gdb, if one sets a breakpoint at a "for" statement, continue will
+#   stop at the "for" statement, but 'next 9' will not.  This is arguably
+#   a bug in gdb, since 'next 9' will not go past other breakpoints.
+#   One solution is to execute 'step', 'break' several times inside
+#   binary_search_expand_continue, and then set those same breakpoints
+#   at the beginning of each probe: ['b extra1', 'b extra2', 's', 'n', ...]
+#   to create backup breakpoints in case we go too far.  Then inspecting which
+#   breakpoint we landed at tells us where we went too far.
 
 class Debugger():
     """Represents control and management of an actual debugger.
