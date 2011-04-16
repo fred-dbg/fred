@@ -723,6 +723,7 @@ class ReversibleDebugger(Debugger):
         self.do_restart(b_clear_history = True)
         self.replay_history(l_history[:-1])
         l_history[-1] = self._p.get_personality_cmd(fred_step_cmd())
+	# FIX ME:  This can step inside libc
         self.replay_history([l_history[-1]])
 	if testIfTooFar():
 	    return (l_history, n_min)
@@ -732,7 +733,7 @@ class ReversibleDebugger(Debugger):
 	return \
 	    self.NEW_binary_search_until(l_history, repeatNextCmd, testIfTooFar)
 
-    # MUST STILL HANDLE "ignore" COMMANDS, AND CHECK IF n>1 HANDLED CORRECTLY.
+    # MUST STILL CHECK IF n>1 HANDLED CORRECTLY.
     # WHEN THIS IS READY, REPLACE reverse_step() BELOW WITH THIS.
     def NEW_reverse_step(self, n=1):
         """Perform n 'reverse-step' commands."""
@@ -775,6 +776,61 @@ class ReversibleDebugger(Debugger):
             
             fredutil.fred_assert(l_history[-1].is_step())
 	    l_history = l_history[0:-1]
+	# Gene - Am I using the next four lines correctly?
+	self.checkpoint.l_history = l_history
+	self.do_restart()
+	self.replay_history()
+	self.update_state()
+	fredutil.fred_debug("Reverse step finished.")
+
+    def NEW_reverse_finish(self, n=1):
+        """Perform n 'reverse-step' commands."""
+        while n > 0:
+            n -= 1
+            self.update_state()
+            orig_state = self.state().copy()
+            if len(self.l_checkpoints) == 0:
+                fredutil.fred_error("No checkpoints found for reverse-step.")
+                return
+	    l_history = self._copy_fred_commands(self.checkpoint.l_history)
+            level = self.state().level()
+	    while level >= self.state().level():
+	        while len(l_history)>0 and not l_history[-1].is_step() and \
+		      not l_history[-1].is_next() and \
+		      not l_history[-1].is_continue():
+		    del l_history[-1]
+	        if len(l_history) == 0:
+		    break
+	        if l_history[-1].is_continue():
+		    # TODO STILL:
+		    fredutil.fred_error("This case not yet implemented.")
+	        elif l_history[-1].is_next() and self.at_breakpoint:
+		    # 'n' can hit a breakpoint deeper in stack.
+		    self.do_restart()
+		    self.replay_history(l_history[0:-1])
+		    del l_history[-1]
+		    # This can be made more efficient.
+		    while self.state().level() < level-1:
+			l_history[-1] += \
+			    [self._p.get_personality_cmd(fred_step_cmd())]
+			# FIX ME:  This can step inside libc
+			self.replay_history([l_history[-1]])
+		    fredutil.fred_assert(self.state().level() == level-1)
+	        elif l_history[-1].is_next():
+		    # Search for time in past when level was one higher.
+		    # This can be optimized for fewer ckpt/restarts.
+		    while self.state().level() >= level and \
+			  not self.at_breakpoint() and len(l_history)>0 and \
+		          l_history[-1].is_next() or l_history[-1].is_step():
+		        del l_history[:-1]
+		        self.do_restart(b_clear_history = True)
+		        self.replay_history(l_history)
+		    fredutil.fred_assert(self.state().level() >= level-1)
+            
+                elif l_history[-1].is_step():
+	            l_history = l_history[0:-1]
+	fredutil.fred_assert(self.state().level() == level-1 or
+			     len(l_history) == 0)
 	# Gene - Am I using the next four lines correctly?
 	self.checkpoint.l_history = l_history
 	self.do_restart()
@@ -871,6 +927,7 @@ class ReversibleDebugger(Debugger):
             return l_history
         while l_history[-1].is_next():
             l_history[-1] = self._p.get_personality_cmd(fred_step_cmd())
+	    # FIX ME:  This can step inside libc
             self.replay_history([self._p.get_personality_cmd(fred_step_cmd())])
             if self.test_expression(s_expr, s_expr_val):
                 # Done: return debugger at time when if 's' were executed, then
@@ -879,6 +936,7 @@ class ReversibleDebugger(Debugger):
                 # gone as deep as possible (i.e. no further expansion is
                 # possible).
                 l_history = l_history[:-1]
+	        # FIX ME:  This can step inside libc
                 l_history[-1] = self._p.get_personality_cmd(fred_step_cmd())
                 self.checkpoint.l_history = l_history
                 self.do_restart()
