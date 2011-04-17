@@ -621,7 +621,7 @@ class ReversibleDebugger(Debugger):
 						           testIfTooFar2)
 
         fredutil.fred_assert(l_history[-1].is_step())
-	l_history = l_history[:-1]
+	del l_history[-1]
         self.do_restart()
         self.replay_history(l_history)
 	return l_history
@@ -645,6 +645,12 @@ class ReversibleDebugger(Debugger):
 	    # Gene - why do we need to clear the history here?
             self.do_restart(b_clear_history = True)
             self.replay_history(l_history, n_count)
+            # FIX ME:  testIfTooFar() may depend on local variables on stack.
+            # If stack is currently shallower, or if same function is not
+            # available at corresponding call frame, then possibly
+            # can declare this "not far enough" in logic below.
+            # But does this still do the right thing if testIfTooFar depends
+            # only on traditional global vars?
 	    if testIfTooFar():
                 fredutil.fred_debug("Setting max bound %d" % n_count)
                 n_max = n_count
@@ -704,7 +710,7 @@ class ReversibleDebugger(Debugger):
 	# The assert above guarantees that we're at a brakpoint
 	# So, repeated 'next' commands will never take us beyond current time.
 	repeatNextCmd = self._p.get_personality_cmd(fred_next_cmd())
-	l_history = l_history[:-1]
+	del l_history[-1]
         self.do_restart(b_clear_history = True)
         self.replay_history(l_history)
 	return self.NEW_binary_search_until(l_history, repeatNextCmd,
@@ -775,7 +781,7 @@ class ReversibleDebugger(Debugger):
 						               testIfTooFar)
             
             fredutil.fred_assert(l_history[-1].is_step())
-	    l_history = l_history[0:-1]
+	    del l_history[-1]
 	# Gene - Am I using the next four lines correctly?
 	self.checkpoint.l_history = l_history
 	self.do_restart()
@@ -784,7 +790,7 @@ class ReversibleDebugger(Debugger):
 	fredutil.fred_debug("Reverse step finished.")
 
     def NEW_reverse_finish(self, n=1):
-        """Perform n 'reverse-step' commands."""
+        """Perform n 'reverse-finish' commands."""
         while n > 0:
             n -= 1
             self.update_state()
@@ -822,13 +828,13 @@ class ReversibleDebugger(Debugger):
 		    while self.state().level() >= level and \
 			  not self.at_breakpoint() and len(l_history)>0 and \
 		          l_history[-1].is_next() or l_history[-1].is_step():
-		        del l_history[:-1]
+		        del l_history[-1]
 		        self.do_restart(b_clear_history = True)
 		        self.replay_history(l_history)
 		    fredutil.fred_assert(self.state().level() >= level-1)
             
                 elif l_history[-1].is_step():
-	            l_history = l_history[0:-1]
+	            del l_history[-1]
 	fredutil.fred_assert(self.state().level() == level-1 or
 			     len(l_history) == 0)
 	# Gene - Am I using the next four lines correctly?
@@ -836,7 +842,74 @@ class ReversibleDebugger(Debugger):
 	self.do_restart()
 	self.replay_history()
 	self.update_state()
-	fredutil.fred_debug("Reverse step finished.")
+	fredutil.fred_debug("Reverse finish finished.")
+
+    # ALGORITHM: (Note core commands: 's', 'n', 'n' at_bkpt, 'c' at_bkpt)
+    # .* 's' -> .* ; .* 'n' -> .*   if 'n' doesn't change stack level
+    # .* 'n' at_bkpt -> .*   if 'n' doesn't change stack level
+    # .* 'n' at_bkpt -> .* 's' 'n'* at_bkpt  if 'n' doesn't change stack level
+    # .* 'c' at_bkpt -> .* 's' 'n'* at_bkpt
+    # .* 'n' -> reverse_finish(.*)   if 'n' returns to shallower stack level
+    def NEW_reverse_next(self, n=1):
+        """Perform n 'reverse-next' commands."""
+        while n > 0:
+            n -= 1
+            self.update_state()
+            orig_state = self.state().copy()
+            if len(self.l_checkpoints) == 0:
+                fredutil.fred_error("No checkpoints found for reverse-step.")
+                return
+	    l_history = self._copy_fred_commands(self.checkpoint.l_history)
+            level = self.state().level()
+	    while True:
+	        while len(l_history)>0 and not l_history[-1].is_step() and \
+		      not l_history[-1].is_next() and \
+		      not l_history[-1].is_continue():
+		    del l_history[-1]
+	        if len(l_history) == 0:
+		    break
+                if l_history[-1].is_step():
+	            del l_history[-1]
+                    break
+                elif l_history[-1].is_next():
+	            del l_history[-1]
+                    self.do_restart(b_clear_history = True)
+                    self.replay_history(l_history)
+                    if self.state().level() == level:
+                        break
+                    elif self.state().level() == level+1:
+                        self.reverse_finish()
+                        break
+                    else:
+                        fredutil.fred_assert(self.state().level() < level)
+
+                fredutil.fred_assert(l_history[-1].is_continue() or
+                             (l_history[-1].is_next() and self.at_breakpoint))
+                if True:  # if is_continue() or (is_next() and at_breakpoint())
+                    # if it was l_history[-1].is_next() and hit a breakpoint,
+                    # then it acts like 'c'.  Already undid last command for 'n'
+                    if l_history[-1].is_continue():
+                        del l_history[-1]
+                        self.do_restart(b_clear_history = True)
+                        self.replay_history(l_history)
+                    l_history[-1] += \
+                        [self._p.get_personality_cmd(fred_step_cmd())]
+                    self.replay_history([l_history[-1]])
+                    fredutil.fred_assert(self.state().level() == level+1)
+                    while not self.at_breakpoint() and \
+                          self.state().level() == level+1:
+                        l_history[-1] += \
+                            [self._p.get_personality_cmd(fred_next_cmd())]
+                        self.replay_history(l_history[-1])
+                    fredutil.fred_assert(self.state().level() == level
+                                         and self.at_breakpoint())
+	fredutil.fred_assert(self.state().level() <= level)
+	# Gene - Am I using the next four lines correctly?
+	self.checkpoint.l_history = l_history
+	self.do_restart()
+	self.replay_history()
+	self.update_state()
+	fredutil.fred_debug("Reverse next finished.")
 
     #END OF NEW:  Will replace other methods later
     #====
@@ -935,7 +1008,7 @@ class ReversibleDebugger(Debugger):
                 # command to 'step' so the rest of the call stack knows we have
                 # gone as deep as possible (i.e. no further expansion is
                 # possible).
-                l_history = l_history[:-1]
+                del l_history[-1]
 	        # FIX ME:  This can step inside libc
                 l_history[-1] = self._p.get_personality_cmd(fred_step_cmd())
                 self.checkpoint.l_history = l_history
