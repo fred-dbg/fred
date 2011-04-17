@@ -740,7 +740,17 @@ class ReversibleDebugger(Debugger):
 	    self.NEW_binary_search_until(l_history, repeatNextCmd, testIfTooFar)
 
     # MUST STILL CHECK IF n>1 HANDLED CORRECTLY.
-    # WHEN THIS IS READY, REPLACE reverse_step() BELOW WITH THIS.
+    # ALGORITHM: (Note core commands: 's', 'n', 'n' at_bkpt, 'c' at_bkpt)
+    #   IDEA:  expand to equivalent 's' or 's' ... 'n'.  In latter case,
+    #	     then delete final 'n' since it's going from a level one deeper
+    #	     back to the original level.
+    #   IMPLEMENTATION:
+    # .* 'c' at_bkpt -> .* 's' 'n'* at_bkpt   and continue with rule below
+    # .* 'n' level1 -> .* 's' 'n'*   until 'n' returns to level1 on stack
+    #       and repeat rule to force final 's', then delete 's' via rule below.
+    #       [ instead of repeating rule, could 
+    # .* 'n' at_bkpt -> NOT YET IMPLEMENTED; MUST DO AS WITH reverse_next
+    # .* 's' -> .*
     def NEW_reverse_step(self, n=1):
         """Perform n 'reverse-step' commands."""
         while n > 0:
@@ -771,7 +781,7 @@ class ReversibleDebugger(Debugger):
 	    while l_history[-1].is_next():
                 level = self.state().level()
 		# expand_next replaces last 'n' by ['s', 'n', ...]
-		# self.state().level() can never decrease under repeated 'n'
+		# self.state().level() can never increase under repeated 'n'
 		# BUG:  Actually, 'n' can hit a breakpoint deeper in stack.
 	        testIfTooFar = lambda: self.state().level() <= level
 	        (l_history, n_min) = \
@@ -808,8 +818,20 @@ class ReversibleDebugger(Debugger):
 	        if len(l_history) == 0:
 		    break
 	        if l_history[-1].is_continue():
-		    # TODO STILL:
+		    # expand 'c' and continue to other cases
 		    fredutil.fred_error("This case not yet implemented.")
+		    # but see comment about BUG in binary_search_expand_continue
+	            testIfTooFar = lambda: self.at_breakpoint()
+		    (l_history, n_min) = \
+			self.NEW_binary_search_expand_continue(l_history,
+							       testIfTooFar)
+		    # l_history ==
+		    #     l_history[0:n_min] + (len(l_history)-n_min)*['n']
+		    if len(l_history) - n_min > 1:
+			l_history = self.NEW_binary_search_history(l_history,
+							 n_min, testIfTooFar)
+		    # execution stopped with n_min; l_history went one further
+		    continue
 	        elif l_history[-1].is_next() and self.at_breakpoint:
 		    # 'n' can hit a breakpoint deeper in stack.
 		    self.do_restart()
@@ -950,7 +972,7 @@ class ReversibleDebugger(Debugger):
 
     def _binary_search_history(self, l_history, n_min, s_expr, s_expr_val):
         """Perform binary search on given history to identify interval where
-        expression changes value."""
+        expression changes value.  Return just before s_expr == s_expr_val."""
         fredutil.fred_debug("Start binary search on history: %s" % \
                             str(l_history))
         n_count = n_max = len(l_history)
