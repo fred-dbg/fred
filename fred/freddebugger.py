@@ -495,7 +495,7 @@ class ReversibleDebugger(Debugger):
         self.update_state()
         fredutil.fred_debug("Reverse step finished.")
 
-    def reverse_finish(self):
+    def reverse_finish(self, n=1):
         """Perform 'reverse-finish' command."""
         self.update_state()
         orig_state = self.state().copy()
