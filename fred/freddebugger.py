@@ -854,7 +854,7 @@ class ReversibleDebugger(Debugger):
 		    del l_history[-1]
 		    # This can be made more efficient.
 		    while self.state().level() < level-1:
-			l_history[-1] += \
+			l_history += \
 			    [self._p.get_personality_cmd(fred_step_cmd())]
 			# FIX ME:  This can step inside libc
 			self.replay_history([l_history[-1]])
@@ -884,8 +884,8 @@ class ReversibleDebugger(Debugger):
     # ALGORITHM: (Note core commands: 's', 'n', 'n' at_bkpt, 'c' at_bkpt)
     # .* 's' -> .* ; .* 'n' -> .*   if 'n' doesn't change stack level
     # .* 'n' at_bkpt -> .*   if 'n' doesn't change stack level
-    # .* 'n' at_bkpt -> .* 's' 'n'* at_bkpt  if 'n' doesn't change stack level
-    # .* 'c' at_bkpt -> .* 's' 'n'* at_bkpt
+    # .* 'n' at_bkpt -> .* 's' 'n'* at_bkpt  if 'n' changes level, and recurse
+    # .* 'c' at_bkpt -> .* 's' 'n'* at_bkpt  and recurse to cases above
     # .* 'n' -> reverse_finish(.*)   if 'n' returns to shallower stack level
     def NEW_reverse_next(self, n=1):
         """Perform n 'reverse-next' commands."""
@@ -897,7 +897,6 @@ class ReversibleDebugger(Debugger):
                 fredutil.fred_error("No checkpoints found for reverse-step.")
                 return
 	    l_history = self._copy_fred_commands(self.checkpoint.l_history)
-            level = self.state().level()
 	    while True:
 	        while len(l_history)>0 and not l_history[-1].is_step() and \
 		      not l_history[-1].is_next() and \
@@ -909,19 +908,34 @@ class ReversibleDebugger(Debugger):
 	            del l_history[-1]
                     break
                 elif l_history[-1].is_next():
+                    level = self.state().level()
+		    # Near end of program, weird things happen:
+		    #  level can be 0, or can be in __libc_start_main
+	            if not self.program_is_running():
+                        level = -99
+		    # This is gdb-specific.  Should push lower and define
+		    #  program_is_running() to be False if we see these.
+        	    elif self._p.get_backtrace()[0].s_function == "_start" or \
+        	         self._p.get_backtrace()[0].s_function == \
+			   "__libc_start_main":
+                        level = -99
 	            del l_history[-1]
                     self.do_restart(b_clear_history = True)
                     self.replay_history(l_history)
                     if self.state().level() == level:
                         break
                     elif self.state().level() == level+1:
+			# The last 'n' returned from fnc; go to before fnc call
                         self.reverse_finish()
                         break
                     else:
-                        fredutil.fred_assert(self.state().level() < level)
+			# The last 'n' entered fnc or exited program
+                        fredutil.fred_assert(self.state().level() == level-1 or
+					     level == -99)
 
                 fredutil.fred_assert(l_history[-1].is_continue() or
-                             (l_history[-1].is_next() and self.at_breakpoint))
+                            (l_history[-1].is_next() and self.at_breakpoint())
+			    or level == -99)
                 if True:  # if is_continue() or (is_next() and at_breakpoint())
                     # if it was l_history[-1].is_next() and hit a breakpoint,
                     # then it acts like 'c'.  Already undid last command for 'n'
@@ -929,17 +943,14 @@ class ReversibleDebugger(Debugger):
                         del l_history[-1]
                         self.do_restart(b_clear_history = True)
                         self.replay_history(l_history)
-                    l_history[-1] += \
+                    l_history += \
                         [self._p.get_personality_cmd(fred_step_cmd())]
                     self.replay_history([l_history[-1]])
-                    fredutil.fred_assert(self.state().level() == level+1)
-                    while not self.at_breakpoint() and \
-                          self.state().level() == level+1:
-                        l_history[-1] += \
+                    while self.program_is_running() and \
+			  not self.at_breakpoint():
+                        l_history += \
                             [self._p.get_personality_cmd(fred_next_cmd())]
-                        self.replay_history(l_history[-1])
-                    fredutil.fred_assert(self.state().level() == level
-                                         and self.at_breakpoint())
+                        self.replay_history([l_history[-1]])
 	fredutil.fred_assert(self.state().level() <= level)
 	# Gene - Am I using the next four lines correctly?
 	self.checkpoint.l_history = l_history
