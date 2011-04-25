@@ -580,15 +580,12 @@ class ReversibleDebugger(Debugger):
 
     def NEW_binary_search_since_last_checkpoint(self,
 					 l_history, n_min, s_expr, s_expr_val):
-        testIfTooFar = lambda: self.test_expression(s_expr, s_expr_val)
+        testIfTooFar = lambda: \
+            not self.program_is_running() or  \
+	    self.test_expression(s_expr, s_expr_val)
 	# After replaying l_history([0:n_min]), testIfTooFar() should be False
         l_history = self.NEW_binary_search_history(l_history,
 						   n_min, testIfTooFar)
-        fredutil.fred_assert( len(l_history) - n_min == 1 )
-	# Current time is at l_history[0:n_min], and not end of l_history
-	if testIfTooFar():
-	    # s_expr == s_expr_val at n_min
-	    return self._REVERSE_WATCH_EXPR_SAME
 	# l_history[-1] now guaranteed to be 'c', 'n', or 's'
         #   and testIfTooFar changes upon executing l_history[-1]
 	# Note that if we're at breakpoint and l_history[-1] == 'n',
@@ -684,6 +681,7 @@ class ReversibleDebugger(Debugger):
         if n_min == n_min_orig and testIfTooFar():
             fredutil.fred_debug("testIfTooFar() true at n_min_orig on entry.")
             raise self.BinarySearchTooFarAtStartError()
+        fredutil.fred_assert( len(l_history) - n_min == 1 )
         fredutil.fred_debug("Done searching history.")
 	return l_history
 
@@ -798,7 +796,9 @@ class ReversibleDebugger(Debugger):
 		# expand_next replaces last 'n' by ['s', 'n', ...]
 		# self.state().level() can never increase under repeated 'n'
 		# BUG:  Actually, 'n' can hit a breakpoint deeper in stack.
-	        testIfTooFar = lambda: self.state().level() <= level
+	        testIfTooFar = lambda: \
+                    not self.program_is_running() or  \
+		    self.state().level() <= level
 	        (l_history, n_min) = \
 		    self.NEW_binary_search_expand_next(l_history, testIfTooFar)
 		if not l_history[-1].is_step():
