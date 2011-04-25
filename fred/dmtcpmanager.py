@@ -2,6 +2,7 @@ import fredio
 import fredutil
 
 import os
+import pdb
 import re
 import shutil
 import subprocess
@@ -117,6 +118,17 @@ def restart(n_index):
     l_ckpt_files = [os.path.join(os.environ["DMTCP_TMPDIR"], x) \
                     for x in os.listdir(os.environ["DMTCP_TMPDIR"]) \
                     if x.endswith(".dmtcp")]
+    if (len(l_ckpt_files) > 2):
+        # XXX: I think this is a Python bug.... sometimes even when there are
+        # physically only two checkpoint files on disk, l_ckpt_files will
+        # contain 4:
+        # (Pdb) p l_ckpt_files
+        #['/tmp/fred.tyler/dmtcp_tmpdir/ckpt_test_list_X-3089-4db5c59e.dmtcp',
+        #'/tmp/fred.tyler/dmtcp_tmpdir/ckpt_gdb_X-3081-4db5c59c.dmtcp',
+        #'/tmp/fred.tyler/dmtcp_tmpdir/ckpt_test_list_X-3089-4db5c59e.dmtcp',
+        #'/tmp/fred.tyler/dmtcp_tmpdir/ckpt_gdb_X-3081-4db5c59c.dmtcp']
+        # I have replaced the hostname with X for readability.
+        pdb.set_trace()
     fredutil.fred_debug("Restarting checkpoint files: %s" % str(l_ckpt_files))
     cmdstr = ["dmtcp_restart", "--quiet", "--port", os.environ["DMTCP_PORT"]]
     map(cmdstr.append, l_ckpt_files)
