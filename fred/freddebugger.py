@@ -539,6 +539,10 @@ class ReversibleDebugger(Debugger):
         self.update_state()
         fredutil.fred_debug("Reverse continue finished.")
         
+    # This exception happens only for reverse_watch currently.
+    class BinarySearchTooFarAtStartError(Exception):
+        pass
+
     def reverse_watch(self, s_expr):
         """Perform 'reverse-watch' command on expression."""
         s_expr_val = self.evaluate_expression(s_expr)
@@ -559,10 +563,15 @@ class ReversibleDebugger(Debugger):
               fredutil.fred_error("No checkpoints found for reverse-step.")
               return
 	  l_history_copy = self._copy_fred_commands(self.checkpoint.l_history)
-	  self.checkpoint.l_history = \
-	    self.NEW_binary_search_since_last_checkpoint(l_history_copy,
-							 0, s_expr, s_expr_val)
-
+	  try:
+	    self.checkpoint.l_history = \
+	      self.NEW_binary_search_since_last_checkpoint(l_history_copy,
+							  0, s_expr, s_expr_val)
+	  except self.BinarySearchTooFarAtStartError:
+	    fredutil.fred_debug("BinarySearchTooFarAtStartError handled")
+            fredutil.fred_info(
+	        'reverse-watch failed; expr "%s"\n  is same at start and end.'
+		% s_expr )
         self.update_state()
         fredutil.fred_debug("Reverse watch finished.")
 
@@ -575,6 +584,11 @@ class ReversibleDebugger(Debugger):
 	# After replaying l_history([0:n_min]), testIfTooFar() should be False
         l_history = self.NEW_binary_search_history(l_history,
 						   n_min, testIfTooFar)
+        fredutil.fred_assert( len(l_history) - n_min == 1 )
+	# Current time is at l_history[0:n_min], and not end of l_history
+	if testIfTooFar():
+	    # s_expr == s_expr_val at n_min
+	    return self._REVERSE_WATCH_EXPR_SAME
 	# l_history[-1] now guaranteed to be 'c', 'n', or 's'
         #   and testIfTooFar changes upon executing l_history[-1]
 	# Note that if we're at breakpoint and l_history[-1] == 'n',
@@ -634,6 +648,7 @@ class ReversibleDebugger(Debugger):
 	If itersToLive is set, returns None if no convergence in those iters."""
         fredutil.fred_debug("Start binary search on history: %s" % \
                             str(l_history))
+	n_min_orig = n_min
         n_count = n_max = len(l_history)
 	# Invariant:  TestIfTooFar() is always True at n_max and False at n_min
         while n_max - n_min > 1:
@@ -666,9 +681,9 @@ class ReversibleDebugger(Debugger):
 	if n_min != n_count:  # This was already done for n_min == n_count
             self.do_restart(b_clear_history = True)
             self.replay_history(l_history, n_min)
-        if n_min == 0 and testIfTooFar():
-            fredutil.fred_error("Reverse-XXX failed to search history.")
-            return None
+        if n_min == n_min_orig and testIfTooFar():
+            fredutil.fred_debug("testIfTooFar() true at n_min_orig on entry.")
+            raise self.BinarySearchTooFarAtStartError()
         fredutil.fred_debug("Done searching history.")
 	return l_history
 
