@@ -945,13 +945,26 @@ class ReversibleDebugger(Debugger):
                         self.replay_history(l_history)
                     l_history += \
                         [self._p.get_personality_cmd(fred_step_cmd())]
-                    self.replay_history([l_history[-1]])
+		    # NOTE: do_step() logs "step", but we will replace history.
+        	    if self.do_step() == "DO-NOT-STEP":
+		        # if entering glibc or other lib, replace l_history[-1]
+		        #   by special cmd called "step" that acts like "next".
+			l_history[-1].set_native(
+					   self._p.get_native(fred_next_cmd()))
+			# undo "step" and then replay "next"
+                        self.do_restart(b_clear_history = True)
+                        self.replay_history(l_history)
+		    # This _start, etc., is gdb-specific.  Should push lower and
+		    #  define program_is_running() to be False if we see these.
+		    # (ADD THIS TO WHILE CONDITION BELOW WHEN WORKING.)
+        	    #	  self._p.get_backtrace()[0].s_function != "_start" and\
+        	    #     self._p.get_backtrace()[0].s_function != \
+		    #	    "__libc_start_main":
                     while self.program_is_running() and \
 			  not self.at_breakpoint():
                         l_history += \
                             [self._p.get_personality_cmd(fred_next_cmd())]
                         self.replay_history([l_history[-1]])
-	fredutil.fred_assert(self.state().level() <= level)
 	# Gene - Am I using the next four lines correctly?
 	self.checkpoint.l_history = l_history
 	self.do_restart()
