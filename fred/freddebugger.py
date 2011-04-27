@@ -157,7 +157,13 @@ class Debugger():
 
     def program_is_running(self):
         """Return True if inferior is still running."""
-        return self._p.program_is_running()
+	# The extra debugging functions are gdb-specific.  When a gdb
+	#  target app exits, it first returns to the call frames below.
+	# NOTE: In FReD l_frames[0] is deepest frame; l_frames[-1] is top level.
+        return self._p.program_is_running() and \
+	       self._p.get_backtrace().l_frames[-1].s_function != "_start" and \
+	       self._p.get_backtrace().l_frames[-1].s_function != \
+							"__libc_start_main"
 
 class ReversibleDebugger(Debugger):
     """Represents control and management of a reversible Debugger.
@@ -226,6 +232,7 @@ class ReversibleDebugger(Debugger):
         """Return the list of available Checkpoint files."""
         return self.l_checkpoints
     
+    # Gene - bad name?  Maybe checkpoint_history() or ckpt_history() ?
     def history(self):
         """Return the history of all Checkpoints."""
         l_history = []
@@ -235,6 +242,7 @@ class ReversibleDebugger(Debugger):
                 l_history.extend(ckpt.l_history)
         return l_history
 
+    # Gene - see above.  clear_ckpt_history() might be a better name.
     def clear_history(self):
         """Clear the current checkpoint's history."""
         del self.checkpoint.l_history[:]            
@@ -293,6 +301,19 @@ class ReversibleDebugger(Debugger):
         self.log_fred_command(cmd)
         self.update_state()
         return output
+
+    def append_step_over_libc(self, l_history):
+	"""Append fred_step_cmd() to l_history.  if this would enter glibc
+	or some other other lib, replace that 'step' by a special cmd
+	with name 'step' that acts when executed like 'next'."""
+        l_history.append(self._p.get_personality_cmd(fred_step_cmd()))
+	# NOTE: do_step() logs "step", but we replace history.
+        if self.do_step() == "DO-NOT-STEP":
+	    l_history[-1].set_native(self._p.get_native(fred_next_cmd()))
+	    # undo "step" and then replay "next"
+            self.do_restart(b_clear_history = True)
+            self.replay_history(l_history)
+	return l_history
         
     def do_continue(self, n=1):
         """Perform n 'continue' commands. Returns output."""
@@ -737,15 +758,14 @@ class ReversibleDebugger(Debugger):
 	while at n_min, will be at earlier point for which not testIfTooFar().
 	You will probably want to call binary_search_history() afterward."""
         fredutil.fred_assert(l_history[-1].is_next())
-	n_min = len(l_history) - 1
-	repeatNextCmd = self._p.get_personality_cmd(fred_next_cmd())
+	del l_history[-1]
+	n_min = len(l_history)
         self.do_restart(b_clear_history = True)
-        self.replay_history(l_history[:-1])
-        l_history[-1] = self._p.get_personality_cmd(fred_step_cmd())
-	# FIX ME:  This can step inside libc
-        self.replay_history([l_history[-1]])
+        self.replay_history(l_history)
+	self.append_step_over_libc(l_history)
 	if testIfTooFar():
 	    return (l_history, n_min)
+	repeatNextCmd = self._p.get_personality_cmd(fred_next_cmd())
 	# BUG: testIfTooFar() should also test if self.at_breakpoint()
 	#      If that happens even once, return immediately, since original
 	#      'next' command could never have gone beyond breakpoint.
@@ -854,10 +874,7 @@ class ReversibleDebugger(Debugger):
 		    del l_history[-1]
 		    # This can be made more efficient.
 		    while self.state().level() < level-1:
-			l_history += \
-			    [self._p.get_personality_cmd(fred_step_cmd())]
-			# FIX ME:  This can step inside libc
-			self.replay_history([l_history[-1]])
+			self.append_step_over_libc(l_history)
 		    fredutil.fred_assert(self.state().level() == level-1)
 	        elif l_history[-1].is_next():
 		    # Search for time in past when level was one higher.
@@ -909,15 +926,7 @@ class ReversibleDebugger(Debugger):
                     break
                 elif l_history[-1].is_next():
                     level = self.state().level()
-		    # Near end of program, weird things happen:
-		    #  level can be 0, or can be in __libc_start_main
 	            if not self.program_is_running():
-                        level = -99
-		    # This is gdb-specific.  Should push lower and define
-		    #  program_is_running() to be False if we see these.
-        	    elif self._p.get_backtrace()[0].s_function == "_start" or \
-        	         self._p.get_backtrace()[0].s_function == \
-			   "__libc_start_main":
                         level = -99
 	            del l_history[-1]
                     self.do_restart(b_clear_history = True)
@@ -943,23 +952,7 @@ class ReversibleDebugger(Debugger):
                         del l_history[-1]
                         self.do_restart(b_clear_history = True)
                         self.replay_history(l_history)
-                    l_history += \
-                        [self._p.get_personality_cmd(fred_step_cmd())]
-		    # NOTE: do_step() logs "step", but we will replace history.
-        	    if self.do_step() == "DO-NOT-STEP":
-		        # if entering glibc or other lib, replace l_history[-1]
-		        #   by special cmd called "step" that acts like "next".
-			l_history[-1].set_native(
-					   self._p.get_native(fred_next_cmd()))
-			# undo "step" and then replay "next"
-                        self.do_restart(b_clear_history = True)
-                        self.replay_history(l_history)
-		    # This _start, etc., is gdb-specific.  Should push lower and
-		    #  define program_is_running() to be False if we see these.
-		    # (ADD THIS TO WHILE CONDITION BELOW WHEN WORKING.)
-        	    #	  self._p.get_backtrace()[0].s_function != "_start" and\
-        	    #     self._p.get_backtrace()[0].s_function != \
-		    #	    "__libc_start_main":
+		    self.append_step_over_libc(l_history)
                     while self.program_is_running() and \
 			  not self.at_breakpoint():
                         l_history += \
@@ -1060,9 +1053,8 @@ class ReversibleDebugger(Debugger):
                 self._binary_search_expand_with_next(l_history[0:-1], s_expr, s_expr_val)
             return l_history
         while l_history[-1].is_next():
-            l_history[-1] = self._p.get_personality_cmd(fred_step_cmd())
-	    # FIX ME:  This can step inside libc
-            self.replay_history([self._p.get_personality_cmd(fred_step_cmd())])
+	    del l_history[-1]
+	    self.append_step_over_libc(l_history)
             if self.test_expression(s_expr, s_expr_val):
                 # Done: return debugger at time when if 's' were executed, then
                 # expression would become true. We also change the final
