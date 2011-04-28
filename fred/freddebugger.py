@@ -601,9 +601,7 @@ class ReversibleDebugger(Debugger):
 
     def NEW_binary_search_since_last_checkpoint(self,
 					 l_history, n_min, s_expr, s_expr_val):
-        testIfTooFar = lambda: \
-            not self.program_is_running() or  \
-	    self.test_expression(s_expr, s_expr_val)
+        testIfTooFar = lambda: self.test_expression(s_expr, s_expr_val)
 	# After replaying l_history([0:n_min]), testIfTooFar() should be False
         l_history = self.NEW_binary_search_history(l_history,
 						   n_min, testIfTooFar)
@@ -684,7 +682,7 @@ class ReversibleDebugger(Debugger):
             # can declare this "not far enough" in logic below.
             # But does this still do the right thing if testIfTooFar depends
             # only on traditional global vars?
-	    if testIfTooFar():
+	    if not self.program_is_running() or testIfTooFar():
                 fredutil.fred_debug("Setting max bound %d" % n_count)
                 n_max = n_count
             else:
@@ -699,7 +697,8 @@ class ReversibleDebugger(Debugger):
 	if n_min != n_count:  # This was already done for n_min == n_count
             self.do_restart(b_clear_history = True)
             self.replay_history(l_history, n_min)
-        if n_min == n_min_orig and testIfTooFar():
+        if n_min == n_min_orig and \
+	   (not self.program_is_running or testIfTooFar()):
             fredutil.fred_debug("testIfTooFar() true at n_min_orig on entry.")
             raise self.BinarySearchTooFarAtStartError()
         fredutil.fred_assert( len(l_history) - n_min == 1 )
@@ -763,7 +762,7 @@ class ReversibleDebugger(Debugger):
         self.do_restart(b_clear_history = True)
         self.replay_history(l_history)
 	self.append_step_over_libc(l_history)
-	if testIfTooFar():
+	if not self.program_is_running() or testIfTooFar():
 	    return (l_history, n_min)
 	repeatNextCmd = self._p.get_personality_cmd(fred_next_cmd())
 	# BUG: testIfTooFar() should also test if self.at_breakpoint()
@@ -816,9 +815,7 @@ class ReversibleDebugger(Debugger):
 		# expand_next replaces last 'n' by ['s', 'n', ...]
 		# self.state().level() can never increase under repeated 'n'
 		# BUG:  Actually, 'n' can hit a breakpoint deeper in stack.
-	        testIfTooFar = lambda: \
-                    not self.program_is_running() or  \
-		    self.state().level() <= level
+	        testIfTooFar = lambda: self.at_breakpoint()
 	        (l_history, n_min) = \
 		    self.NEW_binary_search_expand_next(l_history, testIfTooFar)
 		if not l_history[-1].is_step():
