@@ -842,7 +842,7 @@ class ReversibleDebugger(Debugger):
                 return
 	    l_history = self._copy_fred_commands(self.checkpoint.l_history)
             level = self.state().level()
-	    while level >= self.state().level():
+	    while self.state().level() >= level:
 	        while len(l_history)>0 and not l_history[-1].is_step() and \
 		      not l_history[-1].is_next() and \
 		      not l_history[-1].is_continue():
@@ -864,11 +864,11 @@ class ReversibleDebugger(Debugger):
 							 n_min, testIfTooFar)
 		    # execution stopped with n_min; l_history went one further
 		    continue
-	        elif l_history[-1].is_next() and self.at_breakpoint:
+	        elif l_history[-1].is_next() and self.at_breakpoint():
 		    # 'n' can hit a breakpoint deeper in stack.
-		    self.do_restart()
-		    self.replay_history(l_history[0:-1])
 		    del l_history[-1]
+		    self.do_restart()
+		    self.replay_history(l_history)
 		    # This can be made more efficient.
 		    while self.state().level() < level-1:
 			self.append_step_over_libc(l_history)
