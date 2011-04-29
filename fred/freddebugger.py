@@ -793,7 +793,8 @@ class ReversibleDebugger(Debugger):
                 fredutil.fred_error("No checkpoints found for reverse-step.")
                 return
 	    l_history = self._copy_fred_commands(self.checkpoint.l_history)
-	    while len(l_history)>0 and not l_history[-1].is_step() and \
+	    while len(l_history)>0 and \
+		  not l_history[-1].is_step() and \
 		  not l_history[-1].is_next() and \
 		  not l_history[-1].is_continue():
 		del l_history[-1]
@@ -803,19 +804,24 @@ class ReversibleDebugger(Debugger):
 		# Since we last executed 'continue', we must be at a breakpoint.
 		# Use that to expand the last 'continue' command until we
 		#   reach the breakpoint.
-		# FIXME:  Is at_breakpoint() the right method?
-	        testIfTooFar = lambda: self.at_breakpoint()
-	        (l_history, n_min) = \
-		    self.NEW_binary_search_expand_continue(l_history,
-							   testIfTooFar)
-		l_history = self.NEW_binary_search_history(l_history, n_min,
-						           testIfTooFar)
+		# FIXME:  This is inefficient.  In gdb, we should be
+		#   doing 'n 2', 'n 4', 'n 8', etc., and be depending
+		#   on gdb stopping at breakpoint.  But gdb doesn't always
+		#   stop at breakpoint (e.g. at beginning of 'for' loop)
+                del l_history[-1]
+                self.do_restart(b_clear_history = True)
+                self.replay_history(l_history)
+		self.append_step_over_libc(l_history)
+                while self.program_is_running() and not self.at_breakpoint():
+                    l_history += [self._p.get_personality_cmd(fred_next_cmd())]
+                    self.replay_history([l_history[-1]])
 	    while l_history[-1].is_next():
                 level = self.state().level()
 		# expand_next replaces last 'n' by ['s', 'n', ...]
 		# self.state().level() can never increase under repeated 'n'
 		# BUG:  Actually, 'n' can hit a breakpoint deeper in stack.
-	        testIfTooFar = lambda: self.at_breakpoint()
+	        testIfTooFar = lambda: self.state().level() <= level or \
+				       self.at_breakpoint()
 	        (l_history, n_min) = \
 		    self.NEW_binary_search_expand_next(l_history, testIfTooFar)
 		if not l_history[-1].is_step():
@@ -843,7 +849,8 @@ class ReversibleDebugger(Debugger):
 	    l_history = self._copy_fred_commands(self.checkpoint.l_history)
             level = self.state().level()
 	    while self.state().level() >= level:
-	        while len(l_history)>0 and not l_history[-1].is_step() and \
+	        while len(l_history)>0 and \
+		      not l_history[-1].is_step() and \
 		      not l_history[-1].is_next() and \
 		      not l_history[-1].is_continue():
 		    del l_history[-1]
@@ -912,7 +919,8 @@ class ReversibleDebugger(Debugger):
                 return
 	    l_history = self._copy_fred_commands(self.checkpoint.l_history)
 	    while True:
-	        while len(l_history)>0 and not l_history[-1].is_step() and \
+	        while len(l_history)>0 and \
+		      not l_history[-1].is_step() and \
 		      not l_history[-1].is_next() and \
 		      not l_history[-1].is_continue():
 		    del l_history[-1]
@@ -950,6 +958,10 @@ class ReversibleDebugger(Debugger):
                         self.do_restart(b_clear_history = True)
                         self.replay_history(l_history)
 		    self.append_step_over_libc(l_history)
+		    # FIXME:  This is inefficient.  In gdb, we should be
+		    #   doing 'n 2', 'n 4', 'n 8', etc., and be depending
+		    #   on gdb stopping at breakpoint.  But gdb doesn't always
+		    #   stop at breakpoint (e.g. at beginning of 'for' loop)
                     while self.program_is_running() and \
 			  not self.at_breakpoint():
                         l_history += \
