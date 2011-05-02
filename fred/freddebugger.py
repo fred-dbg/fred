@@ -379,8 +379,9 @@ class ReversibleDebugger(Debugger):
         if len(l_history) == 0:
             l_history = self._copy_fred_commands(self.checkpoint.l_history)
         if n == -1:
-            n = len(l_history)
-        l_temp = self.first_n_commands(self._coalesce_history(l_history), n)
+            l_temp = self._coalesce_history(l_history)
+        else:
+            l_temp = self.first_n_commands(self._coalesce_history(l_history), n)
         fredutil.fred_debug("Replaying the following history: %s" % \
                             str(l_temp))
         for cmd in l_temp:
@@ -408,6 +409,21 @@ class ReversibleDebugger(Debugger):
             i += 1
             j += 1
         return l_result
+
+    def trim_n_cmds(self, l_history, n):
+        """Trim last n commands.
+        Also adjust things like 'next 5' to be 'next 4'."""
+        if len(l_history) == 0:
+            return
+        while n > 0:
+            if l_history[-1].b_count_cmd:
+                n_count = l_history[-1].count()
+                if n_count != 1:
+                    l_history[-1].set_count(n_count - 1)
+                    n -= 1
+                    continue
+            n -= 1
+            l_history.pop()
 
     def undo(self, n=1):
         """Undo the last n commands."""
@@ -581,7 +597,7 @@ class ReversibleDebugger(Debugger):
                 0, s_expr, s_expr_val)
 	else:
           if len(self.l_checkpoints) == 0:
-              fredutil.fred_error("No checkpoints found for reverse-step.")
+              fredutil.fred_error("No checkpoints found for reverse-watch.")
               return
 	  l_history_copy = self._copy_fred_commands(self.checkpoint.l_history)
 	  try:
@@ -839,16 +855,18 @@ class ReversibleDebugger(Debugger):
 
     def NEW_reverse_finish(self, n=1):
         """Perform n 'reverse-finish' commands."""
+        if len(self.l_checkpoints) == 0:
+            fredutil.fred_error("No checkpoints found for reverse-finish.")
+            return
         while n > 0:
             n -= 1
             self.update_state()
             orig_state = self.state().copy()
-            if len(self.l_checkpoints) == 0:
-                fredutil.fred_error("No checkpoints found for reverse-step.")
-                return
 	    l_history = self._copy_fred_commands(self.checkpoint.l_history)
             level = self.state().level()
 	    while self.state().level() >= level:
+                # Trimming ignore commands. TODO: This could delete commands
+                # with side effects like "p var++".
 	        while len(l_history)>0 and \
 		      not l_history[-1].is_step() and \
 		      not l_history[-1].is_next() and \
@@ -873,7 +891,7 @@ class ReversibleDebugger(Debugger):
 		    continue
 	        elif l_history[-1].is_next() and self.at_breakpoint():
 		    # 'n' can hit a breakpoint deeper in stack.
-		    del l_history[-1]
+                    self.trim_n_cmds(l_history, 1)
 		    self.do_restart()
 		    self.replay_history(l_history)
 		    # This can be made more efficient.
@@ -886,13 +904,13 @@ class ReversibleDebugger(Debugger):
 		    while self.state().level() >= level and \
 			  not self.at_breakpoint() and len(l_history)>0 and \
 		          l_history[-1].is_next() or l_history[-1].is_step():
-		        del l_history[-1]
+                        self.trim_n_cmds(l_history, 1)
 		        self.do_restart(b_clear_history = True)
 		        self.replay_history(l_history)
 		    fredutil.fred_assert(self.state().level() >= level-1)
             
                 elif l_history[-1].is_step():
-	            del l_history[-1]
+                    self.trim_n_cmds(l_history, 1)
 	fredutil.fred_assert(self.state().level() == level-1 or
 			     len(l_history) == 0)
 	# Gene - Am I using the next four lines correctly?
@@ -910,15 +928,17 @@ class ReversibleDebugger(Debugger):
     # .* 'n' -> reverse_finish(.*)   if 'n' returns to shallower stack level
     def NEW_reverse_next(self, n=1):
         """Perform n 'reverse-next' commands."""
+        if len(self.l_checkpoints) == 0:
+            fredutil.fred_error("No checkpoints found for reverse-next.")
+            return
         while n > 0:
             n -= 1
             self.update_state()
             orig_state = self.state().copy()
-            if len(self.l_checkpoints) == 0:
-                fredutil.fred_error("No checkpoints found for reverse-step.")
-                return
 	    l_history = self._copy_fred_commands(self.checkpoint.l_history)
-	    while True:
+            while True:
+                # Trimming ignore commands. TODO: This could delete commands
+                # with side effects like "p var++".
 	        while len(l_history)>0 and \
 		      not l_history[-1].is_step() and \
 		      not l_history[-1].is_next() and \
@@ -927,13 +947,13 @@ class ReversibleDebugger(Debugger):
 	        if len(l_history) == 0:
 		    break
                 if l_history[-1].is_step():
-	            del l_history[-1]
+	            self.trim_n_cmds(l_history, 1)
                     break
                 elif l_history[-1].is_next():
                     level = self.state().level()
 	            if not self.program_is_running():
                         level = -99
-	            del l_history[-1]
+	            self.trim_n_cmds(l_history, 1)
                     self.do_restart(b_clear_history = True)
                     self.replay_history(l_history)
                     if self.state().level() == level:
