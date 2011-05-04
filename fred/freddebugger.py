@@ -707,8 +707,9 @@ class ReversibleDebugger(Debugger):
         # XXX: deviate here
         fredutil.fred_assert(n_max - n_min == 1)
 	# Since TestIfTooFar() changes at l_history[1], following assert holds:
-        fredutil.fred_assert(l_history[-1].is_step() or l_history[-1].is_next()
-			     or l_history[-1].is_continue())
+        fredutil.fred_assert(l_history[n_min].is_step() or \
+			     l_history[n_min].is_next() or \
+			     l_history[n_min].is_continue())
         l_history = l_history[:n_max]
 	if n_min != n_count:  # This was already done for n_min == n_count
             self.do_restart(b_clear_history = True)
@@ -1078,8 +1079,8 @@ class ReversibleDebugger(Debugger):
                              "'next' or 'continue': '%s'" % l_history[-1])
         if l_history[-1].is_continue():
             fredutil.fred_debug("Last command continue.")
-            l_history = \
-                self._binary_search_expand_with_next(l_history[0:-1], s_expr, s_expr_val)
+            l_history = self._binary_search_expand_with_next(l_history[0:-1],
+							     s_expr, s_expr_val)
             return l_history
         while l_history[-1].is_next():
 	    del l_history[-1]
