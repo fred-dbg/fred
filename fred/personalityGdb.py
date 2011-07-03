@@ -217,6 +217,8 @@ def get_user_code_addresses():
             if re.search(permissions_re, line) != None:
                 executable_lines.append(line)
     f.close()
+    fredutil.fred_assert(len(executable_lines) > 0,               
+        "Failed to find executable in /proc/%d/maps :" % n_inferior_pid)
     gn_user_code_min = \
         int(re.search(interval_re, executable_lines[0]).group(1), 16)
     gn_user_code_max = \
