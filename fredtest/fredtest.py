@@ -21,11 +21,20 @@
 # along with FReD.  If not, see <http://www.gnu.org/licenses/>.               #
 ###############################################################################
 
+from optparse import OptionParser
+import os
 import sys
-import fredapp
-import fred.fredutil
-import fred.dmtcpmanager
-import fred.fredio
+
+try:
+    import fredapp
+    import fred.fredutil
+    import fred.dmtcpmanager
+    import fred.fredio
+except ImportError:
+    print "Unable to find FReD modules."
+    print "Please set your PYTHONPATH to point to the location of fredapp.py."
+    print "Ex: shell> PYTHONPATH=.. ./fredtest.py"
+    sys.exit(1)
 
 """
 This file should be executable from the command line to run several integration and unit tests on FReD.
@@ -42,6 +51,7 @@ g_debugger = None
 def start_session(l_cmd):
     """Start the given command line as a fred session."""
     global g_debugger
+    fred.fredutil.fred_assert(len(l_cmd) > 0)
     g_debugger = fredapp.fred_setup(l_cmd)
     fred.fredio.wait_for_prompt()
     fredapp.interactive_debugger_setup()
@@ -129,5 +139,24 @@ def run_all_tests():
     run_integration_tests()
     run_unit_tests()
 
+def parse_fredtest_args():
+    """Initialize command line options, and parse them.
+    Then set up fredapp module accordingly."""
+    parser = OptionParser()
+    parser.disable_interspersed_args()
+    # Note that '-h' and '--help' are supported automatically.
+    default_port = os.getenv("DMTCP_PORT") or 7779
+    parser.add_option("-p", "--port", dest="dmtcp_port", default=default_port,
+                      help="Use PORT for DMTCP port number. (default %default)",
+                      metavar="PORT")
+    parser.add_option("--enable-debug", dest="debug", default=False,
+                      action="store_true",
+                      help="Enable FReD debugging messages.")
+    (options, l_args) = parser.parse_args()
+    # 'l_args' is the 'gdb ARGS ./a.out' list
+    fredapp.setup_environment_variables(str(options.dmtcp_port), options.debug)
+    return l_args
+
 if __name__ == "__main__":
+    parse_fredtest_args()
     run_all_tests()

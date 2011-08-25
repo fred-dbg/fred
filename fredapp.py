@@ -254,13 +254,16 @@ def setup_debugger(s_debugger_name):
         fredutil.fred_fatal("Unimplemented debugger '%s'" % s_debugger_name)
 
 def setup_environment_variables(s_dmtcp_port="7779", b_debug=False):
-    """Set up the given environment variables."""
+    """Set up the given environment variables.
+    If any environment variables are already set, the existing values
+    take precedence. This is so the user can set up environment
+    variables for DMTCP/FReD in their .bashrc, for example."""
     fredutil.GB_DEBUG = b_debug
-    os.environ["DMTCP_PORT"] = s_dmtcp_port
-    os.environ["DMTCP_TMPDIR"] = GS_DMTCP_TMPDIR
-    os.environ["DMTCP_CHECKPOINT_DIR"] = GS_DMTCP_TMPDIR
-    os.environ["DMTCP_GZIP"] = '0'
-    os.environ["DMTCP_QUIET"] = '2'
+    fredutil.set_env_var_if_unset("DMTCP_PORT", s_dmtcp_port)
+    fredutil.set_env_var_if_unset("DMTCP_TMPDIR", GS_DMTCP_TMPDIR)
+    fredutil.set_env_var_if_unset("DMTCP_CHECKPOINT_DIR", GS_DMTCP_TMPDIR)
+    fredutil.set_env_var_if_unset("DMTCP_GZIP", '0')
+    fredutil.set_env_var_if_unset("DMTCP_QUIET", '2')
     # Create the DMTCP tmpdir if it doesn't exist:
     if not os.path.exists(GS_DMTCP_TMPDIR):
        os.makedirs(GS_DMTCP_TMPDIR, 0755)
@@ -284,7 +287,7 @@ def interactive_debugger_setup():
     if g_source_script != None:
         source_from_file(g_source_script)
 
-def fred_setup(l_cmd=[]):
+def fred_setup(l_cmd=None):
     """Perform any setup needed by FReD before entering an I/O loop."""
     global g_debugger, gs_resume_dir_path, GS_FRED_TMPDIR
     cleanup_fred_files()
@@ -292,7 +295,7 @@ def fred_setup(l_cmd=[]):
     if not dmtcpmanager.is_dmtcp_in_path():
         fredutil.fred_fatal("No DMTCP binaries available in your PATH.\n")
     # Parse arguments, if none were provided.
-    if len(l_cmd) == 0:
+    if l_cmd == None:
         l_cmd = parse_program_args()
     else:
         # Command provided: set up env vars with default values.

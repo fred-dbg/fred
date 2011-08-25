@@ -151,3 +151,14 @@ def fred_quit(exit_code):
     """Perform any necessary cleanup and quits FReD."""
     fred_teardown()
     sys.exit(exit_code)
+
+def set_env_var_if_unset(s_name, s_val):
+    """Set the given environment variable if it is currently unset."""
+    try:
+        s_cur_val = os.environ[s_name]
+        if len(s_cur_val) == 0:
+            os.environ[s_name] = s_val
+            return
+    except KeyError:
+        os.environ[s_name] = s_val
+        return
