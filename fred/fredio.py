@@ -280,14 +280,14 @@ def reexec(argv):
     fredutil.fred_debug("Replacing current child with '%s'" % str(argv))
     _spawn_child(argv)
 
-def setup(argv, b_spawn_child=True):
+def setup(l_argv, b_spawn_child=True):
     """Perform any setup needed to do i/o with the child process."""
     _set_max_needs_input_length()
     # Enable tab completion (with our own 'completer' function)
     #readline.parse_and_bind('tab: complete')
     #readline.set_completer(_fred_completer)
     if b_spawn_child:
-        _spawn_child(["dmtcp_checkpoint", "--quiet", "--no-gzip", "--port", os.environ["DMTCP_PORT"]] + argv)
+        _spawn_child(["dmtcp_checkpoint"] + l_argv)
 
 def teardown():
     """Perform any cleanup associated with FReD exit."""

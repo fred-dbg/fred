@@ -291,9 +291,6 @@ def fred_setup(l_cmd=None):
     """Perform any setup needed by FReD before entering an I/O loop."""
     global g_debugger, gs_resume_dir_path, GS_FRED_TMPDIR
     cleanup_fred_files()
-    # Don't do anything if we can't find DMTCP.
-    if not dmtcpmanager.is_dmtcp_in_path():
-        fredutil.fred_fatal("No DMTCP binaries available in your PATH.\n")
     # Parse arguments, if none were provided.
     if l_cmd == None:
         l_cmd = parse_program_args()
@@ -346,6 +343,9 @@ def main_io_loop(b_skip_prompt=False):
 def main():
     """Program execution starts here."""
     global gs_resume_dir_path
+    # Don't do anything if we can't find DMTCP.
+    if not dmtcpmanager.is_dmtcp_in_path():
+        fredutil.fred_fatal("No DMTCP binaries available in your PATH.\n")
     fred_setup()
     # Main input/output loop
     # skip the prompt waiting if we are resuming:

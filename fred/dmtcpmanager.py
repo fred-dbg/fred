@@ -54,7 +54,7 @@ def is_dmtcp_in_path():
 
 def get_num_peers():
     """Return NUM_PEERS from 'dmtcp_command s' as an integer."""
-    cmd = [ 'dmtcp_command', "--port", os.environ["DMTCP_PORT"], 's' ]
+    cmd = [ 'dmtcp_command', 's' ]
     output = execute_shell_command(cmd)
     if output != None:
         exp = '^NUM_PEERS=(\d+)'
@@ -73,7 +73,7 @@ def get_num_peers():
 
 def is_running():
     """Return True if dmtcp_command reports RUNNING as 'yes'."""
-    cmd = ["dmtcp_command", "--quiet", "--port", os.environ["DMTCP_PORT"], "s"]
+    cmd = ["dmtcp_command", "s"]
     output = execute_shell_command(cmd)
     if output != None:
         running = re.search('RUNNING=(\w+)', output, re.MULTILINE).group(1)
@@ -85,7 +85,7 @@ def is_running():
 
 def kill_peers():
     """Send 'k' command to coordinator."""
-    cmd = ["dmtcp_command", "--quiet", "--port", os.environ["DMTCP_PORT"], "k"]
+    cmd = ["dmtcp_command", "k"]
     fredutil.fred_debug("Sending command '%s'" % ' '.join(cmd))
     if fredio.GB_FRED_DEMO:
         print "===================== KILLING gdb ====================="
@@ -119,8 +119,7 @@ def checkpoint():
                if x.endswith(".dmtcp") or x.startswith("synchronization-")]
     map(os.remove, l_files)
     # Request the checkpoint.
-    cmdstr = ["dmtcp_command", "--quiet", "--port", os.environ["DMTCP_PORT"],
-              "bc"]
+    cmdstr = ["dmtcp_command", "bc"]
     execute_shell_command_and_wait(cmdstr)
     fredutil.fred_debug("After blocking checkpoint command.")
 
@@ -151,7 +150,7 @@ def restart(n_index):
         # I have replaced the hostname with X for readability.
         l_ckpt_files = list(set(l_ckpt_files))
     fredutil.fred_debug("Restarting checkpoint files: %s" % str(l_ckpt_files))
-    cmdstr = ["dmtcp_restart", "--quiet", "--port", os.environ["DMTCP_PORT"]]
+    cmdstr = ["dmtcp_restart"]
     map(cmdstr.append, l_ckpt_files)
     fredio.reexec(cmdstr)
     # Wait until every peer has finished resuming:
