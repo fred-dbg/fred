@@ -180,6 +180,11 @@ class ReversibleDebugger(Debugger):
         self.checkpoint = None
         self.l_checkpoints = []
 
+    def destroy(self):
+        """Perform any cleanup associated with a ReversibleDebugger inst."""
+        # XXX: Should get rid of this Checkpoint variable.
+        Checkpoint.n_next_index = 0
+
     def setup_from_resume(self):
         """Set up data structures from a resume."""
         for i in range(0, dmtcpmanager.numCheckpoints):
@@ -634,7 +639,7 @@ class ReversibleDebugger(Debugger):
 	#   BREAKPOINT AFTER NEXT.  iF IT HIT A BREAKPOINT, REMOVE ALL FURTHER
 	#   next_or_breakpoint COMMANDS OF l_history IMMEDIATELY AFTER THIS.
 	while l_history[-1].is_continue() or \
-	      (self.at_breakpoint() and self.is_next()):
+	      (self.at_breakpoint() and l_history[-1].is_next()):
 	    (l_history, n_min) = \
 		self.NEW_binary_search_expand_continue(l_history, testIfTooFar)
 	    # l_history == l_history[0:n_min] + (len(l_history)-n_min)*['n']

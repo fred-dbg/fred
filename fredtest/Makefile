@@ -9,3 +9,6 @@ clean:
 
 check: all fredtest.py
 	PYTHONPATH=$(PYTHONPATH) ./fredtest.py
+
+check-pdb: all fredtest.py
+	PYTHONPATH=$(PYTHONPATH) pdb ./fredtest.py

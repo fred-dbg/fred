@@ -142,14 +142,14 @@ def restart(n_index):
     if (len(l_ckpt_files) > 2):
         # XXX: I think this is a Python bug.... sometimes even when there are
         # physically only two checkpoint files on disk, l_ckpt_files will
-        # contain 4:
+        # contain 4, with the two unique ones being duplicated:
         # (Pdb) p l_ckpt_files
         #['/tmp/fred.tyler/dmtcp_tmpdir/ckpt_test_list_X-3089-4db5c59e.dmtcp',
         #'/tmp/fred.tyler/dmtcp_tmpdir/ckpt_gdb_X-3081-4db5c59c.dmtcp',
         #'/tmp/fred.tyler/dmtcp_tmpdir/ckpt_test_list_X-3089-4db5c59e.dmtcp',
         #'/tmp/fred.tyler/dmtcp_tmpdir/ckpt_gdb_X-3081-4db5c59c.dmtcp']
         # I have replaced the hostname with X for readability.
-        pdb.set_trace()
+        l_ckpt_files = list(set(l_ckpt_files))
     fredutil.fred_debug("Restarting checkpoint files: %s" % str(l_ckpt_files))
     cmdstr = ["dmtcp_restart", "--quiet", "--port", os.environ["DMTCP_PORT"]]
     map(cmdstr.append, l_ckpt_files)
@@ -178,3 +178,6 @@ def resume(s_fred_tmpdir, s_resume_dir):
     fredutil.fred_info("Resuming session.")
     restart(gn_index_suffix)
 
+def manager_teardown():
+    global gn_index_suffix
+    gn_index_suffix = 0
