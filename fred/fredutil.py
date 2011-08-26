@@ -26,6 +26,7 @@ import sys
 import time
 
 import fredio
+import dmtcpmanager
 
 # Legal characters for a file path
 GS_FILE_PATH_RE = "[/a-zA-Z0-9_\-\.]+"
@@ -146,6 +147,7 @@ def open_file(s_filename):
 def fred_teardown():
     fred_debug("FReD exiting.")
     fredio.teardown()
+    dmtcpmanager.manager_teardown()
     
 def fred_quit(exit_code):
     """Perform any necessary cleanup and quits FReD."""

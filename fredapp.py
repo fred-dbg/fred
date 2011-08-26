@@ -287,16 +287,12 @@ def interactive_debugger_setup():
     if g_source_script != None:
         source_from_file(g_source_script)
 
-def fred_setup(l_cmd=None):
+def fred_setup():
     """Perform any setup needed by FReD before entering an I/O loop."""
     global g_debugger, gs_resume_dir_path, GS_FRED_TMPDIR
     cleanup_fred_files()
-    # Parse arguments, if none were provided.
-    if l_cmd == None:
-        l_cmd = parse_program_args()
-    else:
-        # Command provided: set up env vars with default values.
-        setup_environment_variables()
+    # Parse command line args and set up environment.
+    l_cmd = parse_program_args()
     # Set up the FReD global debugger
     setup_debugger(l_cmd[0])
     # Set up I/O handling
@@ -306,7 +302,19 @@ def fred_setup(l_cmd=None):
     if gs_resume_dir_path != None:
         dmtcpmanager.resume(GS_FRED_TMPDIR, gs_resume_dir_path)
         g_debugger.setup_from_resume()
-    # We return the debugger instance for the sole purpose of fredtest.py.
+
+def fred_setup_as_module(l_cmd, s_dmtcp_port, b_debug):
+    """Perform setup for FReD when being used as a module, return g_debugger.
+    For example, fredtest.py uses FReD as a module."""
+    global g_debugger
+    cleanup_fred_files()
+    setup_environment_variables(s_dmtcp_port, b_debug)
+    setup_debugger(l_cmd[0])
+    setup_fredio(l_cmd, True)
+    # Since modules won't use the main_io_loop, we perform the debugger setup
+    # requiring a debugger prompt here.
+    fredio.wait_for_prompt()
+    interactive_debugger_setup()
     return g_debugger
 
 def cleanup_fred_files():

@@ -20,6 +20,10 @@
 # You should have received a copy of the GNU General Public License           #
 # along with FReD.  If not, see <http://www.gnu.org/licenses/>.               #
 ###############################################################################
+"""
+This file should be executable from the command line to run several
+integration and unit tests on FReD.
+"""
 
 from optparse import OptionParser
 import os
@@ -36,9 +40,6 @@ except ImportError:
     print "Ex: shell> PYTHONPATH=.. ./fredtest.py"
     sys.exit(1)
 
-"""
-This file should be executable from the command line to run several integration and unit tests on FReD.
-"""
 
 GS_PASSED_STRING = "Passed"
 GS_FAILED_STRING = "Failed"
@@ -47,20 +48,19 @@ GS_TEST_PROGRAMS_DIRECTORY = "./test-programs"
 # Used for storing variable values between runs.
 gd_stored_variables = {}
 g_debugger = None
+gs_dmtcp_port = ""
+gb_fred_debug = False
 
 def start_session(l_cmd):
     """Start the given command line as a fred session."""
     global g_debugger
-    fred.fredutil.fred_assert(len(l_cmd) > 0)
-    g_debugger = fredapp.fred_setup(l_cmd)
-    fred.fredio.wait_for_prompt()
-    fredapp.interactive_debugger_setup()
+    g_debugger = fredapp.fred_setup_as_module(l_cmd, gs_dmtcp_port,
+                                              gb_fred_debug)
 
 def end_session():
     """End the current debugger session."""
     global g_debugger
     fred.fredutil.fred_teardown()
-    fred.dmtcpmanager.manager_teardown()
     g_debugger.destroy()
     g_debugger = None
 
@@ -142,6 +142,7 @@ def run_all_tests():
 def parse_fredtest_args():
     """Initialize command line options, and parse them.
     Then set up fredapp module accordingly."""
+    global gs_dmtcp_port, gb_fred_debug
     parser = OptionParser()
     parser.disable_interspersed_args()
     # Note that '-h' and '--help' are supported automatically.
@@ -153,10 +154,12 @@ def parse_fredtest_args():
                       action="store_true",
                       help="Enable FReD debugging messages.")
     (options, l_args) = parser.parse_args()
-    # 'l_args' is the 'gdb ARGS ./a.out' list
-    fredapp.setup_environment_variables(str(options.dmtcp_port), options.debug)
-    return l_args
+    gs_dmtcp_port = str(options.dmtcp_port)
+    gb_fred_debug = options.debug
 
 if __name__ == "__main__":
+    # Don't do anything if we can't find DMTCP.
+    if not fred.dmtcpmanager.is_dmtcp_in_path():
+        fred.fredutil.fred_fatal("No DMTCP binaries available in your PATH.\n")
     parse_fredtest_args()
     run_all_tests()
