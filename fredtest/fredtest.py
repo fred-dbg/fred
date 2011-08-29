@@ -50,6 +50,7 @@ gd_stored_variables = {}
 g_debugger = None
 gs_dmtcp_port = ""
 gb_fred_debug = False
+gd_tests = {}
 
 def start_session(l_cmd):
     """Start the given command line as a fred session."""
@@ -130,14 +131,25 @@ def run_unit_tests():
     """Run all available unit tests."""
     pass
 
-def run_all_tests():
-    """Run all available test suites."""
+def run_tests(ls_test_list):
+    """Run given list of tests, or all tests if None."""
+    global gd_tests
     print "%-30s | %-15s" % ("Test name", "Result")
     print "-" * 31 + "+" + "-" * 15
     # TODO: This is hackish. Used to hide fred_info() messages.
     fred.fredio.gb_hide_output = True
-    run_integration_tests()
-    run_unit_tests()
+    if ls_test_list == None:
+        run_integration_tests()
+        run_unit_tests()
+    else:
+        for t in ls_test_list:
+            try:
+                gd_tests[t]()
+            except KeyError:
+                # If you've added a new test and are seeing this error message,
+                # you probably forgot to update gd_tests in initialize_tests().
+                print "Unknown test '%s'. Skipping." % t
+                continue
 
 def parse_fredtest_args():
     """Initialize command line options, and parse them.
@@ -153,13 +165,43 @@ def parse_fredtest_args():
     parser.add_option("--enable-debug", dest="debug", default=False,
                       action="store_true",
                       help="Enable FReD debugging messages.")
+    parser.add_option("-l", "--list-tests", dest="list_tests", default=False,
+                      action="store_true",
+                      help="List available tests and exit.")
+    parser.add_option("-t", "--tests", dest="test_list",
+                      help="Comma delimited list of tests to run.")
     (options, l_args) = parser.parse_args()
+    if options.list_tests:
+        list_tests()
+        sys.exit(1)
     gs_dmtcp_port = str(options.dmtcp_port)
     gb_fred_debug = options.debug
+    return options.test_list.split(",") if options.test_list != None else None
 
-if __name__ == "__main__":
+def list_tests():
+    """Displays a list of all available tests."""
+    global gd_tests
+    print "Available tests:"
+    print gd_tests.keys()
+
+def initialize_tests():
+    """Initializes the list of known tests.
+    This must be called before running any tests."""
+    global gd_tests
+    # When you add a new test, update this map from test name -> test fnc.
+    gd_tests = { "gdb-record-replay" : gdb_record_replay,
+                 "gdb-reverse-watch" : gdb_reverse_watch }
+
+def main():
+    """Program execution starts here."""
     # Don't do anything if we can't find DMTCP.
     if not fred.dmtcpmanager.is_dmtcp_in_path():
         fred.fredutil.fred_fatal("No DMTCP binaries available in your PATH.\n")
-    parse_fredtest_args()
-    run_all_tests()
+        
+    initialize_tests()
+
+    ls_test_list = parse_fredtest_args()
+    run_tests(ls_test_list)
+
+if __name__ == "__main__":
+    main()
