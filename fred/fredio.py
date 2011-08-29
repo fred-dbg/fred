@@ -39,29 +39,47 @@ GB_FRED_DEMO_FROM_USER = False
 GS_FRED_DEMO_HIDE = ['info files\n', 'info breakpoints\n', 'where\n']
 GS_FRED_DEMO_UNHIDE_PREFIX = ['next', 'step']
 
-# Function beginning with an underscore ('_') should not be used outside of
-# this module.
-
 # Maximum length of a prompt string (from any debugger)
 GN_MAX_PROMPT_LENGTH = 32
 # Maximum length of a string for requesting additional user input
 gn_max_need_input_length = 0
 
+# Pid of child (debugger)
 gn_child_pid = -1
+# File descriptor of child stdin/stdout.
 gn_child_fd = None
+# Will be True when debugger prompt is waiting for user input.
 gb_prompt_ready = False
+# When True, all output from debugger is hidden.
 gb_hide_output = False
+# When True, all output from debugger is appended to gs_captured_output.
 gb_capture_output = False
+# When True, all output until the debugger prompt appears is captured.
 gb_capture_output_til_prompt = False
+# When True, all output until the debugger prompt appears is captured,
+# correctly handling multi-page input that requires user intervetion
+# to display the next page.
 gb_capture_output_multi_page = False
+# Will be True when the output thread is alive.
 gb_output_thread_alive = False
+# Captured output from the debugger is stored here.
 gs_captured_output = ""
+# Synchronization object used between output thread and main thread.
 g_capture_output_event = threading.Event()
+# Regex (initialized at runtime) to match the debugger prompt.
 gre_prompt = ""
+# Function (initialized at runtime) to match the debugger prompt.
 g_find_prompt_function = None
+# Function (initialized at runtime) to print the debugger prompt.
 g_print_prompt_function = None
+# List of regexes which match strings indicating debugger needs user input.
+# (e.g. gdb requires user to press enter when displaying multi-page text)
 gls_needs_user_input = []
+# Will be True when the debugger needs user input.
 gb_need_user_input = False
+
+# Functions beginning with an underscore ('_') should not be used outside of
+# this file!
 
 class ThreadedOutput(threading.Thread):
     def run(self):
