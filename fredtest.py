@@ -29,21 +29,15 @@ from optparse import OptionParser
 import os
 import sys
 
-try:
-    import fredapp
-    import fred.fredutil
-    import fred.dmtcpmanager
-    import fred.fredio
-except ImportError:
-    print "Unable to find FReD modules."
-    print "Please set your PYTHONPATH to point to the location of fredapp.py."
-    print "Ex: shell> PYTHONPATH=.. ./fredtest.py"
-    sys.exit(1)
-
+import fredapp
+import fred.fredutil
+import fred.dmtcpmanager
+import fred.fredio
 
 GS_PASSED_STRING = "Passed"
 GS_FAILED_STRING = "Failed"
-GS_TEST_PROGRAMS_DIRECTORY = "./test-programs"
+# XXX this path shouldn't be hardcoded.
+GS_TEST_PROGRAMS_DIRECTORY = "fredtest/test-programs"
 
 # Used for storing variable values between runs.
 gd_stored_variables = {}
