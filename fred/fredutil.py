@@ -79,14 +79,19 @@ def fred_debug(msg):
     if GB_DEBUG:
         caller_name = os.path.basename(sys._getframe(1).f_code.co_filename)
         caller_lineno = sys._getframe(1).f_lineno
-        # Prints name of file and line number making call to dprint()
+        # Prints name of file and line number of caller to fred_debug()
         print "[fred-debug] %s:%d - %s" % (caller_name, caller_lineno, msg)
 
 def fred_assert(b_expr, msg="Assertion failed."):
     """Assert that b_expr is True. If not, print message and dump into pdb."""
+    global GB_DEBUG
     if not b_expr:
+        caller_name = os.path.basename(sys._getframe(1).f_code.co_filename)
+        caller_lineno = sys._getframe(1).f_lineno
         fred_error(msg)
-        pdb.set_trace()
+        fred_error("Assertion failed at %s:%d." % (caller_name, caller_lineno))
+        if GB_DEBUG:
+            pdb.set_trace()
 
 def fred_timer_start(s_timer_name):
     """Start a timer with the given name."""
@@ -141,7 +146,7 @@ def open_file(s_filename):
         f = open(s_filename)
     except IOError as (errno, strerror):
         fred_error("Error opening source file '%s': %s" % \
-                           (s_filename, strerror))
+                       (s_filename, strerror))
     return f
 
 def fred_teardown():
@@ -157,6 +162,8 @@ def fred_quit(exit_code):
 def set_env_var_if_unset(s_name, s_val):
     """Set the given environment variable if it is currently unset."""
     try:
+        fred_debug("Trying to set env var '%s' to value '%s'." % \
+                       (s_name, s_val))
         s_cur_val = os.environ[s_name]
         if len(s_cur_val) == 0:
             os.environ[s_name] = s_val
