@@ -159,11 +159,12 @@ class Debugger():
         """Return True if inferior is still running."""
 	# The extra debugging functions are gdb-specific.  When a gdb
 	#  target app exits, it first returns to the call frames below.
-	# NOTE: In FReD l_frames[0] is deepest frame; l_frames[-1] is top level.
-        return self._p.program_is_running() and \
-	       self._p.get_backtrace().l_frames[-1].s_function != "_start" and \
-	       self._p.get_backtrace().l_frames[-1].s_function != \
-							"__libc_start_main"
+        if self.personality_name() == "gdb":
+            return self._p.program_is_running() and \
+                self._p.current_position().s_function != "_start" and \
+                self._p.current_position().s_function != "__libc_start_main"
+        else:
+            return self._p.program_is_running()
 
 class ReversibleDebugger(Debugger):
     """Represents control and management of a reversible Debugger.
