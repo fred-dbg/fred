@@ -181,13 +181,14 @@ extern "C" int getpwnam_r(const char *name, struct passwd *pwd,
   log_entry_t my_entry = create_getpwnam_r_entry(my_clone_id,
       getpwnam_r_event, name, pwd, buf, buflen, result);
   if (SYNC_IS_REPLAY) {
-    WRAPPER_REPLAY(getpwnam_r);
+    WRAPPER_REPLAY_START(getpwnam_r);
     if (retval == 0 &&
         GET_FIELD(currentLogEntry, getpwnam_r, ret_result) != NULL) {
       *pwd = GET_FIELD(currentLogEntry, getpwnam_r, ret_pwd);
       WRAPPER_REPLAY_READ_FROM_READ_LOG(getpwnam_r, buf, buflen);
     }
     *result = GET_FIELD(currentLogEntry, getpwnam_r, ret_result);
+    WRAPPER_REPLAY_END(getpwnam_r);
   } else if (SYNC_IS_RECORD) {
     isOptionalEvent = true;
     retval = _real_getpwnam_r(name, pwd, buf, buflen, result);
@@ -215,13 +216,14 @@ extern "C" int getpwuid_r(uid_t uid, struct passwd *pwd,
   log_entry_t my_entry = create_getpwuid_r_entry(my_clone_id,
       getpwuid_r_event, uid, pwd, buf, buflen, result);
   if (SYNC_IS_REPLAY) {
-    WRAPPER_REPLAY(getpwuid_r);
+    WRAPPER_REPLAY_START(getpwuid_r);
     if (retval == 0 &&
         GET_FIELD(currentLogEntry, getpwuid_r, ret_result) != NULL) {
       *pwd = GET_FIELD(currentLogEntry, getpwuid_r, ret_pwd);
       WRAPPER_REPLAY_READ_FROM_READ_LOG(getpwuid_r, buf, buflen);
     }
     *result = GET_FIELD(currentLogEntry, getpwuid_r, ret_result);
+    WRAPPER_REPLAY_END(getpwuid_r);
   } else if (SYNC_IS_RECORD) {
     isOptionalEvent = true;
     retval = _real_getpwuid_r(uid, pwd, buf, buflen, result);
@@ -249,13 +251,14 @@ extern "C" int getgrnam_r(const char *name, struct group *grp,
   log_entry_t my_entry = create_getgrnam_r_entry(my_clone_id,
       getgrnam_r_event, name, grp, buf, buflen, result);
   if (SYNC_IS_REPLAY) {
-    WRAPPER_REPLAY(getgrnam_r);
+    WRAPPER_REPLAY_START(getgrnam_r);
     if (retval == 0 &&
         GET_FIELD(currentLogEntry, getgrnam_r, ret_result) != NULL) {
       *grp = GET_FIELD(currentLogEntry, getgrnam_r, ret_grp);
       WRAPPER_REPLAY_READ_FROM_READ_LOG(getgrnam_r, buf, buflen);
     }
     *result = GET_FIELD(currentLogEntry, getgrnam_r, ret_result);
+    WRAPPER_REPLAY_END(getgrnam_r);
   } else if (SYNC_IS_RECORD) {
     isOptionalEvent = true;
     retval = _real_getgrnam_r(name, grp, buf, buflen, result);
@@ -283,13 +286,14 @@ extern "C" int getgrgid_r(gid_t gid, struct group *grp,
   log_entry_t my_entry = create_getgrgid_r_entry(my_clone_id,
       getgrgid_r_event, gid, grp, buf, buflen, result);
   if (SYNC_IS_REPLAY) {
-    WRAPPER_REPLAY(getgrgid_r);
+    WRAPPER_REPLAY_START(getgrgid_r);
     if (retval == 0 &&
         GET_FIELD(currentLogEntry, getgrgid_r, ret_result) != NULL) {
       *grp = GET_FIELD(currentLogEntry, getgrgid_r, ret_grp);
       WRAPPER_REPLAY_READ_FROM_READ_LOG(getgrgid_r, buf, buflen);
     }
     *result = GET_FIELD(currentLogEntry, getgrgid_r, ret_result);
+    WRAPPER_REPLAY_END(getgrgid_r);
   } else if (SYNC_IS_RECORD) {
     isOptionalEvent = true;
     retval = _real_getgrgid_r(gid, grp, buf, buflen, result);

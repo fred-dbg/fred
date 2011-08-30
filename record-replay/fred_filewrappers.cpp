@@ -487,7 +487,7 @@ extern "C" int fprintf (FILE *stream, const char *format, ...)
   WRAPPER_HEADER(int, fprintf, _fprintf, stream, format, arg);
 
   if (SYNC_IS_REPLAY) {
-    WRAPPER_REPLAY(fprintf);
+    WRAPPER_REPLAY_START(fprintf);
     /* If we're writing to stdout, we want to see the data to screen.
      * Thus execute the real system call. */
     // XXX We can't do this so easily. If we make the _real_printf call here,
@@ -498,6 +498,7 @@ extern "C" int fprintf (FILE *stream, const char *format, ...)
       }*/
     retval = (int)(unsigned long)GET_COMMON(currentLogEntry,
 					    retval);
+    WRAPPER_REPLAY_END(fprintf);
   } else if (SYNC_IS_RECORD) {
     isOptionalEvent = true;
     retval = _fprintf(stream, format, arg);
@@ -586,10 +587,11 @@ extern "C" FILE *fopen (const char* path, const char* mode)
 {
   WRAPPER_HEADER(FILE *, fopen, _real_fopen, path, mode);
   if (SYNC_IS_REPLAY) {
-    WRAPPER_REPLAY_TYPED(FILE*, fopen);
+    WRAPPER_REPLAY_START_TYPED(FILE*, fopen);
     if (retval != NULL) {
       *retval = GET_FIELD(currentLogEntry, fopen, fopen_retval);
     }
+    WRAPPER_REPLAY_END(fopen);
   } else if (SYNC_IS_RECORD) {
     isOptionalEvent = true;
     retval = _real_fopen(path, mode);
@@ -606,10 +608,11 @@ extern "C" FILE *fopen64 (const char* path, const char* mode)
 {
   WRAPPER_HEADER(FILE *, fopen64, _real_fopen64, path, mode);
   if (SYNC_IS_REPLAY) {
-    WRAPPER_REPLAY_TYPED(FILE*, fopen64);
+    WRAPPER_REPLAY_START_TYPED(FILE*, fopen64);
     if (retval != NULL) {
       *retval = GET_FIELD(currentLogEntry, fopen64, fopen64_retval);
     }
+    WRAPPER_REPLAY_END(fopen64);
   } else if (SYNC_IS_RECORD) {
     isOptionalEvent = true;
     retval = _real_fopen64(path, mode);
@@ -955,10 +958,11 @@ extern "C" struct dirent * /*__attribute__ ((optimize(0)))*/ readdir(DIR *dirp)
   log_entry_t my_entry = create_readdir_entry(my_clone_id,
                                               readdir_event, dirp);
   if (SYNC_IS_REPLAY) {
-    WRAPPER_REPLAY_TYPED(struct dirent*, readdir);
+    WRAPPER_REPLAY_START_TYPED(struct dirent*, readdir);
     if (retval != NULL) {
       buf = GET_FIELD(currentLogEntry, readdir, retval);
     }
+    WRAPPER_REPLAY_END(readdir);
   } else if (SYNC_IS_RECORD) {
     retval = _real_readdir(dirp);
     if (retval != NULL) {
@@ -1048,7 +1052,7 @@ int send_sigwinch;
 void ioctl_helper(log_entry_t &my_entry, int &retval, int d, int request,
                   void *arg) {
   if (SYNC_IS_REPLAY) {
-    WRAPPER_REPLAY(ioctl);
+    WRAPPER_REPLAY_START(ioctl);
     switch (request) {
       case SIOCGIFCONF: {
         *((struct ifconf *)arg) = GET_FIELD(currentLogEntry,ioctl,ifconf_val);
@@ -1063,6 +1067,7 @@ void ioctl_helper(log_entry_t &my_entry, int &retval, int d, int request,
       default:
         break;
     }
+    WRAPPER_REPLAY_END(ioctl);
   } else if (SYNC_IS_RECORD) {
     retval = _real_ioctl(d, request, arg);
     switch (request) {
