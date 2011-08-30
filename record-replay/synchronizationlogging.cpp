@@ -2779,62 +2779,59 @@ TURN_CHECK_P(getnameinfo_turn_check)
     IS_EQUAL_FIELD_PTR(e1, e2, getnameinfo, flags);
 }
 
-/* Populates the given array with any optional events associated with
-   the given event. */
-static void get_optional_events(log_entry_t *e, int *opt_events)
+/* Returns true if 'opt_event' is a registered optional event for 'event'.
+ * If 'query' is true, 'opt_event' is ignored, and returns true if 'event' has
+ * any registered optional events.
+ * This means you can call is_optional_event_for(evt, unknown_event, true)
+ * to query if 'evt' has any optional events. */
+static inline bool is_optional_event_for(event_code_t event,
+                                         event_code_t opt_event,
+                                         bool query)
 {
-  event_code_t event_num = (event_code_t) GET_COMMON_PTR(e, event);
-  if (event_num == fscanf_event ||
-      event_num == fgets_event ||
-      event_num == fputs_event ||
-      event_num == fputc_event ||
-      event_num == getc_event ||
-      //event_num == fgetc_event ||
-      event_num == fprintf_event ||
-      event_num == accept_event ||
-      event_num == accept4_event ||
-      event_num == fdopen_event) {
-    opt_events[0] = mmap_event;
-  } else if (event_num == setsockopt_event || event_num == getsockopt_event) {
-    opt_events[0] = malloc_event;
-    opt_events[1] = free_event;
-    opt_events[2] = mmap_event;
-  } else if (event_num == fclose_event) {
-    opt_events[0] = free_event;
-  } else if (event_num == opendir_event ||
-	     event_num == fdopendir_event) {
-    opt_events[0] = malloc_event;
-  } else if (event_num == closedir_event) {
-    opt_events[0] = free_event;
-  } else if (event_num == pthread_cond_wait_event ||
-	     event_num == pthread_cond_timedwait_event ||
-	     event_num == pthread_cond_signal_event) {
-    opt_events[0] = calloc_event;
-  } else if (event_num == fopen_event ||
-	     event_num == fopen64_event) {
-    opt_events[0] = mmap_event;
-    opt_events[1] = malloc_event;
-    opt_events[2] = free_event;
-  } else if (event_num == getpwnam_r_event || event_num == getpwuid_r_event ||
-             event_num == getgrnam_r_event || event_num == getgrgid_r_event ||
-             event_num == getaddrinfo_event ||
-             event_num == freeaddrinfo_event ||
-             event_num == getnameinfo_event) {
-    opt_events[0] = mmap_event;
-    opt_events[1] = malloc_event;
-    opt_events[2] = free_event;
-    opt_events[3] = calloc_event;
+  /* Group together events that share the same optional events. */
+  switch (event) {
+  case pthread_cond_signal_event:
+  case pthread_cond_timedwait_event:
+  case pthread_cond_wait_event:
+    return query || opt_event == calloc_event;
+  case closedir_event:
+  case fclose_event:
+    return query || opt_event == free_event;
+  case accept4_event:
+  case accept_event:
+  case fdopen_event:
+  case fgets_event:
+  case fprintf_event:
+  case fputc_event:
+  case fputs_event:
+  case fscanf_event:
+  case getc_event:
+    return query || opt_event == mmap_event;
+  case fopen64_event:
+  case fopen_event:
+  case getsockopt_event:
+  case setsockopt_event:
+    return query || opt_event == malloc_event ||
+      opt_event == free_event || opt_event == mmap_event;
+  case freeaddrinfo_event:
+  case getaddrinfo_event:
+  case getgrgid_r_event:
+  case getgrnam_r_event:
+  case getnameinfo_event:
+  case getpwnam_r_event:
+  case getpwuid_r_event:
+    return query || opt_event == malloc_event ||
+      opt_event == free_event || opt_event == calloc_event ||
+      opt_event == mmap_event;
+  default:
+     return false;
   }
-  // TODO: Some error checking that we do not accidently assign above
-  // the index MAX_OPTIONAL_EVENTS
 }
 
-/* Returns 1 if the given event has at least one optional event, 0 otherwise. */
-static int has_optional_event(log_entry_t *e)
+/* Returns true if the given event has any registered optional events. */
+static inline bool has_optional_event(event_code_t event)
 {
-  int opt_evts[MAX_OPTIONAL_EVENTS] = {0};
-  get_optional_events(e, opt_evts);
-  return opt_evts[0] != 0;
+  return is_optional_event_for(event, unknown_event, true);
 }
 
 /* Given the event number of an optional event, executes the action to fulfill
@@ -2869,17 +2866,6 @@ static void execute_optional_event(int opt_event_num)
   }
 }
 
-/* Returns 1 if the given array of ints contains the given int, 0 otherwise. */
-static int opt_events_contains(const int opt_events[MAX_OPTIONAL_EVENTS],
-    int evt)
-{
-  int i = 0;
-  for (i = 0; i < MAX_OPTIONAL_EVENTS; i++) {
-    if (opt_events[i] == evt) return 1;
-  }
-  return 0;
-}
-
 /* Like waitForTurn(), but also handles events with "optional" events. For
    example, fscanf() can call mmap() sometimes. This method will execute that
    optional event if it occurs before the regular fscanf_event. If it never
@@ -2891,21 +2877,21 @@ static int opt_events_contains(const int opt_events[MAX_OPTIONAL_EVENTS],
    call mmap. So we must do it manually. */
 static void waitForTurnWithOptional(log_entry_t *my_entry, turn_pred_t pred)
 {
-  int opt_events[MAX_OPTIONAL_EVENTS] = {0};
-  get_optional_events(my_entry, opt_events);
-  while (1) {
-    if ((*pred)(&currentLogEntry, my_entry))
-      break;
-    /* For the optional event, we can only check the clone_id and the event
-       number, since we don't know any more information. */
-    if (GET_COMMON(currentLogEntry, clone_id) == my_clone_id &&
-        GET_COMMON(currentLogEntry, isOptional) == 1) {
-      JASSERT(opt_events_contains(opt_events, GET_COMMON(currentLogEntry, event)));
-      execute_optional_event(GET_COMMON(currentLogEntry, event));
-    }
-    memfence();
-    usleep(15);
+ while (1) {
+  if ((*pred)(&currentLogEntry, my_entry))
+    break;
+  /* For the optional event, we can only check the clone_id and the event
+     number, since we don't know any more information. */
+  if (GET_COMMON(currentLogEntry, clone_id) == my_clone_id &&
+      GET_COMMON(currentLogEntry, isOptional) == 1) {
+    JASSERT(is_optional_event_for((event_code_t)GET_COMMON_PTR(my_entry, event),
+                                  (event_code_t)GET_COMMON(currentLogEntry, event),
+                                  false));
+    execute_optional_event(GET_COMMON(currentLogEntry, event));
   }
+  memfence();
+  usleep(15);
+ }
 }
 
 // FIXME: REDO the logic to get rid of mutex
@@ -2914,7 +2900,7 @@ static void waitForTurnWithOptional(log_entry_t *my_entry, turn_pred_t pred)
 void waitForTurn(log_entry_t my_entry, turn_pred_t pred)
 {
   memfence();
-  if (has_optional_event(&my_entry)) {
+  if (has_optional_event((event_code_t)GET_COMMON(my_entry, event))) {
     waitForTurnWithOptional(&my_entry, pred);
   } else {
     while (1) {
