@@ -2790,16 +2790,18 @@ static inline bool is_optional_event_for(event_code_t event,
 {
   /* Group together events that share the same optional events. */
   switch (event) {
+  case opendir_event:
+    return query || opt_event == malloc_event;
   case pthread_cond_signal_event:
   case pthread_cond_timedwait_event:
   case pthread_cond_wait_event:
+  case pthread_cond_broadcast_event:
     return query || opt_event == calloc_event;
   case closedir_event:
   case fclose_event:
     return query || opt_event == free_event;
   case accept4_event:
   case accept_event:
-  case fdopen_event:
   case fgets_event:
   case fprintf_event:
   case fputc_event:
@@ -2807,6 +2809,8 @@ static inline bool is_optional_event_for(event_code_t event,
   case fscanf_event:
   case getc_event:
     return query || opt_event == mmap_event;
+  case fdopen_event:
+    return query || opt_event == mmap_event || opt_event == malloc_event;
   case fopen64_event:
   case fopen_event:
   case getsockopt_event:
@@ -2884,9 +2888,11 @@ static void waitForTurnWithOptional(log_entry_t *my_entry, turn_pred_t pred)
      number, since we don't know any more information. */
   if (GET_COMMON(currentLogEntry, clone_id) == my_clone_id &&
       GET_COMMON(currentLogEntry, isOptional) == 1) {
-    JASSERT(is_optional_event_for((event_code_t)GET_COMMON_PTR(my_entry, event),
-                                  (event_code_t)GET_COMMON(currentLogEntry, event),
-                                  false));
+    if (!is_optional_event_for((event_code_t)GET_COMMON_PTR(my_entry, event),
+			       (event_code_t)GET_COMMON(currentLogEntry, event),
+			       false)) {
+      JASSERT(false);
+    }
     execute_optional_event(GET_COMMON(currentLogEntry, event));
   }
   memfence();

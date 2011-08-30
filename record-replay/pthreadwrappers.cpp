@@ -426,7 +426,9 @@ extern "C" int pthread_cond_broadcast(pthread_cond_t *cond)
     }
     WRAPPER_REPLAY_END(pthread_cond_broadcast);
   } else if (SYNC_IS_RECORD) {
+    isOptionalEvent = true;
     retval = _real_pthread_cond_broadcast(cond);
+    isOptionalEvent = false;
     if (retval == 0) {
       SET_FIELD2(my_entry, pthread_cond_broadcast, cond, *cond);
     }
