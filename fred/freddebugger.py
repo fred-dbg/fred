@@ -880,7 +880,8 @@ class ReversibleDebugger(Debugger):
 		      not l_history[-1].is_continue():
 		    del l_history[-1]
 	        if len(l_history) == 0:
-		    break
+			fred_util.fred_warning("Reverse-finish:" +
+					"  can't reverse past last checkpoint")
 	        if l_history[-1].is_continue():
 		    # expand 'c' and continue to other cases
 		    fredutil.fred_error("This case not yet implemented.")
@@ -967,7 +968,8 @@ class ReversibleDebugger(Debugger):
                         break
                     elif self.state().level() == level+1:
 			# The last 'n' returned from fnc; go to before fnc call
-                        self.reverse_finish()
+                        self.checkpoint.l_history = l_history
+                        self.NEW_reverse_finish()
                         break
                     else:
 			# The last 'n' entered fnc or exited program
