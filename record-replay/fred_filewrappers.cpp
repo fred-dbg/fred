@@ -596,6 +596,29 @@ extern "C" size_t fwrite(const void *ptr, size_t size, size_t nmemb,
   return retval;
 }
 
+extern "C" size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream)
+{
+  WRAPPER_HEADER(size_t, fread, _real_fread, ptr, size, nmemb, stream);
+  if (SYNC_IS_REPLAY) {
+    WRAPPER_REPLAY_START_TYPED(size_t, fread);
+    if (retval != 0) {
+      // fread() returns the number of items (NOT bytes) read.
+      WRAPPER_REPLAY_READ_FROM_READ_LOG(fread, ptr, retval*size);
+    }
+    WRAPPER_REPLAY_END(fread);
+  } else if (SYNC_IS_RECORD) {
+    isOptionalEvent = true;
+    retval = _real_fread(ptr, size, nmemb, stream);
+    isOptionalEvent = false;
+    if (retval != 0) {
+      // fread() returns the number of items (NOT bytes) read.
+      WRAPPER_LOG_WRITE_INTO_READ_LOG(fread, ptr, retval*size);
+    }
+    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+  }
+  return retval;
+}
+
 extern "C" void rewind(FILE *stream)
 {
   BASIC_SYNC_WRAPPER_VOID(rewind, _real_rewind, stream);

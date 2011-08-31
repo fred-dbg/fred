@@ -262,6 +262,7 @@ LIB_PRIVATE extern __thread int thread_performing_dlopen_dlsym;
   MACRO(rmdir)                                \
   MACRO(ftell)                                \
   MACRO(fwrite)                               \
+  MACRO(fread)                                \
   MACRO(mkdir)                                \
   MACRO(mkstemp)                              \
                                               \
@@ -522,6 +523,7 @@ LIB_PRIVATE extern __thread int thread_performing_dlopen_dlsym;
   int _real_rmdir(const char *pathname);
   long _real_ftell(FILE *stream);
   size_t _real_fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream);
+  size_t _real_fread(void *ptr, size_t size, size_t nmemb, FILE *stream);
 
   void * _mmap_no_sync(void *addr, size_t length, int prot, int flags,
       int fd, off_t offset);

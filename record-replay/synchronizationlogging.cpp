@@ -901,6 +901,18 @@ log_entry_t create_fwrite_entry(clone_id_t clone_id, int event, const void *ptr,
   return e;
 }
 
+log_entry_t create_fread_entry(clone_id_t clone_id, int event, void *ptr,
+    size_t size, size_t nmemb, FILE *stream)
+{
+  log_entry_t e = EMPTY_LOG_ENTRY;
+  setupCommonFields(&e, clone_id, event);
+  SET_FIELD(e, fread, ptr);
+  SET_FIELD(e, fread, size);
+  SET_FIELD(e, fread, nmemb);
+  SET_FIELD(e, fread, stream);
+  return e;
+}
+
 log_entry_t create_fsync_entry(clone_id_t clone_id, int event, int fd)
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
@@ -2528,6 +2540,19 @@ TURN_CHECK_P(fwrite_turn_check)
       GET_FIELD_PTR(e2, fwrite, stream);
 }
 
+TURN_CHECK_P(fread_turn_check)
+{
+  return base_turn_check(e1, e2) &&
+    GET_FIELD_PTR(e1, fread, ptr) ==
+      GET_FIELD_PTR(e2, fread, ptr) &&
+    GET_FIELD_PTR(e1, fread, size) ==
+      GET_FIELD_PTR(e2, fread, size) &&
+    GET_FIELD_PTR(e1, fread, nmemb) ==
+      GET_FIELD_PTR(e2, fread, nmemb) &&
+    GET_FIELD_PTR(e1, fread, stream) ==
+      GET_FIELD_PTR(e2, fread, stream);
+}
+
 TURN_CHECK_P(fsync_turn_check)
 {
   return base_turn_check(e1, e2);/* &&
@@ -2726,6 +2751,7 @@ static inline bool is_optional_event_for(event_code_t event,
   case fscanf_event:
   case fseek_event:
   case fwrite_event:
+  case fread_event:
   case getc_event:
     return query || opt_event == mmap_event;
   case fdopen_event:

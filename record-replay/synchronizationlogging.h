@@ -338,6 +338,7 @@ static pthread_mutex_t read_data_mutex = PTHREAD_MUTEX_INITIALIZER;
     MACRO(fsync, __VA_ARGS__);                                                 \
     MACRO(ftell, __VA_ARGS__);                                                 \
     MACRO(fwrite, __VA_ARGS__);                                                \
+    MACRO(fread, __VA_ARGS__);                                                 \
     MACRO(fxstat, __VA_ARGS__);                                                \
     MACRO(fxstat64, __VA_ARGS__);                                              \
     MACRO(getc, __VA_ARGS__);                                                  \
@@ -451,6 +452,7 @@ typedef enum {
   fsync_event,
   ftell_event,
   fwrite_event,
+  fread_event,
   fxstat_event,
   fxstat64_event,
   getc_event,
@@ -1301,6 +1303,17 @@ typedef struct {
 static const int log_event_fwrite_size = sizeof(log_event_fwrite_t);
 
 typedef struct {
+  // For fread():
+  void *ptr;
+  size_t size;
+  size_t nmemb;
+  FILE *stream;
+  off_t data_offset; // offset into read saved data file
+} log_event_fread_t;
+
+static const int log_event_fread_size = sizeof(log_event_fread_t);
+
+typedef struct {
   // For fsync():
   int fd;
 } log_event_fsync_t;
@@ -1598,6 +1611,7 @@ typedef struct {
     log_event_free_t                             log_event_free;
     log_event_ftell_t                            log_event_ftell;
     log_event_fwrite_t                           log_event_fwrite;
+    log_event_fread_t                            log_event_fread;
     log_event_fsync_t                            log_event_fsync;
     log_event_fxstat_t                           log_event_fxstat;
     log_event_fxstat64_t                         log_event_fxstat64;
@@ -1858,6 +1872,8 @@ LIB_PRIVATE log_entry_t create_ftell_entry(clone_id_t clone_id, int event,
     FILE *stream);
 LIB_PRIVATE log_entry_t create_fwrite_entry(clone_id_t clone_id, int event,
     const void *ptr, size_t size, size_t nmemb, FILE *stream);
+LIB_PRIVATE log_entry_t create_fread_entry(clone_id_t clone_id, int event,
+    void *ptr, size_t size, size_t nmemb, FILE *stream);
 LIB_PRIVATE log_entry_t create_fxstat_entry(clone_id_t clone_id, int event, int vers,
     int fd, struct stat *buf);
 LIB_PRIVATE log_entry_t create_fxstat64_entry(clone_id_t clone_id, int event, int vers,
@@ -2073,6 +2089,7 @@ LIB_PRIVATE TURN_CHECK_P(free_turn_check);
 LIB_PRIVATE TURN_CHECK_P(fsync_turn_check);
 LIB_PRIVATE TURN_CHECK_P(ftell_turn_check);
 LIB_PRIVATE TURN_CHECK_P(fwrite_turn_check);
+LIB_PRIVATE TURN_CHECK_P(fread_turn_check);
 LIB_PRIVATE TURN_CHECK_P(fxstat_turn_check);
 LIB_PRIVATE TURN_CHECK_P(fxstat64_turn_check);
 LIB_PRIVATE TURN_CHECK_P(getc_turn_check);

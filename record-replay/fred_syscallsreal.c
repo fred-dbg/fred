@@ -910,6 +910,11 @@ size_t _real_fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream) {
 }
 
 LIB_PRIVATE
+size_t _real_fread(void *ptr, size_t size, size_t nmemb, FILE *stream) {
+  REAL_FUNC_PASSTHROUGH_TYPED ( size_t, fread) ( ptr, size, nmemb, stream );
+}
+
+LIB_PRIVATE
 int _real_fcntl(int fd, int cmd, ...) {
   va_list ap;
   // Handling the variable number of arguments
