@@ -508,6 +508,20 @@ extern "C" int fprintf (FILE *stream, const char *format, ...)
   return retval;
 }
 
+extern "C" int fseek(FILE *stream, long offset, int whence)
+{
+  WRAPPER_HEADER(int, fseek, _real_fseek, stream, offset, whence);
+  if (SYNC_IS_REPLAY) {
+    WRAPPER_REPLAY_TYPED(int, fseek);
+  } else if (SYNC_IS_RECORD) {
+    isOptionalEvent = true;
+    retval = _real_fseek(stream, offset, whence);
+    isOptionalEvent = false;
+    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+  }
+  return retval;
+}
+
 extern "C" int _IO_getc(FILE *stream)
 {
   BASIC_SYNC_WRAPPER(int, getc, _real_getc, stream);

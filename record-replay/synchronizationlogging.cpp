@@ -384,6 +384,7 @@ int isUnlock(log_entry_t e)
     GET_COMMON(e,event) == fputs_event_return ||
     GET_COMMON(e,event) == fputc_event_return ||
     GET_COMMON(e,event) == fscanf_event_return ||
+    GET_COMMON(e,event) == fseek_event_return ||
     GET_COMMON(e,event) == fwrite_event_return ||
     GET_COMMON(e,event) == putc_event_return ||
     GET_COMMON(e,event) == mmap_event_return ||
@@ -944,6 +945,17 @@ log_entry_t create_fscanf_entry(clone_id_t clone_id, int event,
   setupCommonFields(&e, clone_id, event);
   SET_FIELD2(e, fscanf, stream, stream);
   SET_FIELD2(e, fscanf, format, (char*)format);
+  return e;
+}
+
+log_entry_t create_fseek_entry(clone_id_t clone_id, int event,
+                               FILE *stream, long offset, int whence)
+{
+  log_entry_t e = EMPTY_LOG_ENTRY;
+  setupCommonFields(&e, clone_id, event);
+  SET_FIELD(e, fseek, stream);
+  SET_FIELD(e, fseek, offset);
+  SET_FIELD(e, fseek, whence);
   return e;
 }
 
@@ -2342,6 +2354,17 @@ TURN_CHECK_P(fscanf_turn_check)
       GET_FIELD_PTR(e2, fscanf, format);
 }
 
+TURN_CHECK_P(fseek_turn_check)
+{
+  return base_turn_check(e1,e2) &&
+    GET_FIELD_PTR(e1, fseek, stream) ==
+      GET_FIELD_PTR(e2, fseek, stream) &&
+    GET_FIELD_PTR(e1, fseek, offset) ==
+      GET_FIELD_PTR(e2, fseek, offset) &&
+    GET_FIELD_PTR(e1, fseek, whence) ==
+      GET_FIELD_PTR(e2, fseek, whence);
+}
+
 TURN_CHECK_P(fputs_turn_check)
 {
   return base_turn_check(e1,e2) &&
@@ -2807,6 +2830,7 @@ static inline bool is_optional_event_for(event_code_t event,
   case fputc_event:
   case fputs_event:
   case fscanf_event:
+  case fseek_event:
   case fwrite_event:
   case getc_event:
     return query || opt_event == mmap_event;

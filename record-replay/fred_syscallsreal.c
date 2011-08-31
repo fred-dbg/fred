@@ -835,6 +835,11 @@ int _real_fsync(int fd) {
 }
 
 LIB_PRIVATE
+int _real_fseek(FILE *stream, long offset, int whence) {
+  REAL_FUNC_PASSTHROUGH_TYPED ( int, fseek ) ( stream, offset, whence );
+}
+
+LIB_PRIVATE
 int _real_getc(FILE *stream) {
   REAL_FUNC_PASSTHROUGH_TYPED ( int, getc ) ( stream );
 }

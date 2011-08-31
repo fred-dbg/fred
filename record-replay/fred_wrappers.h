@@ -250,6 +250,7 @@ LIB_PRIVATE extern __thread int thread_performing_dlopen_dlsym;
   MACRO(fputs)                                \
   MACRO(fdatasync)                            \
   MACRO(fsync)                                \
+  MACRO(fseek)                                \
   MACRO(link)                                 \
   MACRO(getc)                                 \
   MACRO(gettimeofday)                         \
@@ -511,6 +512,7 @@ LIB_PRIVATE extern __thread int thread_performing_dlopen_dlsym;
   int _real_fcntl(int fd, int cmd, ...);
   int _real_fdatasync(int fd);
   int _real_fsync(int fd);
+  int _real_fseek(FILE *stream, long offset, int whence);
   int _real_fputs(const char *s, FILE *stream);
   int _real_fxstat(int vers, int fd, struct stat *buf);
   int _real_fxstat64(int vers, int fd, struct stat64 *buf);

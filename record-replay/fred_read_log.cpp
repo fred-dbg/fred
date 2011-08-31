@@ -267,6 +267,14 @@ void print_log_entry_fsync(int idx, log_entry_t *entry) {
   printf(", fd=%d\n", GET_FIELD_PTR(entry, fsync, fd));
 }
 
+void print_log_entry_fseek(int idx, log_entry_t *entry) {
+  print_log_entry_common(idx, entry);
+  printf(", stream=%p\n, offset=%ld, whence=%d\n",
+         GET_FIELD_PTR(entry, fseek, stream),
+         GET_FIELD_PTR(entry, fseek, offset),
+         GET_FIELD_PTR(entry, fseek, whence));
+}
+
 void print_log_entry_fxstat(int idx, log_entry_t *entry) {
   print_log_entry_common(idx, entry);
   printf(", vers=%d, fd=%d\n",

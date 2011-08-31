@@ -331,6 +331,7 @@ static pthread_mutex_t read_data_mutex = PTHREAD_MUTEX_INITIALIZER;
     MACRO(fopen64, __VA_ARGS__);                                               \
     MACRO(fprintf, __VA_ARGS__);                                               \
     MACRO(fscanf, __VA_ARGS__);                                                \
+    MACRO(fseek, __VA_ARGS__);                                                 \
     MACRO(fputs, __VA_ARGS__);                                                 \
     MACRO(fputc, __VA_ARGS__);                                                 \
     MACRO(free, __VA_ARGS__);                                                  \
@@ -443,6 +444,7 @@ typedef enum {
   fopen64_event,
   fprintf_event,
   fscanf_event,
+  fseek_event,
   fputs_event,
   fputc_event,
   free_event,
@@ -962,6 +964,15 @@ typedef struct {
 } log_event_fscanf_t;
 
 static const int log_event_fscanf_size = sizeof(log_event_fscanf_t);
+
+typedef struct {
+  // For fseek():
+  FILE *stream;
+  long offset;
+  int whence;
+} log_event_fseek_t;
+
+static const int log_event_fseek_size = sizeof(log_event_fseek_t);
 
 typedef struct {
   // For fputs():
@@ -1551,6 +1562,7 @@ typedef struct {
     log_event_fopen64_t                          log_event_fopen64;
     log_event_fprintf_t                          log_event_fprintf;
     log_event_fscanf_t                           log_event_fscanf;
+    log_event_fseek_t                            log_event_fseek;
     log_event_fputs_t                            log_event_fputs;
     log_event_fputc_t                            log_event_fputc;
     log_event_getc_t                             log_event_getc;
@@ -1862,6 +1874,8 @@ LIB_PRIVATE log_entry_t create_fprintf_entry(clone_id_t clone_id, int event,
     FILE *stream, const char *format, va_list ap);
 LIB_PRIVATE log_entry_t create_fscanf_entry(clone_id_t clone_id, int event,
     FILE *stream, const char *format, va_list ap);
+LIB_PRIVATE log_entry_t create_fseek_entry(clone_id_t clone_id, int event,
+    FILE *stream, long offset, int whence);
 LIB_PRIVATE log_entry_t create_fputs_entry(clone_id_t clone_id, int event,
     const char *s, FILE *stream);
 LIB_PRIVATE log_entry_t create_fputc_entry(clone_id_t clone_id, int event,
@@ -2081,6 +2095,7 @@ LIB_PRIVATE TURN_CHECK_P(fopen_turn_check);
 LIB_PRIVATE TURN_CHECK_P(fopen64_turn_check);
 LIB_PRIVATE TURN_CHECK_P(fprintf_turn_check);
 LIB_PRIVATE TURN_CHECK_P(fscanf_turn_check);
+LIB_PRIVATE TURN_CHECK_P(fseek_turn_check);
 LIB_PRIVATE TURN_CHECK_P(fputs_turn_check);
 LIB_PRIVATE TURN_CHECK_P(fputc_turn_check);
 LIB_PRIVATE TURN_CHECK_P(free_turn_check);
