@@ -179,6 +179,7 @@ LIB_PRIVATE extern __thread int thread_performing_dlopen_dlsym;
   MACRO(chmod)                              \
   MACRO(chown)                              \
   MACRO(fclose)                             \
+  MACRO(fchdir)                             \
   MACRO(__xstat)                            \
   MACRO(__xstat64)                          \
   MACRO(__lxstat)                           \
@@ -346,6 +347,7 @@ LIB_PRIVATE extern __thread int thread_performing_dlopen_dlsym;
   int _real_chmod ( const char *path, mode_t mode );
   int _real_chown ( const char *path, uid_t owner, gid_t group );
   int _real_fclose ( FILE *fp );
+  int _real_fchdir ( int fd );
   void _real_exit ( int status );
 
 #ifndef RECORD_REPLAY

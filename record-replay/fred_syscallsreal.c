@@ -317,6 +317,12 @@ int _real_fclose ( FILE *fp )
 }
 
 LIB_PRIVATE
+int _real_fchdir ( int fd )
+{
+  REAL_FUNC_PASSTHROUGH ( fchdir ) ( fd );
+}
+
+LIB_PRIVATE
 void _real_exit ( int status )
 {
   REAL_FUNC_PASSTHROUGH_VOID ( exit ) ( status );

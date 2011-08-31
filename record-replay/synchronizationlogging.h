@@ -309,7 +309,7 @@ static pthread_mutex_t read_data_mutex = PTHREAD_MUTEX_INITIALIZER;
 #define FOREACH_NAME(MACRO, ...)                                               \
   do {                                                                         \
     MACRO(accept, __VA_ARGS__);                                                \
-    MACRO(accept4, __VA_ARGS__);                                                \
+    MACRO(accept4, __VA_ARGS__);                                               \
     MACRO(access, __VA_ARGS__);                                                \
     MACRO(bind, __VA_ARGS__);                                                  \
     MACRO(calloc, __VA_ARGS__);                                                \
@@ -323,10 +323,11 @@ static pthread_mutex_t read_data_mutex = PTHREAD_MUTEX_INITIALIZER;
     MACRO(dup3, __VA_ARGS__);                                                  \
     MACRO(exec_barrier, __VA_ARGS__);                                          \
     MACRO(fclose, __VA_ARGS__);                                                \
+    MACRO(fchdir, __VA_ARGS__);                                                \
     MACRO(fcntl, __VA_ARGS__);                                                 \
     MACRO(fdatasync, __VA_ARGS__);                                             \
     MACRO(fdopen, __VA_ARGS__);                                                \
-    MACRO(fdopendir, __VA_ARGS__);					       \
+    MACRO(fdopendir, __VA_ARGS__);                                             \
     MACRO(fgets, __VA_ARGS__);                                                 \
     MACRO(fflush, __VA_ARGS__);                                                \
     MACRO(fopen, __VA_ARGS__);                                                 \
@@ -440,6 +441,7 @@ typedef enum {
   dup3_event,
   exec_barrier_event,
   fclose_event,
+  fchdir_event,
   fcntl_event,
   fdatasync_event,
   fdopen_event,
@@ -882,6 +884,13 @@ typedef struct {
 } log_event_fclose_t;
 
 static const int log_event_fclose_size = sizeof(log_event_fclose_t);
+
+typedef struct {
+  // For fchdir():
+  int fd;
+} log_event_fchdir_t;
+
+static const int log_event_fchdir_size = sizeof(log_event_fchdir_t);
 
 typedef struct {
   // For fcntl():
@@ -1599,6 +1608,7 @@ typedef struct {
     log_event_pthread_create_t                   log_event_pthread_create;
     log_event_libc_memalign_t                    log_event_libc_memalign;
     log_event_fclose_t                           log_event_fclose;
+    log_event_fchdir_t                           log_event_fchdir;
     log_event_fcntl_t                            log_event_fcntl;
     log_event_fdatasync_t                        log_event_fdatasync;
     log_event_fdopen_t                           log_event_fdopen;
@@ -1884,6 +1894,8 @@ LIB_PRIVATE log_entry_t create_fcntl_entry(clone_id_t clone_id, int event, int f
     int cmd, long arg_3_l, struct flock *arg_3_f);
 LIB_PRIVATE log_entry_t create_fclose_entry(clone_id_t clone_id, int event,
     FILE *fp);
+LIB_PRIVATE log_entry_t create_fchdir_entry(clone_id_t clone_id, int event,
+    int fd);
 LIB_PRIVATE log_entry_t create_fdatasync_entry(clone_id_t clone_id, int event, int fd);
 LIB_PRIVATE log_entry_t create_fdopen_entry(clone_id_t clone_id, int event, int fd,
     const char *mode);
@@ -2117,6 +2129,7 @@ LIB_PRIVATE TURN_CHECK_P(dup_turn_check);
 LIB_PRIVATE TURN_CHECK_P(dup2_turn_check);
 LIB_PRIVATE TURN_CHECK_P(dup3_turn_check);
 LIB_PRIVATE TURN_CHECK_P(fclose_turn_check);
+LIB_PRIVATE TURN_CHECK_P(fchdir_turn_check);
 LIB_PRIVATE TURN_CHECK_P(fcntl_turn_check);
 LIB_PRIVATE TURN_CHECK_P(fdatasync_turn_check);
 LIB_PRIVATE TURN_CHECK_P(fdopen_turn_check);

@@ -78,6 +78,11 @@ extern "C" int fclose(FILE *fp)
   return retval;
 }
 
+extern "C" int fchdir(int fd)
+{
+  BASIC_SYNC_WRAPPER(int, fchdir, _real_fchdir, fd);
+}
+
 extern "C" int open (const char *path, int flags, ... )
 {
   mode_t mode = 0;

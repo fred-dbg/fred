@@ -766,6 +766,14 @@ log_entry_t create_fclose_entry(clone_id_t clone_id, int event, FILE *fp)
   return e;
 }
 
+log_entry_t create_fchdir_entry(clone_id_t clone_id, int event, int fd)
+{
+  log_entry_t e = EMPTY_LOG_ENTRY;
+  setupCommonFields(&e, clone_id, event);
+  SET_FIELD(e, fchdir, fd);
+  return e;
+}
+
 log_entry_t create_fcntl_entry(clone_id_t clone_id, int event, int fd, int cmd,
     long arg_3_l, struct flock *arg_3_f)
 {
@@ -2161,6 +2169,13 @@ TURN_CHECK_P(fclose_turn_check)
   return base_turn_check(e1,e2) &&
     GET_FIELD_PTR(e1, fclose, fp) ==
       GET_FIELD_PTR(e2, fclose, fp);
+}
+
+TURN_CHECK_P(fchdir_turn_check)
+{
+  return base_turn_check(e1,e2) &&
+    GET_FIELD_PTR(e1, fchdir, fd) ==
+      GET_FIELD_PTR(e2, fchdir, fd);
 }
 
 TURN_CHECK_P(fcntl_turn_check)
