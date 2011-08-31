@@ -299,6 +299,12 @@ int _real_close ( int fd )
 }
 
 LIB_PRIVATE
+int _real_chmod ( const char *path, mode_t mode )
+{
+  REAL_FUNC_PASSTHROUGH ( chmod ) ( path, mode );
+}
+
+LIB_PRIVATE
 int _real_fclose ( FILE *fp )
 {
   REAL_FUNC_PASSTHROUGH ( fclose ) ( fp );

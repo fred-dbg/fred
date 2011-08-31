@@ -692,6 +692,11 @@ extern "C" FILE *freopen(const char* path, const char* mode, FILE *stream)
   return retval;
 }
 
+extern "C" int chmod(const char *path, mode_t mode)
+{
+  BASIC_SYNC_WRAPPER(int, chmod, _real_chmod, path, mode);
+}
+
 static int _fcntl(int fd, int cmd, long arg_3_l, struct flock *arg_3_f)
 {
   if (arg_3_l == -1 && arg_3_f == NULL) {

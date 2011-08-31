@@ -674,6 +674,16 @@ log_entry_t create_calloc_entry(clone_id_t clone_id, int event, size_t nmemb,
   return e;
 }
 
+log_entry_t create_chmod_entry(clone_id_t clone_id, int event,
+                               const char *path, mode_t mode)
+{
+  log_entry_t e = EMPTY_LOG_ENTRY;
+  setupCommonFields(&e, clone_id, event);
+  SET_FIELD2(e, chmod, path, (char *)path);
+  SET_FIELD(e, chmod, mode);
+  return e;
+}
+
 log_entry_t create_close_entry(clone_id_t clone_id, int event, int fd)
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
@@ -2318,6 +2328,15 @@ TURN_CHECK_P(calloc_turn_check)
       GET_FIELD_PTR(e2, calloc, nmemb) &&
     GET_FIELD_PTR(e1, calloc, size) ==
       GET_FIELD_PTR(e2, calloc, size);
+}
+
+TURN_CHECK_P(chmod_turn_check)
+{
+  return base_turn_check(e1, e2) &&
+    GET_FIELD_PTR(e1, chmod, path) ==
+      GET_FIELD_PTR(e2, chmod, path) &&
+    GET_FIELD_PTR(e1, chmod, mode) ==
+      GET_FIELD_PTR(e2, chmod, mode);
 }
 
 TURN_CHECK_P(lseek_turn_check)

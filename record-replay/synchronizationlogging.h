@@ -313,6 +313,7 @@ static pthread_mutex_t read_data_mutex = PTHREAD_MUTEX_INITIALIZER;
     MACRO(access, __VA_ARGS__);                                                \
     MACRO(bind, __VA_ARGS__);                                                  \
     MACRO(calloc, __VA_ARGS__);                                                \
+    MACRO(chmod, __VA_ARGS__);                                                 \
     MACRO(close, __VA_ARGS__);                                                 \
     MACRO(closedir, __VA_ARGS__);                                              \
     MACRO(connect, __VA_ARGS__);                                               \
@@ -428,6 +429,7 @@ typedef enum {
   access_event,
   bind_event,
   calloc_event,
+  chmod_event,
   close_event,
   closedir_event,
   connect_event,
@@ -1231,6 +1233,14 @@ typedef struct {
 static const int log_event_calloc_size = sizeof(log_event_calloc_t);
 
 typedef struct {
+  // For chmod():
+  char *path;
+  mode_t mode;
+} log_event_chmod_t;
+
+static const int log_event_chmod_size = sizeof(log_event_chmod_t);
+
+typedef struct {
   // For close():
   int fd;
 } log_event_close_t;
@@ -1621,6 +1631,7 @@ typedef struct {
     log_event_mremap_t                           log_event_mremap;
     log_event_munmap_t                           log_event_munmap;
     log_event_calloc_t                           log_event_calloc;
+    log_event_chmod_t                            log_event_chmod;
     log_event_realloc_t                          log_event_realloc;
     log_event_free_t                             log_event_free;
     log_event_ftell_t                            log_event_ftell;
@@ -1843,6 +1854,8 @@ LIB_PRIVATE log_entry_t create_bind_entry(clone_id_t clone_id, int event,
     int sockfd, const struct sockaddr *my_addr, socklen_t addrlen);
 LIB_PRIVATE log_entry_t create_calloc_entry(clone_id_t clone_id, int event, size_t nmemb,
     size_t size);
+LIB_PRIVATE log_entry_t create_chmod_entry(clone_id_t clone_id, int event,
+    const char *path, mode_t mode);
 LIB_PRIVATE log_entry_t create_close_entry(clone_id_t clone_id, int event, int fd);
 LIB_PRIVATE log_entry_t create_closedir_entry(clone_id_t clone_id, int event, DIR *dirp);
 LIB_PRIVATE log_entry_t create_connect_entry(clone_id_t clone_id, int event, int sockfd,
@@ -2081,6 +2094,7 @@ LIB_PRIVATE TURN_CHECK_P(accept4_turn_check);
 LIB_PRIVATE TURN_CHECK_P(access_turn_check);
 LIB_PRIVATE TURN_CHECK_P(bind_turn_check);
 LIB_PRIVATE TURN_CHECK_P(calloc_turn_check);
+LIB_PRIVATE TURN_CHECK_P(chmod_turn_check);
 LIB_PRIVATE TURN_CHECK_P(close_turn_check);
 LIB_PRIVATE TURN_CHECK_P(closedir_turn_check);
 LIB_PRIVATE TURN_CHECK_P(connect_turn_check);
