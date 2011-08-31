@@ -174,6 +174,7 @@ LIB_PRIVATE extern __thread int thread_performing_dlopen_dlsym;
   MACRO(open64)                             \
   MACRO(fopen)                              \
   MACRO(fopen64)                            \
+  MACRO(freopen)                            \
   MACRO(close)                              \
   MACRO(fclose)                             \
   MACRO(__xstat)                            \
@@ -338,6 +339,7 @@ LIB_PRIVATE extern __thread int thread_performing_dlopen_dlsym;
   int _real_open64(const char *pathname, int flags, ...);
   FILE* _real_fopen(const char *path, const char *mode);
   FILE* _real_fopen64(const char *path, const char *mode);
+  FILE* _real_freopen(const char *path, const char *mode, FILE *stream);
   int _real_close ( int fd );
   int _real_fclose ( FILE *fp );
   void _real_exit ( int status );

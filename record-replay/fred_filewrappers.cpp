@@ -671,6 +671,27 @@ extern "C" FILE *fopen64 (const char* path, const char* mode)
   return retval;
 }
 
+extern "C" FILE *freopen(const char* path, const char* mode, FILE *stream)
+{
+  WRAPPER_HEADER(FILE *, freopen, _real_freopen, path, mode, stream);
+  if (SYNC_IS_REPLAY) {
+    WRAPPER_REPLAY_START_TYPED(FILE *, freopen);
+    if (retval != NULL) {
+      *retval = GET_FIELD(currentLogEntry, freopen, freopen_retval);
+    }
+    WRAPPER_REPLAY_END(freopen);
+  } else if (SYNC_IS_RECORD) {
+    isOptionalEvent = true;
+    retval = _real_freopen(path, mode, stream);
+    isOptionalEvent = false;
+    if (retval != NULL) {
+      SET_FIELD2(my_entry, freopen, freopen_retval, *retval);
+    }
+    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+  }
+  return retval;
+}
+
 static int _fcntl(int fd, int cmd, long arg_3_l, struct flock *arg_3_f)
 {
   if (arg_3_l == -1 && arg_3_f == NULL) {

@@ -592,6 +592,11 @@ FILE * _real_fopen64( const char *path, const char *mode ) {
   REAL_FUNC_PASSTHROUGH_TYPED ( FILE *, fopen64 ) ( path, mode );
 }
 
+LIB_PRIVATE
+FILE * _real_freopen( const char *path, const char *mode, FILE *stream ) {
+  REAL_FUNC_PASSTHROUGH_TYPED ( FILE *, freopen ) ( path, mode, stream );
+}
+
 /* See comments for syscall wrapper */
 LIB_PRIVATE
 long int _real_syscall(long int sys_num, ... ) {

@@ -822,6 +822,17 @@ log_entry_t create_fopen64_entry(clone_id_t clone_id, int event,
   return e;
 }
 
+log_entry_t create_freopen_entry(clone_id_t clone_id, int event,
+   const char *path, const char *mode, FILE *stream)
+{
+  log_entry_t e = EMPTY_LOG_ENTRY;
+  setupCommonFields(&e, clone_id, event);
+  SET_FIELD2(e, freopen, path, (char*)path);
+  SET_FIELD2(e, freopen, mode, (char*)mode);
+  SET_FIELD(e, freopen, stream);
+  return e;
+}
+
 log_entry_t create_fprintf_entry(clone_id_t clone_id, int event,
     FILE *stream, const char *format, va_list ap)
 {
@@ -2242,6 +2253,17 @@ TURN_CHECK_P(fopen64_turn_check)
       GET_FIELD_PTR(e2, fopen64, mode);
 }
 
+TURN_CHECK_P(freopen_turn_check)
+{
+  return base_turn_check(e1,e2) &&
+    GET_FIELD_PTR(e1, freopen, path) ==
+      GET_FIELD_PTR(e2, freopen, path) &&
+    GET_FIELD_PTR(e1, freopen, mode) ==
+      GET_FIELD_PTR(e2, freopen, mode) &&
+    GET_FIELD_PTR(e1, freopen, stream) ==
+      GET_FIELD_PTR(e2, freopen, stream);
+}
+
 TURN_CHECK_P(fprintf_turn_check)
 {
   return base_turn_check(e1,e2) &&
@@ -2758,6 +2780,7 @@ static inline bool is_optional_event_for(event_code_t event,
     return query || opt_event == mmap_event || opt_event == malloc_event;
   case fopen64_event:
   case fopen_event:
+  case freopen_event:
   case getsockopt_event:
   case setsockopt_event:
     return query || opt_event == malloc_event ||
