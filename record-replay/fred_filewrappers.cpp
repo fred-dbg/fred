@@ -697,6 +697,11 @@ extern "C" int chmod(const char *path, mode_t mode)
   BASIC_SYNC_WRAPPER(int, chmod, _real_chmod, path, mode);
 }
 
+extern "C" int chown(const char *path, uid_t owner, gid_t group)
+{
+  BASIC_SYNC_WRAPPER(int, chown, _real_chown, path, owner, group);
+}
+
 static int _fcntl(int fd, int cmd, long arg_3_l, struct flock *arg_3_f)
 {
   if (arg_3_l == -1 && arg_3_f == NULL) {

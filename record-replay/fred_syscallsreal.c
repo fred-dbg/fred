@@ -305,6 +305,12 @@ int _real_chmod ( const char *path, mode_t mode )
 }
 
 LIB_PRIVATE
+int _real_chown ( const char *path, uid_t owner, gid_t group )
+{
+  REAL_FUNC_PASSTHROUGH ( chown ) ( path, owner, group );
+}
+
+LIB_PRIVATE
 int _real_fclose ( FILE *fp )
 {
   REAL_FUNC_PASSTHROUGH ( fclose ) ( fp );

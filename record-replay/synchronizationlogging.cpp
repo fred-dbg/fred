@@ -684,6 +684,17 @@ log_entry_t create_chmod_entry(clone_id_t clone_id, int event,
   return e;
 }
 
+log_entry_t create_chown_entry(clone_id_t clone_id, int event,
+                               const char *path, uid_t owner, gid_t group)
+{
+  log_entry_t e = EMPTY_LOG_ENTRY;
+  setupCommonFields(&e, clone_id, event);
+  SET_FIELD2(e, chown, path, (char *)path);
+  SET_FIELD(e, chown, owner);
+  SET_FIELD(e, chown, group);
+  return e;
+}
+
 log_entry_t create_close_entry(clone_id_t clone_id, int event, int fd)
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
@@ -2337,6 +2348,17 @@ TURN_CHECK_P(chmod_turn_check)
       GET_FIELD_PTR(e2, chmod, path) &&
     GET_FIELD_PTR(e1, chmod, mode) ==
       GET_FIELD_PTR(e2, chmod, mode);
+}
+
+TURN_CHECK_P(chown_turn_check)
+{
+  return base_turn_check(e1, e2) &&
+    GET_FIELD_PTR(e1, chown, path) ==
+      GET_FIELD_PTR(e2, chown, path) &&
+    GET_FIELD_PTR(e1, chown, owner) ==
+      GET_FIELD_PTR(e2, chown, owner) &&
+    GET_FIELD_PTR(e1, chown, group) ==
+      GET_FIELD_PTR(e2, chown, group);
 }
 
 TURN_CHECK_P(lseek_turn_check)
