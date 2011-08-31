@@ -2807,6 +2807,7 @@ static inline bool is_optional_event_for(event_code_t event,
   case fputc_event:
   case fputs_event:
   case fscanf_event:
+  case fwrite_event:
   case getc_event:
     return query || opt_event == mmap_event;
   case fdopen_event:

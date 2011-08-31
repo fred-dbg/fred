@@ -570,7 +570,16 @@ extern "C" int putchar(int c)
 extern "C" size_t fwrite(const void *ptr, size_t size, size_t nmemb,
     FILE *stream)
 {
-  BASIC_SYNC_WRAPPER(size_t, fwrite, _real_fwrite, ptr, size, nmemb, stream);
+  WRAPPER_HEADER(size_t, fwrite, _real_fwrite, ptr, size, nmemb, stream);
+  if (SYNC_IS_REPLAY) {
+    WRAPPER_REPLAY_TYPED(size_t, fwrite);
+  } else if (SYNC_IS_RECORD) {
+    isOptionalEvent = true;
+    retval = _real_fwrite(ptr, size, nmemb, stream);
+    isOptionalEvent = false;
+    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+  }
+  return retval;
 }
 
 extern "C" void rewind(FILE *stream)
