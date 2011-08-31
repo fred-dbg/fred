@@ -1663,8 +1663,6 @@ typedef struct {
 #define IS_EQUAL_FIELD_PTR(e1, e2, event, field) \
   (GET_FIELD_PTR(e1, event, field) == GET_FIELD_PTR(e2, event, field))
 
-
-#if 1
 #define IFNAME_GET_EVENT_SIZE(name, event, event_size)                  \
   do {                                                                  \
     if (event == name##_event)          \
@@ -1686,32 +1684,6 @@ typedef struct {
              log_event_##name##_size);                                     \
     }                                                                   \
   } while(0)
-
-#else
-#define IFNAME_GET_EVENT_SIZE(name, event, event_size)                  \
-  do {                                                                  \
-    if (event == name##_event || event == name##_event_return)          \
-      event_size = log_event_##name##_size;                             \
-  } while(0)
-
-#define IFNAME_READ_ENTRY_FROM_LOG(name, source, entry)                    \
-  do {                                                                  \
-    if (GET_COMMON(entry,event) == name##_event ||                  \
-        GET_COMMON(entry,event) == name##_event_return) {           \
-      memcpy(&entry.event_data.log_event_##name, source,      \
-             log_event_##name##_size);                                     \
-    }                                                                   \
-  } while(0)
-
-#define IFNAME_WRITE_ENTRY_TO_LOG(name, dest, entry)                \
-  do {                                                                  \
-    if (GET_COMMON(entry,event) == name##_event ||                      \
-        GET_COMMON(entry,event) == name##_event_return) {               \
-      memcpy(dest, &entry.event_data.log_event_##name,              \
-             log_event_##name##_size);                                     \
-    }                                                                   \
-  } while(0)
-#endif
 
 #define GET_EVENT_SIZE(event, event_size)                               \
   do {                                                                  \
@@ -1794,7 +1766,6 @@ LIB_PRIVATE extern volatile off_t         read_log_pos;
 
 /* Functions */
 LIB_PRIVATE void   register_in_global_log_list(clone_id_t clone_id);
-LIB_PRIVATE int    isUnlock(log_entry_t e);
 LIB_PRIVATE void   addNextLogEntry(log_entry_t&);
 LIB_PRIVATE void   prepareNextLogEntry(log_entry_t& e);
 LIB_PRIVATE void   atomic_increment(volatile int *ptr);
