@@ -346,6 +346,7 @@ static pthread_mutex_t read_data_mutex = PTHREAD_MUTEX_INITIALIZER;
     MACRO(fxstat, __VA_ARGS__);                                                \
     MACRO(fxstat64, __VA_ARGS__);                                              \
     MACRO(getc, __VA_ARGS__);                                                  \
+    MACRO(getcwd, __VA_ARGS__);						       \
     MACRO(getsockopt, __VA_ARGS__);                                            \
     MACRO(gettimeofday, __VA_ARGS__);                                          \
     MACRO(fgetc, __VA_ARGS__);                                                 \
@@ -353,7 +354,7 @@ static pthread_mutex_t read_data_mutex = PTHREAD_MUTEX_INITIALIZER;
     MACRO(getline, __VA_ARGS__);                                               \
     MACRO(getpeername, __VA_ARGS__);                                           \
     MACRO(getsockname, __VA_ARGS__);                                           \
-    MACRO(ioctl, __VA_ARGS__);                                           \
+    MACRO(ioctl, __VA_ARGS__);                                                 \
     MACRO(libc_memalign, __VA_ARGS__);                                         \
     MACRO(lseek, __VA_ARGS__);                                                 \
     MACRO(link, __VA_ARGS__);                                                  \
@@ -464,6 +465,7 @@ typedef enum {
   fxstat_event,
   fxstat64_event,
   getc_event,
+  getcwd_event,
   gettimeofday_event,
   ioctl_event,
   fgetc_event,
@@ -1024,6 +1026,15 @@ typedef struct {
 } log_event_getc_t;
 
 static const int log_event_getc_size = sizeof(log_event_getc_t);
+
+typedef struct {
+  // For getcwd():
+  char *buf;
+  size_t size;
+  off_t data_offset;
+} log_event_getcwd_t;
+
+static const int log_event_getcwd_size = sizeof(log_event_getcwd_t);
 
 typedef struct {
   // For gettimeofday():
@@ -1624,6 +1635,7 @@ typedef struct {
     log_event_fputs_t                            log_event_fputs;
     log_event_fputc_t                            log_event_fputc;
     log_event_getc_t                             log_event_getc;
+    log_event_getcwd_t                           log_event_getcwd;
     log_event_gettimeofday_t                     log_event_gettimeofday;
     log_event_fgetc_t                            log_event_fgetc;
     log_event_ungetc_t                           log_event_ungetc;
@@ -1934,6 +1946,8 @@ LIB_PRIVATE log_entry_t create_fxstat_entry(clone_id_t clone_id, int event, int 
 LIB_PRIVATE log_entry_t create_fxstat64_entry(clone_id_t clone_id, int event, int vers,
     int fd, struct stat64 *buf);
 LIB_PRIVATE log_entry_t create_getc_entry(clone_id_t clone_id, int event, FILE *stream);
+LIB_PRIVATE log_entry_t create_getcwd_entry(clone_id_t clone_id, int event,
+    char *buf, size_t size);
 LIB_PRIVATE log_entry_t create_gettimeofday_entry(clone_id_t clone_id, int event,
     struct timeval *tv, struct timezone *tz);
 LIB_PRIVATE log_entry_t create_fgetc_entry(clone_id_t clone_id, int event, FILE *stream);
@@ -2152,6 +2166,7 @@ LIB_PRIVATE TURN_CHECK_P(fread_turn_check);
 LIB_PRIVATE TURN_CHECK_P(fxstat_turn_check);
 LIB_PRIVATE TURN_CHECK_P(fxstat64_turn_check);
 LIB_PRIVATE TURN_CHECK_P(getc_turn_check);
+LIB_PRIVATE TURN_CHECK_P(getcwd_turn_check);
 LIB_PRIVATE TURN_CHECK_P(gettimeofday_turn_check);
 LIB_PRIVATE TURN_CHECK_P(fgetc_turn_check);
 LIB_PRIVATE TURN_CHECK_P(ungetc_turn_check);

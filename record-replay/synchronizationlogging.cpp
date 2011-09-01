@@ -991,6 +991,16 @@ log_entry_t create_getc_entry(clone_id_t clone_id, int event, FILE *stream)
   return e;
 }
 
+log_entry_t create_getcwd_entry(clone_id_t clone_id, int event,
+				char *buf, size_t size)
+{
+  log_entry_t e = EMPTY_LOG_ENTRY;
+  setupCommonFields(&e, clone_id, event);
+  SET_FIELD(e, getcwd, buf);
+  SET_FIELD(e, getcwd, size);
+  return e;
+}
+
 log_entry_t create_gettimeofday_entry(clone_id_t clone_id, int event,
     struct timeval *tv, struct timezone *tz)
 {
@@ -2235,6 +2245,15 @@ TURN_CHECK_P(getc_turn_check)
       GET_FIELD_PTR(e2, getc, stream);
 }
 
+TURN_CHECK_P(getcwd_turn_check)
+{
+  return base_turn_check(e1,e2) &&
+    GET_FIELD_PTR(e1, getcwd, buf) ==
+      GET_FIELD_PTR(e2, getcwd, buf) &&
+    GET_FIELD_PTR(e1, getcwd, size) ==
+      GET_FIELD_PTR(e2, getcwd, size);
+}
+
 TURN_CHECK_P(gettimeofday_turn_check)
 {
   return base_turn_check(e1,e2) &&
@@ -2810,6 +2829,7 @@ static inline bool is_optional_event_for(event_code_t event,
 {
   /* Group together events that share the same optional events. */
   switch (event) {
+  case getcwd_event:
   case opendir_event:
     return query || opt_event == malloc_event;
   case pthread_cond_signal_event:

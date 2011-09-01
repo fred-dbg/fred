@@ -868,6 +868,11 @@ int _real_getc(FILE *stream) {
 }
 
 LIB_PRIVATE
+char * _real_getcwd(char *buf, size_t size) {
+  REAL_FUNC_PASSTHROUGH_TYPED ( char *, getcwd ) ( buf, size );
+}
+
+LIB_PRIVATE
 int _real_gettimeofday(struct timeval *tv, struct timezone *tz) {
   REAL_FUNC_PASSTHROUGH_TYPED ( int, gettimeofday ) ( tv, tz );
 }

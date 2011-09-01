@@ -257,6 +257,7 @@ LIB_PRIVATE extern __thread int thread_performing_dlopen_dlsym;
   MACRO(fseek)                                \
   MACRO(link)                                 \
   MACRO(getc)                                 \
+  MACRO(getcwd)				      \
   MACRO(gettimeofday)                         \
   MACRO(fgetc)                                \
   MACRO(ungetc)                               \
@@ -513,6 +514,7 @@ LIB_PRIVATE extern __thread int thread_performing_dlopen_dlsym;
   int _real_fflush(FILE *stream);
   ssize_t _real_getline(char **lineptr, size_t *n, FILE *stream);
   int _real_getc(FILE *stream);
+  char * _real_getcwd(char *buf, size_t size);
   int _real_gettimeofday(struct timeval *tv, struct timezone *tz);
   int _real_fgetc(FILE *stream);
   int _real_fputc(int, FILE *stream);

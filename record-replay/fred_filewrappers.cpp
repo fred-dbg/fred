@@ -542,6 +542,39 @@ extern "C" int ungetc(int c, FILE *stream)
   BASIC_SYNC_WRAPPER(int, ungetc, _real_ungetc, c, stream);
 }
 
+extern "C" char *getcwd(char *buf, size_t size)
+{
+  WRAPPER_HEADER(char *, getcwd, _real_getcwd, buf, size);
+  if (SYNC_IS_REPLAY) {
+    WRAPPER_REPLAY_START_TYPED(char*, getcwd);
+    if (retval != NULL) {
+      /* retval will be a pointer to whatever buffer was used. If the
+	 user provided a NULL buffer, _real_getcwd allocated one on
+	 RECORD, but the optional event handler allocated it on REPLAY
+	 before we arrive here. Memory accurate replay allows us to
+	 depend on 'retval' pointing to the allocated buffer by the
+	 optional event handler. If the user provided a buffer, retval
+	 points to it. */
+      WRAPPER_REPLAY_READ_FROM_READ_LOG(getcwd, retval, size);
+    }
+    WRAPPER_REPLAY_END(getcwd);
+  } else if (SYNC_IS_RECORD) {
+    isOptionalEvent = true;
+    retval = _real_getcwd(buf, size);
+    isOptionalEvent = false;
+    if (retval != NULL) {
+      /* retval will be a pointer to whatever buffer was used. If the
+	 user provided a NULL buffer, _real_getcwd will allocate one
+	 and retval points to it. If the user provided a buffer,
+	 retval points to it. */
+      JASSERT(size > 0).Text("Unimplemented.");
+      WRAPPER_LOG_WRITE_INTO_READ_LOG(getcwd, retval, size);
+    }
+    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+  }
+  return retval;
+}
+
 extern "C" int fputs(const char *s, FILE *stream)
 {
   WRAPPER_HEADER(int, fputs, _real_fputs, s, stream);
