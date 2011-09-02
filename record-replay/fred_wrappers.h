@@ -227,8 +227,8 @@ LIB_PRIVATE extern __thread int thread_performing_dlopen_dlsym;
   MACRO(access)                               \
   MACRO(closedir)                             \
   MACRO(opendir)                              \
-  MACRO(fdopendir)			      \
-  MACRO(openat)				      \
+  MACRO(fdopendir)                            \
+  MACRO(openat)                               \
   MACRO(readdir)                              \
   MACRO(readdir_r)                            \
   MACRO(rand)                                 \
@@ -257,7 +257,7 @@ LIB_PRIVATE extern __thread int thread_performing_dlopen_dlsym;
   MACRO(fseek)                                \
   MACRO(link)                                 \
   MACRO(getc)                                 \
-  MACRO(getcwd)				      \
+  MACRO(getcwd)                               \
   MACRO(gettimeofday)                         \
   MACRO(fgetc)                                \
   MACRO(ungetc)                               \

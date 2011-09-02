@@ -475,7 +475,7 @@ extern "C" int __fprintf_chk (FILE *stream, int flag, const char *format, ...)
       retval = _fprintf(stream, format, arg);
       }*/
     retval = (int)(unsigned long)GET_COMMON(currentLogEntry,
-					    retval);
+                                            retval);
   } else if (SYNC_IS_RECORD) {
     isOptionalEvent = true;
     retval = _fprintf(stream, format, arg);
@@ -502,7 +502,7 @@ extern "C" int fprintf (FILE *stream, const char *format, ...)
       retval = _fprintf(stream, format, arg);
       }*/
     retval = (int)(unsigned long)GET_COMMON(currentLogEntry,
-					    retval);
+                                            retval);
     WRAPPER_REPLAY_END(fprintf);
   } else if (SYNC_IS_RECORD) {
     isOptionalEvent = true;
@@ -549,12 +549,12 @@ extern "C" char *getcwd(char *buf, size_t size)
     WRAPPER_REPLAY_START_TYPED(char*, getcwd);
     if (retval != NULL) {
       /* retval will be a pointer to whatever buffer was used. If the
-	 user provided a NULL buffer, _real_getcwd allocated one on
-	 RECORD, but the optional event handler allocated it on REPLAY
-	 before we arrive here. Memory accurate replay allows us to
-	 depend on 'retval' pointing to the allocated buffer by the
-	 optional event handler. If the user provided a buffer, retval
-	 points to it. */
+         user provided a NULL buffer, _real_getcwd allocated one on
+         RECORD, but the optional event handler allocated it on REPLAY
+         before we arrive here. Memory accurate replay allows us to
+         depend on 'retval' pointing to the allocated buffer by the
+         optional event handler. If the user provided a buffer, retval
+         points to it. */
       WRAPPER_REPLAY_READ_FROM_READ_LOG(getcwd, retval, size);
     }
     WRAPPER_REPLAY_END(getcwd);
@@ -564,9 +564,9 @@ extern "C" char *getcwd(char *buf, size_t size)
     isOptionalEvent = false;
     if (retval != NULL) {
       /* retval will be a pointer to whatever buffer was used. If the
-	 user provided a NULL buffer, _real_getcwd will allocate one
-	 and retval points to it. If the user provided a buffer,
-	 retval points to it. */
+         user provided a NULL buffer, _real_getcwd will allocate one
+         and retval points to it. If the user provided a buffer,
+         retval points to it. */
       JASSERT(size > 0).Text("Unimplemented.");
       WRAPPER_LOG_WRITE_INTO_READ_LOG(getcwd, retval, size);
     }
@@ -1219,9 +1219,9 @@ extern "C" int ioctl(int d,  unsigned long int request, ...)
     WRAPPER_HEADER(int, ioctl, _real_ioctl, d, request, win);
     ioctl_helper(my_entry, retval, d, request, win);
     win->ws_col--; // Lie to application, and force it to resize window,
-		   //  reset any scroll regions, etc.
+                   //  reset any scroll regions, etc.
     kill(getpid(), SIGWINCH); // Tell application to look up true winsize
-			      // and resize again.
+                              // and resize again.
   } else {
     void * arg;
     va_start(ap, request);

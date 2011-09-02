@@ -346,7 +346,7 @@ static pthread_mutex_t read_data_mutex = PTHREAD_MUTEX_INITIALIZER;
     MACRO(fxstat, __VA_ARGS__);                                                \
     MACRO(fxstat64, __VA_ARGS__);                                              \
     MACRO(getc, __VA_ARGS__);                                                  \
-    MACRO(getcwd, __VA_ARGS__);						       \
+    MACRO(getcwd, __VA_ARGS__);                                                \
     MACRO(getsockopt, __VA_ARGS__);                                            \
     MACRO(gettimeofday, __VA_ARGS__);                                          \
     MACRO(fgetc, __VA_ARGS__);                                                 \
@@ -370,8 +370,8 @@ static pthread_mutex_t read_data_mutex = PTHREAD_MUTEX_INITIALIZER;
     MACRO(munmap, __VA_ARGS__);                                                \
     MACRO(open, __VA_ARGS__);                                                  \
     MACRO(open64, __VA_ARGS__);                                                \
-    MACRO(openat, __VA_ARGS__);						       \
-    MACRO(opendir, __VA_ARGS__);					       \
+    MACRO(openat, __VA_ARGS__);                                                \
+    MACRO(opendir, __VA_ARGS__);                                               \
     MACRO(pread, __VA_ARGS__);                                                 \
     MACRO(putc, __VA_ARGS__);                                                  \
     MACRO(pwrite, __VA_ARGS__);                                                \

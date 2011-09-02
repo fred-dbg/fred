@@ -992,7 +992,7 @@ log_entry_t create_getc_entry(clone_id_t clone_id, int event, FILE *stream)
 }
 
 log_entry_t create_getcwd_entry(clone_id_t clone_id, int event,
-				char *buf, size_t size)
+                                char *buf, size_t size)
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
@@ -2933,8 +2933,8 @@ static void waitForTurnWithOptional(log_entry_t *my_entry, turn_pred_t pred)
   if (GET_COMMON(currentLogEntry, clone_id) == my_clone_id &&
       GET_COMMON(currentLogEntry, isOptional) == 1) {
     if (!is_optional_event_for((event_code_t)GET_COMMON_PTR(my_entry, event),
-			       (event_code_t)GET_COMMON(currentLogEntry, event),
-			       false)) {
+                               (event_code_t)GET_COMMON(currentLogEntry, event),
+                               false)) {
       JASSERT(false);
     }
     execute_optional_event(GET_COMMON(currentLogEntry, event));
