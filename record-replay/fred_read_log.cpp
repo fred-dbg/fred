@@ -163,6 +163,21 @@ void print_log_entry_close(int idx, log_entry_t *entry) {
   printf(", fd=%d\n", GET_FIELD_PTR(entry, close, fd));
 }
 
+void print_log_entry_chmod(int idx, log_entry_t *entry) {
+  print_log_entry_common(idx, entry);
+  printf(", path=%p, mode=%Zu\n",
+         GET_FIELD_PTR(entry, chmod, path),
+         GET_FIELD_PTR(entry, chmod, mode));
+}
+
+void print_log_entry_chown(int idx, log_entry_t *entry) {
+  print_log_entry_common(idx, entry);
+  printf(", path=%p, owner=%Zu, group=%Zu\n",
+         GET_FIELD_PTR(entry, chown, path),
+         GET_FIELD_PTR(entry, chown, owner),
+         GET_FIELD_PTR(entry, chown, group));
+}
+
 void print_log_entry_closedir(int idx, log_entry_t *entry) {
   print_log_entry_common(idx, entry);
   printf(", dirp=%p\n", GET_FIELD_PTR(entry, closedir, dirp));
@@ -177,6 +192,12 @@ void print_log_entry_fclose(int idx, log_entry_t *entry) {
   print_log_entry_common(idx, entry);
   printf(", fp=%p\n",
       GET_FIELD_PTR(entry, fclose, fp));
+}
+
+void print_log_entry_fchdir(int idx, log_entry_t *entry) {
+  print_log_entry_common(idx, entry);
+  printf(", fd=%d\n",
+      GET_FIELD_PTR(entry, fchdir, fd));
 }
 
 void print_log_entry_fcntl(int idx, log_entry_t *entry) {
@@ -275,6 +296,23 @@ void print_log_entry_fseek(int idx, log_entry_t *entry) {
          GET_FIELD_PTR(entry, fseek, whence));
 }
 
+void print_log_entry_fread(int idx, log_entry_t *entry) {
+  print_log_entry_common(idx, entry);
+  printf(", ptr=%p\n, size=%Zu, nmemb=%Zu, stream=%p\n",
+         GET_FIELD_PTR(entry, fread, ptr),
+         GET_FIELD_PTR(entry, fread, size),
+         GET_FIELD_PTR(entry, fread, nmemb),
+         GET_FIELD_PTR(entry, fread, stream));
+}
+
+void print_log_entry_freopen(int idx, log_entry_t *entry) {
+  print_log_entry_common(idx, entry);
+  printf(", path=%p, mode=%p, stream=%p\n",
+         GET_FIELD_PTR(entry, freopen, path),
+         GET_FIELD_PTR(entry, freopen, mode),
+         GET_FIELD_PTR(entry, freopen, stream));
+}
+
 void print_log_entry_fxstat(int idx, log_entry_t *entry) {
   print_log_entry_common(idx, entry);
   printf(", vers=%d, fd=%d\n",
@@ -303,6 +341,13 @@ void print_log_entry_getsockname(int idx, log_entry_t *entry) {
          GET_FIELD_PTR(entry, getsockname, sockfd),
          GET_FIELD_PTR(entry, getsockname, addr),
          GET_FIELD_PTR(entry, getsockname, addrlen));
+}
+
+void print_log_entry_getcwd(int idx, log_entry_t *entry) {
+  print_log_entry_common(idx, entry);
+  printf(", buf=%p, size=%Zu\n",
+         GET_FIELD_PTR(entry, getcwd, buf),
+         GET_FIELD_PTR(entry, getcwd, size));
 }
 
 void print_log_entry_libc_memalign(int idx, log_entry_t *entry) {
