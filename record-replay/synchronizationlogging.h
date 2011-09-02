@@ -1873,257 +1873,171 @@ LIB_PRIVATE int    validAddress(void *addr);
 LIB_PRIVATE ssize_t writeAll(int fd, const void *buf, size_t count);
 LIB_PRIVATE void   writeLogsToDisk();
 
-// THESE DECLARATIONS SEEM TO BE USED ONLY IN synchronizationlogging.cpp.
-// IF THAT IS TRUE, THEY SHOULD BE 'static' AND NOT LIB_PRIVATE.
-// IMPLYING HERE THAT THEY ARE USED BY MULTIPLE LIBRARY FILES (LIB_PRIVATE)
-//   JUST CONFUSES THE READER.  -- Gene
+/* These 'create_XXX_entry' functions are used library-wide by their
+   respective wrapper functions. Their usages are hidden by the
+   WRAPPER_HEADER macro. Thus, unless we think of a better design, the
+   visibility of these functions is LIB_PRIVATE.
 
-LIB_PRIVATE log_entry_t create_accept_entry(clone_id_t clone_id, int event, int sockfd,
-    struct sockaddr *addr, socklen_t *addrlen);
-LIB_PRIVATE log_entry_t create_accept4_entry(clone_id_t clone_id, int event, int sockfd,
-    struct sockaddr *addr, socklen_t *addrlen, int flags);
-LIB_PRIVATE log_entry_t create_access_entry(clone_id_t clone_id, int event,
-    const char *pathname, int mode);
-LIB_PRIVATE log_entry_t create_bind_entry(clone_id_t clone_id, int event,
-    int sockfd, const struct sockaddr *my_addr, socklen_t addrlen);
-LIB_PRIVATE log_entry_t create_calloc_entry(clone_id_t clone_id, int event, size_t nmemb,
-    size_t size);
-LIB_PRIVATE log_entry_t create_chmod_entry(clone_id_t clone_id, int event,
-    const char *path, mode_t mode);
-LIB_PRIVATE log_entry_t create_chown_entry(clone_id_t clone_id, int event,
-    const char *path, uid_t owner, gid_t group);
-LIB_PRIVATE log_entry_t create_close_entry(clone_id_t clone_id, int event, int fd);
-LIB_PRIVATE log_entry_t create_closedir_entry(clone_id_t clone_id, int event, DIR *dirp);
-LIB_PRIVATE log_entry_t create_connect_entry(clone_id_t clone_id, int event, int sockfd,
-    const struct sockaddr *serv_addr, socklen_t addrlen);
-LIB_PRIVATE log_entry_t create_dup_entry(clone_id_t clone_id, int event, int oldfd);
-LIB_PRIVATE log_entry_t create_dup2_entry(clone_id_t clone_id, int event,
-                                          int oldfd, int newfd);
-LIB_PRIVATE log_entry_t create_dup3_entry(clone_id_t clone_id, int event,
-                                          int oldfd, int newfd, int flags);
+   XXX: These functions should only be needed in their respective
+   wrapper files. Couldn't we define these functions only in those
+   files, instead of making them globally (within the library) visible
+   here? */
+#define CREATE_ENTRY_FUNC(name, ...) \
+  LIB_PRIVATE log_entry_t create_##name##_entry(clone_id_t clone_id, \
+                                                int event, ##__VA_ARGS__)
+/* ##__VA_ARGS__ is a GNU extension -- it means omit the variadic
+   arguments if the list is empty. It will also then delete the
+   extra comma. */
+
+CREATE_ENTRY_FUNC(accept, int sockfd,
+                  struct sockaddr *addr, socklen_t *addrlen);
+CREATE_ENTRY_FUNC(accept4, int sockfd,
+                  struct sockaddr *addr, socklen_t *addrlen, int flags);
+CREATE_ENTRY_FUNC(access, const char *pathname, int mode);
+CREATE_ENTRY_FUNC(bind, int sockfd,
+                  const struct sockaddr *my_addr, socklen_t addrlen);
+CREATE_ENTRY_FUNC(calloc, size_t nmemb, size_t size);
+CREATE_ENTRY_FUNC(chmod, const char *path, mode_t mode);
+CREATE_ENTRY_FUNC(chown, const char *path, uid_t owner, gid_t group);
+CREATE_ENTRY_FUNC(close, int fd);
+CREATE_ENTRY_FUNC(closedir, DIR *dirp);
+CREATE_ENTRY_FUNC(connect, int sockfd,
+                  const struct sockaddr *serv_addr, socklen_t addrlen);
+CREATE_ENTRY_FUNC(dup, int oldfd);
+CREATE_ENTRY_FUNC(dup2, int oldfd, int newfd);
+CREATE_ENTRY_FUNC(dup3, int oldfd, int newfd, int flags);
+CREATE_ENTRY_FUNC(fcntl, int fd, int cmd, long arg_3_l, struct flock *arg_3_f);
+CREATE_ENTRY_FUNC(fclose, FILE *fp);
+CREATE_ENTRY_FUNC(fchdir, int fd);
+CREATE_ENTRY_FUNC(fdatasync, int fd);
+CREATE_ENTRY_FUNC(fdopen, int fd, const char *mode);
+CREATE_ENTRY_FUNC(fdopendir, int fd);
+CREATE_ENTRY_FUNC(fgets, char *s, int size, FILE *stream);
+CREATE_ENTRY_FUNC(fflush, FILE *stream);
+CREATE_ENTRY_FUNC(fopen, const char *name, const char *mode);
+CREATE_ENTRY_FUNC(fopen64, const char *name, const char *mode);
+CREATE_ENTRY_FUNC(freopen, const char *path, const char *mode, FILE *stream);
+CREATE_ENTRY_FUNC(fprintf, FILE *stream, const char *format, va_list ap);
+CREATE_ENTRY_FUNC(fscanf, FILE *stream, const char *format, va_list ap);
+CREATE_ENTRY_FUNC(fseek, FILE *stream, long offset, int whence);
+CREATE_ENTRY_FUNC(fputs, const char *s, FILE *stream);
+CREATE_ENTRY_FUNC(fputc, int c, FILE *stream);
+CREATE_ENTRY_FUNC(free, void *ptr);
+CREATE_ENTRY_FUNC(fsync, int fd);
+CREATE_ENTRY_FUNC(ftell, FILE *stream);
+CREATE_ENTRY_FUNC(fwrite, const void *ptr, size_t size, size_t nmemb,
+                  FILE *stream);
+CREATE_ENTRY_FUNC(fread, void *ptr, size_t size, size_t nmemb, FILE *stream);
+CREATE_ENTRY_FUNC(fxstat, int vers, int fd, struct stat *buf);
+CREATE_ENTRY_FUNC(fxstat64, int vers, int fd, struct stat64 *buf);
+CREATE_ENTRY_FUNC(getc, FILE *stream);
+CREATE_ENTRY_FUNC(getcwd, char *buf, size_t size);
+CREATE_ENTRY_FUNC(gettimeofday, struct timeval *tv, struct timezone *tz);
+CREATE_ENTRY_FUNC(fgetc, FILE *stream);
+CREATE_ENTRY_FUNC(ungetc, int c, FILE *stream);
+CREATE_ENTRY_FUNC(getline, char **lineptr, size_t *n, FILE *stream);
+CREATE_ENTRY_FUNC(getpeername, int sockfd,
+                  struct sockaddr *addr, socklen_t *addrlen);
+CREATE_ENTRY_FUNC(getsockname, int sockfd,
+                  struct sockaddr *addr, socklen_t *addrlen);
+CREATE_ENTRY_FUNC(libc_memalign, size_t boundary, size_t size);
+CREATE_ENTRY_FUNC(link, const char *oldpath, const char *newpath);
+CREATE_ENTRY_FUNC(listen, int sockfd, int backlog);
+CREATE_ENTRY_FUNC(lseek, int fd, off_t offset, int whence);
+CREATE_ENTRY_FUNC(lxstat, int vers, const char *path, struct stat *buf);
+CREATE_ENTRY_FUNC(lxstat64, int vers, const char *path, struct stat64 *buf);
+CREATE_ENTRY_FUNC(malloc, size_t size);
+CREATE_ENTRY_FUNC(mkdir, const char *pathname, mode_t mode);
+CREATE_ENTRY_FUNC(mkstemp, char *temp);
+CREATE_ENTRY_FUNC(mmap, void *addr,
+                  size_t length, int prot, int flags, int fd, off_t offset);
+CREATE_ENTRY_FUNC(mmap64, void *addr,
+                  size_t length, int prot, int flags, int fd, off64_t offset);
+CREATE_ENTRY_FUNC(munmap, void *addr, size_t length);
+CREATE_ENTRY_FUNC(mremap, 
+                  void *old_address, size_t old_size, size_t new_size,
+                  int flags, void *new_addr);
+CREATE_ENTRY_FUNC(open, const char *path, int flags, mode_t mode);
+CREATE_ENTRY_FUNC(open64, const char *path, int flags, mode_t mode);
+CREATE_ENTRY_FUNC(openat, int dirfd, const char *pathname, int flags);
+CREATE_ENTRY_FUNC(opendir, const char *name);
+CREATE_ENTRY_FUNC(pread, int fd, void* buf, size_t count, off_t offset);
+CREATE_ENTRY_FUNC(putc, int c, FILE *stream);
+CREATE_ENTRY_FUNC(pwrite, int fd, const void* buf, size_t count, off_t offset);
+CREATE_ENTRY_FUNC(pthread_cond_broadcast, pthread_cond_t *cond_var);
+CREATE_ENTRY_FUNC(pthread_cond_signal, pthread_cond_t *cond_var);
+CREATE_ENTRY_FUNC(pthread_cond_wait, 
+                  pthread_cond_t *cond_var, pthread_mutex_t *mutex);
+CREATE_ENTRY_FUNC(pthread_cond_timedwait, 
+                  pthread_cond_t *cond_var, pthread_mutex_t *mutex,
+                  const struct timespec *abstime);
+CREATE_ENTRY_FUNC(pthread_rwlock_unlock, pthread_rwlock_t *rwlock);
+CREATE_ENTRY_FUNC(pthread_rwlock_rdlock, pthread_rwlock_t *rwlock);
+CREATE_ENTRY_FUNC(pthread_rwlock_wrlock, pthread_rwlock_t *rwlock);
+CREATE_ENTRY_FUNC(pthread_create, 
+                  pthread_t *thread, const pthread_attr_t *attr,
+                  void *(*start_routine)(void*), void *arg);
+CREATE_ENTRY_FUNC(pthread_detach, pthread_t thread);
+CREATE_ENTRY_FUNC(pthread_exit, void *value_ptr);
+CREATE_ENTRY_FUNC(pthread_join, pthread_t thread, void *value_ptr);
+CREATE_ENTRY_FUNC(pthread_kill, pthread_t thread, int sig);
+CREATE_ENTRY_FUNC(pthread_mutex_lock, pthread_mutex_t *mutex);
+CREATE_ENTRY_FUNC(pthread_mutex_trylock, pthread_mutex_t *mutex);
+CREATE_ENTRY_FUNC(pthread_mutex_unlock, pthread_mutex_t *mutex);
+CREATE_ENTRY_FUNC(rand);
+CREATE_ENTRY_FUNC(read, int readfd, void* buf_addr, size_t count);
+CREATE_ENTRY_FUNC(readdir, DIR *dirp);
+CREATE_ENTRY_FUNC(readdir_r, 
+                  DIR *dirp, struct dirent *entry, struct dirent **result);
+CREATE_ENTRY_FUNC(readlink, const char *path, char *buf, size_t bufsiz);
+CREATE_ENTRY_FUNC(realloc, void *ptr, size_t size);
+CREATE_ENTRY_FUNC(rename, const char *oldpath, const char *newpath);
+CREATE_ENTRY_FUNC(rewind, FILE *stream);
+CREATE_ENTRY_FUNC(rmdir, const char *pathname);
+CREATE_ENTRY_FUNC(select, int nfds,
+                  fd_set *readfds, fd_set *writefds, fd_set *exceptfds,
+                  struct timeval *timeout);
+CREATE_ENTRY_FUNC(setsockopt, 
+                  int sockfd, int level, int optname,
+                  const void* optval, socklen_t optlen);
+CREATE_ENTRY_FUNC(getsockopt, 
+                  int sockfd, int level, int optname,
+                  void* optval, socklen_t* optlen);
+CREATE_ENTRY_FUNC(ioctl, int d, int request, void* arg);
+CREATE_ENTRY_FUNC(signal_handler, int sig);
+CREATE_ENTRY_FUNC(sigwait, const sigset_t *set, int *sig);
+CREATE_ENTRY_FUNC(srand, unsigned int seed);
+CREATE_ENTRY_FUNC(socket, int domain, int type, int protocol);
+CREATE_ENTRY_FUNC(xstat, int vers, const char *path, struct stat *buf);
+CREATE_ENTRY_FUNC(xstat64, int vers, const char *path, struct stat64 *buf);
+CREATE_ENTRY_FUNC(time, time_t *tloc);
+CREATE_ENTRY_FUNC(unlink, const char *pathname);
+CREATE_ENTRY_FUNC(write, 
+                  int writefd, const void* buf_addr, size_t count);
+CREATE_ENTRY_FUNC(epoll_create, int size);
+CREATE_ENTRY_FUNC(epoll_create1, int flags);
+CREATE_ENTRY_FUNC(epoll_ctl, 
+                  int epfd, int op, int fd, struct epoll_event *_event);
+CREATE_ENTRY_FUNC(epoll_wait, int epfd,
+                  struct epoll_event *events, int maxevents, int timeout);
+CREATE_ENTRY_FUNC(getpwnam_r, const char *name, struct passwd *pwd,
+                  char *buf, size_t buflen, struct passwd **result);
+CREATE_ENTRY_FUNC(getpwuid_r, uid_t uid, struct passwd *pwd,
+                  char *buf, size_t buflen, struct passwd **result);
+CREATE_ENTRY_FUNC(getgrnam_r, const char *name, struct group *grp,
+                  char *buf, size_t buflen, struct group **result);
+CREATE_ENTRY_FUNC(getgrgid_r, gid_t gid, struct group *grp,
+                  char *buf, size_t buflen, struct group **result);
+CREATE_ENTRY_FUNC(getaddrinfo, const char *node, const char *service,
+                  const struct addrinfo *hints, struct addrinfo **res);
+CREATE_ENTRY_FUNC(freeaddrinfo, struct addrinfo *res);
+CREATE_ENTRY_FUNC(getnameinfo, const struct sockaddr *sa, socklen_t salen,
+                  char *host, socklen_t hostlen, char *serv, socklen_t servlen,
+                  unsigned int flags);
+/* Special case: user synchronized events. */
+CREATE_ENTRY_FUNC(user);
+/* Special case: exec barrier (notice no clone id or event). */
 LIB_PRIVATE log_entry_t create_exec_barrier_entry();
-LIB_PRIVATE log_entry_t create_fcntl_entry(clone_id_t clone_id, int event, int fd,
-    int cmd, long arg_3_l, struct flock *arg_3_f);
-LIB_PRIVATE log_entry_t create_fclose_entry(clone_id_t clone_id, int event,
-    FILE *fp);
-LIB_PRIVATE log_entry_t create_fchdir_entry(clone_id_t clone_id, int event,
-    int fd);
-LIB_PRIVATE log_entry_t create_fdatasync_entry(clone_id_t clone_id, int event, int fd);
-LIB_PRIVATE log_entry_t create_fdopen_entry(clone_id_t clone_id, int event, int fd,
-    const char *mode);
-LIB_PRIVATE log_entry_t create_fdopendir_entry(clone_id_t clone_id, int event, int fd);
-LIB_PRIVATE log_entry_t create_fgets_entry(clone_id_t clone_id, int event, char *s,
-    int size, FILE *stream);
-LIB_PRIVATE log_entry_t create_fflush_entry(clone_id_t clone_id, int event,
-    FILE *stream);
-LIB_PRIVATE log_entry_t create_fopen_entry(clone_id_t clone_id, int event,
-    const char *name, const char *mode);
-LIB_PRIVATE log_entry_t create_fopen64_entry(clone_id_t clone_id, int event,
-    const char *name, const char *mode);
-LIB_PRIVATE log_entry_t create_freopen_entry(clone_id_t clone_id, int event,
-    const char *path, const char *mode, FILE *stream);
-LIB_PRIVATE log_entry_t create_fprintf_entry(clone_id_t clone_id, int event,
-    FILE *stream, const char *format, va_list ap);
-LIB_PRIVATE log_entry_t create_fscanf_entry(clone_id_t clone_id, int event,
-    FILE *stream, const char *format, va_list ap);
-LIB_PRIVATE log_entry_t create_fseek_entry(clone_id_t clone_id, int event,
-    FILE *stream, long offset, int whence);
-LIB_PRIVATE log_entry_t create_fputs_entry(clone_id_t clone_id, int event,
-    const char *s, FILE *stream);
-LIB_PRIVATE log_entry_t create_fputc_entry(clone_id_t clone_id, int event,
-    int c, FILE *stream);
-LIB_PRIVATE log_entry_t create_free_entry(clone_id_t clone_id, int event,
-    void *ptr);
-LIB_PRIVATE log_entry_t create_fsync_entry(clone_id_t clone_id, int event, int fd);
-LIB_PRIVATE log_entry_t create_ftell_entry(clone_id_t clone_id, int event,
-    FILE *stream);
-LIB_PRIVATE log_entry_t create_fwrite_entry(clone_id_t clone_id, int event,
-    const void *ptr, size_t size, size_t nmemb, FILE *stream);
-LIB_PRIVATE log_entry_t create_fread_entry(clone_id_t clone_id, int event,
-    void *ptr, size_t size, size_t nmemb, FILE *stream);
-LIB_PRIVATE log_entry_t create_fxstat_entry(clone_id_t clone_id, int event, int vers,
-    int fd, struct stat *buf);
-LIB_PRIVATE log_entry_t create_fxstat64_entry(clone_id_t clone_id, int event, int vers,
-    int fd, struct stat64 *buf);
-LIB_PRIVATE log_entry_t create_getc_entry(clone_id_t clone_id, int event, FILE *stream);
-LIB_PRIVATE log_entry_t create_getcwd_entry(clone_id_t clone_id, int event,
-    char *buf, size_t size);
-LIB_PRIVATE log_entry_t create_gettimeofday_entry(clone_id_t clone_id, int event,
-    struct timeval *tv, struct timezone *tz);
-LIB_PRIVATE log_entry_t create_fgetc_entry(clone_id_t clone_id, int event, FILE *stream);
-LIB_PRIVATE log_entry_t create_ungetc_entry(clone_id_t clone_id, int event, int c,
-    FILE *stream);
-LIB_PRIVATE log_entry_t create_getline_entry(clone_id_t clone_id, int event,
-    char **lineptr, size_t *n, FILE *stream);
-LIB_PRIVATE log_entry_t create_getpeername_entry(clone_id_t clone_id, int event,
-    int sockfd, struct sockaddr *addr, socklen_t *addrlen);
-LIB_PRIVATE log_entry_t create_getsockname_entry(clone_id_t clone_id, int event,
-    int sockfd, struct sockaddr *addr, socklen_t *addrlen);
-LIB_PRIVATE log_entry_t create_libc_memalign_entry(clone_id_t clone_id, int event,
-    size_t boundary, size_t size);
-LIB_PRIVATE log_entry_t create_link_entry(clone_id_t clone_id, int event,
-    const char *oldpath, const char *newpath);
-LIB_PRIVATE log_entry_t create_listen_entry(clone_id_t clone_id, int event,
-    int sockfd, int backlog);
-LIB_PRIVATE log_entry_t create_lseek_entry(clone_id_t clone_id, int event, int fd,
-    off_t offset, int whence);
-LIB_PRIVATE log_entry_t create_lxstat_entry(clone_id_t clone_id, int event, int vers,
-    const char *path, struct stat *buf);
-LIB_PRIVATE log_entry_t create_lxstat64_entry(clone_id_t clone_id, int event, int vers,
-    const char *path, struct stat64 *buf);
-LIB_PRIVATE log_entry_t create_malloc_entry(clone_id_t clone_id, int event, size_t size);
-LIB_PRIVATE log_entry_t create_mkdir_entry(clone_id_t clone_id, int event,
-    const char *pathname, mode_t mode);
-LIB_PRIVATE log_entry_t create_mkstemp_entry(clone_id_t clone_id, int event, char *temp);
-LIB_PRIVATE log_entry_t create_mmap_entry(clone_id_t clone_id, int event, void *addr,
-    size_t length, int prot, int flags, int fd, off_t offset);
-LIB_PRIVATE log_entry_t create_mmap64_entry(clone_id_t clone_id, int event, void *addr,
-    size_t length, int prot, int flags, int fd, off64_t offset);
-LIB_PRIVATE log_entry_t create_munmap_entry(clone_id_t clone_id, int event, void *addr,
-    size_t length);
-LIB_PRIVATE log_entry_t create_mremap_entry(clone_id_t clone_id, int event,
-    void *old_address, size_t old_size, size_t new_size, int flags, void *new_addr);
-LIB_PRIVATE log_entry_t create_open_entry(clone_id_t clone_id, int event,
-    const char *path, int flags, mode_t mode);
-LIB_PRIVATE log_entry_t create_open64_entry(clone_id_t clone_id, int event,
-    const char *path, int flags, mode_t mode);
-LIB_PRIVATE log_entry_t create_openat_entry(clone_id_t clone_id, int event,
-    int dirfd, const char *pathname, int flags);
-LIB_PRIVATE log_entry_t create_opendir_entry(clone_id_t clone_id, int event,
-    const char *name);
-LIB_PRIVATE log_entry_t create_pread_entry(clone_id_t clone_id, int event, int fd,
-    void* buf, size_t count, off_t offset);
-LIB_PRIVATE log_entry_t create_putc_entry(clone_id_t clone_id, int event, int c,
-    FILE *stream);
-LIB_PRIVATE log_entry_t create_pwrite_entry(clone_id_t clone_id, int event, int fd,
-    const void* buf, size_t count, off_t offset);
-LIB_PRIVATE log_entry_t create_pthread_cond_broadcast_entry(clone_id_t clone_id, int event,
-    pthread_cond_t *cond_var);
-LIB_PRIVATE log_entry_t create_pthread_cond_signal_entry(clone_id_t clone_id, int event,
-    pthread_cond_t *cond_var);
-LIB_PRIVATE log_entry_t create_pthread_cond_wait_entry(clone_id_t clone_id, int event,
-    pthread_cond_t *cond_var, pthread_mutex_t *mutex);
-LIB_PRIVATE log_entry_t create_pthread_cond_timedwait_entry(clone_id_t clone_id, int event,
-    pthread_cond_t *cond_var, pthread_mutex_t *mutex, const struct timespec *abstime);
-LIB_PRIVATE log_entry_t create_pthread_rwlock_unlock_entry(clone_id_t clone_id,
-    int event, pthread_rwlock_t *rwlock);
-LIB_PRIVATE log_entry_t create_pthread_rwlock_rdlock_entry(clone_id_t clone_id,
-    int event, pthread_rwlock_t *rwlock);
-LIB_PRIVATE log_entry_t create_pthread_rwlock_wrlock_entry(clone_id_t clone_id,
-    int event, pthread_rwlock_t *rwlock);
-LIB_PRIVATE log_entry_t create_pthread_create_entry(clone_id_t clone_id,
-    int event, pthread_t *thread, const pthread_attr_t *attr,
-    void *(*start_routine)(void*), void *arg);
-LIB_PRIVATE log_entry_t create_pthread_detach_entry(clone_id_t clone_id,
-    int event, pthread_t thread);
-LIB_PRIVATE log_entry_t create_pthread_exit_entry(clone_id_t clone_id,
-    int event, void *value_ptr);
-LIB_PRIVATE log_entry_t create_pthread_join_entry(clone_id_t clone_id,
-    int event, pthread_t thread, void *value_ptr);
-LIB_PRIVATE log_entry_t create_pthread_kill_entry(clone_id_t clone_id,
-    int event, pthread_t thread, int sig);
-LIB_PRIVATE log_entry_t create_pthread_mutex_lock_entry(clone_id_t clone_id, int event,
-    pthread_mutex_t *mutex);
-LIB_PRIVATE log_entry_t create_pthread_mutex_trylock_entry(clone_id_t clone_id, int event,
-    pthread_mutex_t *mutex);
-LIB_PRIVATE log_entry_t create_pthread_mutex_unlock_entry(clone_id_t clone_id, int event,
-    pthread_mutex_t *mutex);
-LIB_PRIVATE log_entry_t create_rand_entry(clone_id_t clone_id, int event);
-LIB_PRIVATE log_entry_t create_read_entry(clone_id_t clone_id, int event, int readfd,
-    void* buf_addr, size_t count);
-LIB_PRIVATE log_entry_t create_readdir_entry(clone_id_t clone_id, int event,
-    DIR *dirp);
-LIB_PRIVATE log_entry_t create_readdir_r_entry(clone_id_t clone_id, int event,
-    DIR *dirp, struct dirent *entry, struct dirent **result);
-LIB_PRIVATE log_entry_t create_readlink_entry(clone_id_t clone_id, int event,
-    const char *path, char *buf, size_t bufsiz);
-LIB_PRIVATE log_entry_t create_realloc_entry(clone_id_t clone_id, int event,
-    void *ptr, size_t size);
-LIB_PRIVATE log_entry_t create_rename_entry(clone_id_t clone_id, int event,
-    const char *oldpath, const char *newpath);
-LIB_PRIVATE log_entry_t create_rewind_entry(clone_id_t clone_id, int event,
-    FILE *stream);
-LIB_PRIVATE log_entry_t create_rmdir_entry(clone_id_t clone_id, int event,
-    const char *pathname);
-LIB_PRIVATE log_entry_t create_select_entry(clone_id_t clone_id, int event, int nfds,
-    fd_set *readfds, fd_set *writefds, fd_set *exceptfds,
-    struct timeval *timeout);
-LIB_PRIVATE log_entry_t create_setsockopt_entry(clone_id_t clone_id, int event,
-    int sockfd, int level, int optname, const void* optval, socklen_t optlen);
-LIB_PRIVATE log_entry_t create_getsockopt_entry(clone_id_t clone_id, int event,
-    int sockfd, int level, int optname, void* optval, socklen_t* optlen);
-LIB_PRIVATE log_entry_t create_ioctl_entry(clone_id_t clone_id, int event,
-    int d, int request, void* arg);
-LIB_PRIVATE log_entry_t create_signal_handler_entry(clone_id_t clone_id, int event,
-    int sig);
-LIB_PRIVATE log_entry_t create_sigwait_entry(clone_id_t clone_id, int event,
-    const sigset_t *set, int *sig);
-LIB_PRIVATE log_entry_t create_srand_entry(clone_id_t clone_id, int event,
-    unsigned int seed);
-LIB_PRIVATE log_entry_t create_socket_entry(clone_id_t clone_id, int event,
-    int domain, int type, int protocol);
-LIB_PRIVATE log_entry_t create_xstat_entry(clone_id_t clone_id, int event, int vers,
-    const char *path, struct stat *buf);
-LIB_PRIVATE log_entry_t create_xstat64_entry(clone_id_t clone_id, int event, int vers,
-    const char *path, struct stat64 *buf);
-LIB_PRIVATE log_entry_t create_time_entry(clone_id_t clone_id, int event,
-    time_t *tloc);
-LIB_PRIVATE log_entry_t create_unlink_entry(clone_id_t clone_id, int event,
-    const char *pathname);
-LIB_PRIVATE log_entry_t create_user_entry(clone_id_t clone_id, int event);
-LIB_PRIVATE log_entry_t create_write_entry(clone_id_t clone_id, int event,
-    int writefd, const void* buf_addr, size_t count);
-
-LIB_PRIVATE log_entry_t create_epoll_create_entry(clone_id_t clone_id,
-                                                  int event, int size);
-LIB_PRIVATE log_entry_t create_epoll_create1_entry(clone_id_t clone_id,
-                                                   int event, int flags);
-LIB_PRIVATE log_entry_t create_epoll_ctl_entry(clone_id_t clone_id, int event,
-                                               int epfd, int op, int fd,
-                                               struct epoll_event *_event);
-LIB_PRIVATE log_entry_t create_epoll_wait_entry(clone_id_t clone_id, int event,
-                                                int epfd,
-                                                struct epoll_event *events,
-                                                int maxevents, int timeout);
-
-LIB_PRIVATE log_entry_t create_getpwnam_r_entry(clone_id_t clone_id, int event,
-                                                const char *name,
-                                                struct passwd *pwd,
-                                                char *buf, size_t buflen,
-                                                struct passwd **result);
-
-LIB_PRIVATE log_entry_t create_getpwuid_r_entry(clone_id_t clone_id, int event,
-                                                uid_t uid, struct passwd *pwd,
-                                                char *buf, size_t buflen,
-                                                struct passwd **result);
-
-LIB_PRIVATE log_entry_t create_getgrnam_r_entry(clone_id_t clone_id, int event,
-                                                const char *name,
-                                                struct group *grp,
-                                                char *buf, size_t buflen,
-                                                struct group **result);
-
-LIB_PRIVATE log_entry_t create_getgrgid_r_entry(clone_id_t clone_id, int event,
-                                                gid_t gid, struct group *grp,
-                                                char *buf, size_t buflen,
-                                                struct group **result);
-
-LIB_PRIVATE log_entry_t create_getaddrinfo_entry(clone_id_t clone_id, int event,
-                                                 const char *node,
-                                                 const char *service,
-                                                 const struct addrinfo *hints,
-                                                 struct addrinfo **res);
-
-LIB_PRIVATE log_entry_t create_freeaddrinfo_entry(clone_id_t clone_id,
-                                                  int event,
-                                                  struct addrinfo *res);
-
-LIB_PRIVATE log_entry_t create_getnameinfo_entry(clone_id_t clone_id, int event,
-                                                 const struct sockaddr *sa,
-                                                 socklen_t salen,
-                                                 char *host, socklen_t hostlen,
-                                                 char *serv, socklen_t servlen,
-                                                 unsigned int flags);
 
 LIB_PRIVATE void waitForTurn(log_entry_t my_entry, turn_pred_t pred);
 LIB_PRIVATE void waitForExecBarrier();
