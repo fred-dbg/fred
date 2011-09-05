@@ -1613,6 +1613,16 @@ log_entry_t create_time_entry(clone_id_t clone_id, int event, time_t *tloc)
   return e;
 }
 
+log_entry_t create_truncate_entry(clone_id_t clone_id, int event,
+                                  const char *path, off_t length)
+{
+  log_entry_t e = EMPTY_LOG_ENTRY;
+  setupCommonFields(&e, clone_id, event);
+  SET_FIELD2(e, truncate, path, (char *)path);
+  SET_FIELD(e, truncate, length);
+  return e;
+}
+
 log_entry_t create_unlink_entry(clone_id_t clone_id, int event,
      const char *pathname)
 {
@@ -2058,6 +2068,15 @@ TURN_CHECK_P(time_turn_check)
   return base_turn_check(e1, e2) &&
     GET_FIELD_PTR(e1, time, tloc) ==
       GET_FIELD_PTR(e2, time, tloc);
+}
+
+TURN_CHECK_P(truncate_turn_check)
+{
+  return base_turn_check(e1, e2) &&
+    GET_FIELD_PTR(e1, truncate, path) ==
+      GET_FIELD_PTR(e2, truncate, path) &&
+    GET_FIELD_PTR(e1, truncate, length) ==
+      GET_FIELD_PTR(e2, truncate, length);
 }
 
 TURN_CHECK_P(accept_turn_check)

@@ -406,6 +406,7 @@ static pthread_mutex_t read_data_mutex = PTHREAD_MUTEX_INITIALIZER;
     MACRO(srand, __VA_ARGS__);                                                 \
     MACRO(socket, __VA_ARGS__);                                                \
     MACRO(time, __VA_ARGS__);                                                  \
+    MACRO(truncate, __VA_ARGS__);                                              \
     MACRO(unlink, __VA_ARGS__);                                                \
     MACRO(write, __VA_ARGS__);                                                 \
     MACRO(xstat, __VA_ARGS__);                                                 \
@@ -525,6 +526,7 @@ typedef enum {
   socket_event,
   srand_event,
   time_event,
+  truncate_event,
   unlink_event,
   user_event,
   write_event,
@@ -1401,6 +1403,14 @@ typedef struct {
 static const int log_event_time_size = sizeof(log_event_time_t);
 
 typedef struct {
+  // For truncate():
+  char *path;
+  off_t length;
+} log_event_truncate_t;
+
+static const int log_event_truncate_size = sizeof(log_event_truncate_t);
+
+typedef struct {
   // For srand():
   unsigned int seed;
 } log_event_srand_t;
@@ -1675,6 +1685,7 @@ typedef struct {
     log_event_fxstat_t                           log_event_fxstat;
     log_event_fxstat64_t                         log_event_fxstat64;
     log_event_time_t                             log_event_time;
+    log_event_truncate_t                         log_event_truncate;
     log_event_unlink_t                           log_event_unlink;
     log_event_user_t                             log_event_user;
     log_event_srand_t                            log_event_srand;
@@ -2011,6 +2022,7 @@ CREATE_ENTRY_FUNC(socket, int domain, int type, int protocol);
 CREATE_ENTRY_FUNC(xstat, int vers, const char *path, struct stat *buf);
 CREATE_ENTRY_FUNC(xstat64, int vers, const char *path, struct stat64 *buf);
 CREATE_ENTRY_FUNC(time, time_t *tloc);
+CREATE_ENTRY_FUNC(truncate, const char *path, off_t length);
 CREATE_ENTRY_FUNC(unlink, const char *pathname);
 CREATE_ENTRY_FUNC(write, 
                   int writefd, const void* buf_addr, size_t count);
@@ -2140,6 +2152,7 @@ LIB_PRIVATE TURN_CHECK_P(sigwait_turn_check);
 LIB_PRIVATE TURN_CHECK_P(srand_turn_check);
 LIB_PRIVATE TURN_CHECK_P(socket_turn_check);
 LIB_PRIVATE TURN_CHECK_P(time_turn_check);
+LIB_PRIVATE TURN_CHECK_P(truncate_turn_check);
 LIB_PRIVATE TURN_CHECK_P(unlink_turn_check);
 LIB_PRIVATE TURN_CHECK_P(user_turn_check);
 LIB_PRIVATE TURN_CHECK_P(write_turn_check);

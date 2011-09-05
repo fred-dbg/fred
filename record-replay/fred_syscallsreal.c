@@ -1057,6 +1057,11 @@ time_t _real_time(time_t *tloc) {
 }
 
 LIB_PRIVATE
+int _real_truncate(const char *path, off_t length) {
+  REAL_FUNC_PASSTHROUGH_TYPED ( int,truncate ) ( path, length );
+}
+
+LIB_PRIVATE
 int _real_dup(int oldfd) {
   REAL_FUNC_PASSTHROUGH_TYPED ( int,dup ) ( oldfd );
 }

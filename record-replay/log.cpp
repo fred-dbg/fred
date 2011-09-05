@@ -327,8 +327,9 @@ int dmtcp::SynchronizationLog::writeEntryAtOffset(const log_entry_t& entry,
     JASSERT(false);
   }
 
-  int event_size;
+  int event_size = -1;
   GET_EVENT_SIZE(GET_COMMON(entry, event), event_size);
+  JASSERT( event_size > 0 );
 
   JASSERT ((index + log_event_common_size + event_size) < *_size)
     ( *_size ) .Text ("Log size too small");
@@ -473,4 +474,6 @@ void dmtcp::SynchronizationLog::mergeLogs(dmtcp::vector<clone_id_t> clone_ids)
 
   *_isUnified = true;
   resetIndex();
+
+  JTRACE ( "Finished merging logs." );
 }

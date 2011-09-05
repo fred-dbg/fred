@@ -662,6 +662,11 @@ extern "C" void rewind(FILE *stream)
   BASIC_SYNC_WRAPPER_VOID(rewind, _real_rewind, stream);
 }
 
+extern "C" int truncate(const char *path, off_t length)
+{
+  BASIC_SYNC_WRAPPER(int, truncate, _real_truncate, path, length);
+}
+
 extern "C" long ftell(FILE *stream)
 {
   BASIC_SYNC_WRAPPER(long, ftell, _real_ftell, stream);
