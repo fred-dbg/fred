@@ -19,25 +19,55 @@
  * along with FReD.  If not, see <http://www.gnu.org/licenses/>.            *
  ****************************************************************************/
 
-#ifndef CONSTANTS_H
-#define CONSTANTS_H
+#include "dmtcpmodule.h"
+#include "constants.h"
+#include "jassert.h"
 
-//#ifdef HAVE_CONFIG_H
-//# include "config.h"
-//#endif
-#include "linux/version.h"
+// dmtcp_checkpoint, and dmtcp_coordinator, and dmtcp_command do not
+//   need to load dmtcpworker.cpp
+// libdmtcpinternal.a contains code needed by dmtcpworker and the utilities
+//    alike.
+// libnohijack.a contains stub functions (mostly empty definitions
+//   corresponding to definitions in dmtcphijack.so.  It includes
+//   nosyscallsreal.c and this file (dmtcpworkerstubs.cpp).
+// dmtcphijack.so and libsyscallsreal.a contain the wrappers and other code
+//   that executes within the end user process
 
-#define RECORD_REPLAY
+// dmtcphijack.so defines this differently
+void _dmtcp_setup_trampolines() {}
 
-#ifndef DMTCP
-#define DMTCP
-#endif
+void dmtcp_process_event(DmtcpEvent_t id, void* data)
+{
+  return;
+}
 
-#define LIBC_FILENAME "libc.so.6"
-#define LIBPTHREAD_FILENAME "libpthread.so.0"
+int  dmtcp_get_ckpt_signal()
+{
+  JASSERT(false) .Text ("NOT REACHED");
+  return -1;
+}
 
-#define ENABLE_MALLOC_WRAPPER
-#define ENV_VAR_LOG_REPLAY "DMTCP_LOG_REPLAY"
+const char* dmtcp_get_tmpdir()
+{
+  JASSERT(false) .Text("NOT REACHED");
+  return NULL;
+}
 
-#endif
+const char* dmtcp_get_uniquepid_str()
+{
+  JASSERT(false) .Text("NOT REACHED");
+  return NULL;
+}
+
+int  dmtcp_is_running_state()
+{
+  JASSERT(false) .Text("NOT REACHED");
+  return 0;
+}
+
+int  dmtcp_get_readlog_fd()
+{
+  JASSERT(false) .Text("NOT REACHED");
+  return -1;
+}
 

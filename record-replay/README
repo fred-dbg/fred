@@ -1,5 +1,5 @@
-To compile the module, use a command similar to the following, replacing "/home/kapil/..." with appropriate path to jalib in your environment.
-env CFLAGS="-I/home/kapil/dmtcp/dmtcp/jalib/." CXXFLAGS="-I/home/kapil/dmtcp/dmtcp/jalib/." ./configure
+To compile the module, use a command similar to the following, replacing "/home/kapil/..." with appropriate path to dmtcp trunk in your environment.
+./configure --with-dmtcp-path=/home/kapil/dmtcp
 
 To run the program under record-replay, use the following command replacing "/home/kapil/..." to point to fredhijack.so in your environment.
 ./bin/dmtcp_checkpoint --with-module /home/kapil/pthread-wrappers/fred/record-replay/fredhijack.so gdb ../pthread-wrappers/test-programs/pthread-test

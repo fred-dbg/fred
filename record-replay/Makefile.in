@@ -36,9 +36,10 @@ POST_INSTALL = :
 NORMAL_UNINSTALL = :
 PRE_UNINSTALL = :
 POST_UNINSTALL = :
+bin_PROGRAMS = fred_read_log$(EXEEXT)
 pkglib_PROGRAMS = fredhijack.so$(EXEEXT)
 subdir = .
-DIST_COMMON = $(am__configure_deps) $(nobase_noinst_HEADERS) \
+DIST_COMMON = README $(am__configure_deps) $(nobase_noinst_HEADERS) \
 	$(srcdir)/Makefile.am $(srcdir)/Makefile.in \
 	$(top_srcdir)/configure depcomp install-sh missing
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -58,8 +59,14 @@ libfredinternal_a_LIBADD =
 am_libfredinternal_a_OBJECTS = synchronizationlogging.$(OBJEXT) \
 	log.$(OBJEXT) fred.$(OBJEXT) fred_trampolines.$(OBJEXT)
 libfredinternal_a_OBJECTS = $(am_libfredinternal_a_OBJECTS)
-am__installdirs = "$(DESTDIR)$(pkglibdir)"
-PROGRAMS = $(pkglib_PROGRAMS)
+am__installdirs = "$(DESTDIR)$(bindir)" "$(DESTDIR)$(pkglibdir)"
+PROGRAMS = $(bin_PROGRAMS) $(pkglib_PROGRAMS)
+am_fred_read_log_OBJECTS = fred_read_log.$(OBJEXT) \
+	nosyscallsreal.$(OBJEXT) util.$(OBJEXT) stubs.$(OBJEXT) \
+	jassert.$(OBJEXT) jalib.$(OBJEXT) jalloc.$(OBJEXT) \
+	jfilesystem.$(OBJEXT)
+fred_read_log_OBJECTS = $(am_fred_read_log_OBJECTS)
+fred_read_log_DEPENDENCIES = libfredinternal.a
 am_fredhijack_so_OBJECTS = fred_signalwrappers.$(OBJEXT) \
 	fred_epollwrappers.$(OBJEXT) fred_mallocwrappers.$(OBJEXT) \
 	fred_filewrappers.$(OBJEXT) fred_syscallsreal.$(OBJEXT) \
@@ -82,8 +89,10 @@ CXXCOMPILE = $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
 CXXLD = $(CXX)
 CXXLINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) $(LDFLAGS) \
 	-o $@
-SOURCES = $(libfredinternal_a_SOURCES) $(fredhijack_so_SOURCES)
-DIST_SOURCES = $(libfredinternal_a_SOURCES) $(fredhijack_so_SOURCES)
+SOURCES = $(libfredinternal_a_SOURCES) $(fred_read_log_SOURCES) \
+	$(fredhijack_so_SOURCES)
+DIST_SOURCES = $(libfredinternal_a_SOURCES) $(fred_read_log_SOURCES) \
+	$(fredhijack_so_SOURCES)
 HEADERS = $(nobase_noinst_HEADERS)
 ETAGS = etags
 CTAGS = ctags
@@ -123,6 +132,7 @@ INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
+JALIB_PATH = @JALIB_PATH@
 LDFLAGS = @LDFLAGS@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
@@ -194,7 +204,7 @@ AUTOMAKE_OPTIONS = foreign
 
 #HEADERS
 #set the include path found by configure
-INCLUDES = $(all_includes)
+INCLUDES = $(all_includes) -I$(JALIB_PATH)
 
 # targets:
 noinst_LIBRARIES = libfredinternal.a
@@ -214,9 +224,11 @@ fredhijack_so_SOURCES = fred_signalwrappers.cpp fred_epollwrappers.cpp \
 
 fredhijack_so_LDFLAGS = -shared -module
 fredhijack_so_LDADD = libfredinternal.a -ldl -lpthread
+fred_read_log_SOURCES = fred_read_log.cpp nosyscallsreal.c util.cpp stubs.cpp \
+			$(JALIB_PATH)/jassert.cpp $(JALIB_PATH)/jalib.cpp \
+			$(JALIB_PATH)/jalloc.cpp $(JALIB_PATH)/jfilesystem.cpp
 
-#fred_read_log_SOURCES = fred_read_log.cpp nosyscallsreal.c 
-#fred_read_log_LDADD   = libjalib.a libfredinternal.a fredhijack.so -lpthread
+fred_read_log_LDADD = libfredinternal.a -lpthread
 PICFLAGS = -fPIC
 AM_CFLAGS = $(PICFLAGS)
 AM_CXXFLAGS = $(PICFLAGS)
@@ -266,6 +278,43 @@ libfredinternal.a: $(libfredinternal_a_OBJECTS) $(libfredinternal_a_DEPENDENCIES
 	-rm -f libfredinternal.a
 	$(libfredinternal_a_AR) libfredinternal.a $(libfredinternal_a_OBJECTS) $(libfredinternal_a_LIBADD)
 	$(RANLIB) libfredinternal.a
+install-binPROGRAMS: $(bin_PROGRAMS)
+	@$(NORMAL_INSTALL)
+	test -z "$(bindir)" || $(MKDIR_P) "$(DESTDIR)$(bindir)"
+	@list='$(bin_PROGRAMS)'; test -n "$(bindir)" || list=; \
+	for p in $$list; do echo "$$p $$p"; done | \
+	sed 's/$(EXEEXT)$$//' | \
+	while read p p1; do if test -f $$p; \
+	  then echo "$$p"; echo "$$p"; else :; fi; \
+	done | \
+	sed -e 'p;s,.*/,,;n;h' -e 's|.*|.|' \
+	    -e 'p;x;s,.*/,,;s/$(EXEEXT)$$//;$(transform);s/$$/$(EXEEXT)/' | \
+	sed 'N;N;N;s,\n, ,g' | \
+	$(AWK) 'BEGIN { files["."] = ""; dirs["."] = 1 } \
+	  { d=$$3; if (dirs[d] != 1) { print "d", d; dirs[d] = 1 } \
+	    if ($$2 == $$4) files[d] = files[d] " " $$1; \
+	    else { print "f", $$3 "/" $$4, $$1; } } \
+	  END { for (d in files) print "f", d, files[d] }' | \
+	while read type dir files; do \
+	    if test "$$dir" = .; then dir=; else dir=/$$dir; fi; \
+	    test -z "$$files" || { \
+	      echo " $(INSTALL_PROGRAM_ENV) $(INSTALL_PROGRAM) $$files '$(DESTDIR)$(bindir)$$dir'"; \
+	      $(INSTALL_PROGRAM_ENV) $(INSTALL_PROGRAM) $$files "$(DESTDIR)$(bindir)$$dir" || exit $$?; \
+	    } \
+	; done
+
+uninstall-binPROGRAMS:
+	@$(NORMAL_UNINSTALL)
+	@list='$(bin_PROGRAMS)'; test -n "$(bindir)" || list=; \
+	files=`for p in $$list; do echo "$$p"; done | \
+	  sed -e 'h;s,^.*/,,;s/$(EXEEXT)$$//;$(transform)' \
+	      -e 's/$$/$(EXEEXT)/' `; \
+	test -n "$$list" || exit 0; \
+	echo " ( cd '$(DESTDIR)$(bindir)' && rm -f" $$files ")"; \
+	cd "$(DESTDIR)$(bindir)" && rm -f $$files
+
+clean-binPROGRAMS:
+	-test -z "$(bin_PROGRAMS)" || rm -f $(bin_PROGRAMS)
 install-pkglibPROGRAMS: $(pkglib_PROGRAMS)
 	@$(NORMAL_INSTALL)
 	test -z "$(pkglibdir)" || $(MKDIR_P) "$(DESTDIR)$(pkglibdir)"
@@ -303,6 +352,9 @@ uninstall-pkglibPROGRAMS:
 
 clean-pkglibPROGRAMS:
 	-test -z "$(pkglib_PROGRAMS)" || rm -f $(pkglib_PROGRAMS)
+fred_read_log$(EXEEXT): $(fred_read_log_OBJECTS) $(fred_read_log_DEPENDENCIES) 
+	@rm -f fred_read_log$(EXEEXT)
+	$(CXXLINK) $(fred_read_log_OBJECTS) $(fred_read_log_LDADD) $(LIBS)
 fredhijack.so$(EXEEXT): $(fredhijack_so_OBJECTS) $(fredhijack_so_DEPENDENCIES) 
 	@rm -f fredhijack.so$(EXEEXT)
 	$(fredhijack_so_LINK) $(fredhijack_so_OBJECTS) $(fredhijack_so_LDADD) $(LIBS)
@@ -317,14 +369,22 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fred_epollwrappers.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fred_filewrappers.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fred_mallocwrappers.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fred_read_log.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fred_signalwrappers.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fred_socketwrappers.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fred_syscallsreal.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fred_trampolines.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/jalib.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/jalloc.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/jassert.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/jfilesystem.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/log.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/netwrappers.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nosyscallsreal.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pthreadwrappers.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stubs.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/synchronizationlogging.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/util.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
@@ -353,6 +413,62 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(CXXCOMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
+
+jassert.o: $(JALIB_PATH)/jassert.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT jassert.o -MD -MP -MF $(DEPDIR)/jassert.Tpo -c -o jassert.o `test -f '$(JALIB_PATH)/jassert.cpp' || echo '$(srcdir)/'`$(JALIB_PATH)/jassert.cpp
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/jassert.Tpo $(DEPDIR)/jassert.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='$(JALIB_PATH)/jassert.cpp' object='jassert.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o jassert.o `test -f '$(JALIB_PATH)/jassert.cpp' || echo '$(srcdir)/'`$(JALIB_PATH)/jassert.cpp
+
+jassert.obj: $(JALIB_PATH)/jassert.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT jassert.obj -MD -MP -MF $(DEPDIR)/jassert.Tpo -c -o jassert.obj `if test -f '$(JALIB_PATH)/jassert.cpp'; then $(CYGPATH_W) '$(JALIB_PATH)/jassert.cpp'; else $(CYGPATH_W) '$(srcdir)/$(JALIB_PATH)/jassert.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/jassert.Tpo $(DEPDIR)/jassert.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='$(JALIB_PATH)/jassert.cpp' object='jassert.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o jassert.obj `if test -f '$(JALIB_PATH)/jassert.cpp'; then $(CYGPATH_W) '$(JALIB_PATH)/jassert.cpp'; else $(CYGPATH_W) '$(srcdir)/$(JALIB_PATH)/jassert.cpp'; fi`
+
+jalib.o: $(JALIB_PATH)/jalib.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT jalib.o -MD -MP -MF $(DEPDIR)/jalib.Tpo -c -o jalib.o `test -f '$(JALIB_PATH)/jalib.cpp' || echo '$(srcdir)/'`$(JALIB_PATH)/jalib.cpp
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/jalib.Tpo $(DEPDIR)/jalib.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='$(JALIB_PATH)/jalib.cpp' object='jalib.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o jalib.o `test -f '$(JALIB_PATH)/jalib.cpp' || echo '$(srcdir)/'`$(JALIB_PATH)/jalib.cpp
+
+jalib.obj: $(JALIB_PATH)/jalib.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT jalib.obj -MD -MP -MF $(DEPDIR)/jalib.Tpo -c -o jalib.obj `if test -f '$(JALIB_PATH)/jalib.cpp'; then $(CYGPATH_W) '$(JALIB_PATH)/jalib.cpp'; else $(CYGPATH_W) '$(srcdir)/$(JALIB_PATH)/jalib.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/jalib.Tpo $(DEPDIR)/jalib.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='$(JALIB_PATH)/jalib.cpp' object='jalib.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o jalib.obj `if test -f '$(JALIB_PATH)/jalib.cpp'; then $(CYGPATH_W) '$(JALIB_PATH)/jalib.cpp'; else $(CYGPATH_W) '$(srcdir)/$(JALIB_PATH)/jalib.cpp'; fi`
+
+jalloc.o: $(JALIB_PATH)/jalloc.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT jalloc.o -MD -MP -MF $(DEPDIR)/jalloc.Tpo -c -o jalloc.o `test -f '$(JALIB_PATH)/jalloc.cpp' || echo '$(srcdir)/'`$(JALIB_PATH)/jalloc.cpp
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/jalloc.Tpo $(DEPDIR)/jalloc.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='$(JALIB_PATH)/jalloc.cpp' object='jalloc.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o jalloc.o `test -f '$(JALIB_PATH)/jalloc.cpp' || echo '$(srcdir)/'`$(JALIB_PATH)/jalloc.cpp
+
+jalloc.obj: $(JALIB_PATH)/jalloc.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT jalloc.obj -MD -MP -MF $(DEPDIR)/jalloc.Tpo -c -o jalloc.obj `if test -f '$(JALIB_PATH)/jalloc.cpp'; then $(CYGPATH_W) '$(JALIB_PATH)/jalloc.cpp'; else $(CYGPATH_W) '$(srcdir)/$(JALIB_PATH)/jalloc.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/jalloc.Tpo $(DEPDIR)/jalloc.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='$(JALIB_PATH)/jalloc.cpp' object='jalloc.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o jalloc.obj `if test -f '$(JALIB_PATH)/jalloc.cpp'; then $(CYGPATH_W) '$(JALIB_PATH)/jalloc.cpp'; else $(CYGPATH_W) '$(srcdir)/$(JALIB_PATH)/jalloc.cpp'; fi`
+
+jfilesystem.o: $(JALIB_PATH)/jfilesystem.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT jfilesystem.o -MD -MP -MF $(DEPDIR)/jfilesystem.Tpo -c -o jfilesystem.o `test -f '$(JALIB_PATH)/jfilesystem.cpp' || echo '$(srcdir)/'`$(JALIB_PATH)/jfilesystem.cpp
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/jfilesystem.Tpo $(DEPDIR)/jfilesystem.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='$(JALIB_PATH)/jfilesystem.cpp' object='jfilesystem.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o jfilesystem.o `test -f '$(JALIB_PATH)/jfilesystem.cpp' || echo '$(srcdir)/'`$(JALIB_PATH)/jfilesystem.cpp
+
+jfilesystem.obj: $(JALIB_PATH)/jfilesystem.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT jfilesystem.obj -MD -MP -MF $(DEPDIR)/jfilesystem.Tpo -c -o jfilesystem.obj `if test -f '$(JALIB_PATH)/jfilesystem.cpp'; then $(CYGPATH_W) '$(JALIB_PATH)/jfilesystem.cpp'; else $(CYGPATH_W) '$(srcdir)/$(JALIB_PATH)/jfilesystem.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/jfilesystem.Tpo $(DEPDIR)/jfilesystem.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='$(JALIB_PATH)/jfilesystem.cpp' object='jfilesystem.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o jfilesystem.obj `if test -f '$(JALIB_PATH)/jfilesystem.cpp'; then $(CYGPATH_W) '$(JALIB_PATH)/jfilesystem.cpp'; else $(CYGPATH_W) '$(srcdir)/$(JALIB_PATH)/jfilesystem.cpp'; fi`
 
 ID: $(HEADERS) $(SOURCES) $(LISP) $(TAGS_FILES)
 	list='$(SOURCES) $(HEADERS) $(LISP) $(TAGS_FILES)'; \
@@ -557,7 +673,7 @@ check-am: all-am
 check: check-am
 all-am: Makefile $(LIBRARIES) $(PROGRAMS) $(HEADERS)
 installdirs:
-	for dir in "$(DESTDIR)$(pkglibdir)"; do \
+	for dir in "$(DESTDIR)$(bindir)" "$(DESTDIR)$(pkglibdir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
 	done
 install: install-am
@@ -587,8 +703,8 @@ maintainer-clean-generic:
 	@echo "it deletes files that may require special tools to rebuild."
 clean: clean-am
 
-clean-am: clean-generic clean-noinstLIBRARIES clean-pkglibPROGRAMS \
-	mostlyclean-am
+clean-am: clean-binPROGRAMS clean-generic clean-noinstLIBRARIES \
+	clean-pkglibPROGRAMS mostlyclean-am
 
 distclean: distclean-am
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
@@ -615,7 +731,7 @@ install-dvi: install-dvi-am
 
 install-dvi-am:
 
-install-exec-am: install-pkglibPROGRAMS
+install-exec-am: install-binPROGRAMS install-pkglibPROGRAMS
 
 install-html: install-html-am
 
@@ -656,25 +772,26 @@ ps: ps-am
 
 ps-am:
 
-uninstall-am: uninstall-pkglibPROGRAMS
+uninstall-am: uninstall-binPROGRAMS uninstall-pkglibPROGRAMS
 
 .MAKE: install-am install-strip
 
 .PHONY: CTAGS GTAGS all all-am am--refresh check check-am clean \
-	clean-generic clean-noinstLIBRARIES clean-pkglibPROGRAMS ctags \
-	dist dist-all dist-bzip2 dist-gzip dist-lzma dist-shar \
-	dist-tarZ dist-xz dist-zip distcheck distclean \
-	distclean-compile distclean-generic distclean-tags \
+	clean-binPROGRAMS clean-generic clean-noinstLIBRARIES \
+	clean-pkglibPROGRAMS ctags dist dist-all dist-bzip2 dist-gzip \
+	dist-lzma dist-shar dist-tarZ dist-xz dist-zip distcheck \
+	distclean distclean-compile distclean-generic distclean-tags \
 	distcleancheck distdir distuninstallcheck dvi dvi-am html \
-	html-am info info-am install install-am install-data \
-	install-data-am install-dvi install-dvi-am install-exec \
-	install-exec-am install-html install-html-am install-info \
-	install-info-am install-man install-pdf install-pdf-am \
-	install-pkglibPROGRAMS install-ps install-ps-am install-strip \
-	installcheck installcheck-am installdirs maintainer-clean \
-	maintainer-clean-generic mostlyclean mostlyclean-compile \
-	mostlyclean-generic pdf pdf-am ps ps-am tags uninstall \
-	uninstall-am uninstall-pkglibPROGRAMS
+	html-am info info-am install install-am install-binPROGRAMS \
+	install-data install-data-am install-dvi install-dvi-am \
+	install-exec install-exec-am install-html install-html-am \
+	install-info install-info-am install-man install-pdf \
+	install-pdf-am install-pkglibPROGRAMS install-ps install-ps-am \
+	install-strip installcheck installcheck-am installdirs \
+	maintainer-clean maintainer-clean-generic mostlyclean \
+	mostlyclean-compile mostlyclean-generic pdf pdf-am ps ps-am \
+	tags uninstall uninstall-am uninstall-binPROGRAMS \
+	uninstall-pkglibPROGRAMS
 
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.

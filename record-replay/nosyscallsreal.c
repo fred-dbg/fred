@@ -34,7 +34,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include "constants.h"
-#include "sockettable.h"
 #include <sys/select.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -86,12 +85,14 @@ static pthread_mutex_t theMutex = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
 
 #define LIBPTHREAD_REAL_FUNC_PASSTHROUGH_TYPED(type,name) return name
 #define LIBPTHREAD_REAL_FUNC_PASSTHROUGH_VOID(name) name
-void _dmtcp_lock() { REAL_FUNC_PASSTHROUGH_VOID ( pthread_mutex_lock ) ( &theMutex ); }
-void _dmtcp_unlock() { REAL_FUNC_PASSTHROUGH_VOID ( pthread_mutex_unlock ) ( &theMutex ); }
-#else
-void _dmtcp_lock() { pthread_mutex_lock ( &theMutex ); }
-void _dmtcp_unlock() { pthread_mutex_unlock ( &theMutex ); }
-#endif
+
+void _dmtcp_lock() {
+  REAL_FUNC_PASSTHROUGH_VOID ( pthread_mutex_lock ) ( &theMutex );
+}
+
+void _dmtcp_unlock() {
+  REAL_FUNC_PASSTHROUGH_VOID ( pthread_mutex_unlock ) ( &theMutex );
+}
 
 void initialize_wrappers() {
   return;
@@ -434,7 +435,6 @@ int _real_epoll_pwait(int epfd, struct epoll_event *events,
 }
 #endif
 
-#ifdef RECORD_REPLAY
 int _real_dup2 ( int oldfd, int newfd ) {
   REAL_FUNC_PASSTHROUGH ( dup2 ) ( oldfd, newfd );
 }

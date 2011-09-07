@@ -34,11 +34,11 @@
 #include <string>
 #include <map>
 #include "constants.h"
+#include "jalib.h"
+#include "dmtcpalloc.h"
 
 //namespace dmtcp = std;
 //using namespace dmtcp;
-int main(){}
-#ifdef KRECORD_REPLAY
 #include "synchronizationlogging.h"
 #include "log.h"
 
@@ -758,6 +758,13 @@ void print_log_entry_unlink(int idx, log_entry_t *entry) {
          GET_FIELD_PTR(entry, unlink, pathname));
 }
 
+void print_log_entry_truncate(int idx, log_entry_t *entry) {
+  print_log_entry_common(idx, entry);
+  printf(", path=%p, length=%zu\n",
+         GET_FIELD_PTR(entry, truncate, path),
+         GET_FIELD_PTR(entry, truncate, length));
+}
+
 void print_log_entry_user(int idx, log_entry_t *entry) {
   print_log_entry_common(idx, entry);
   printf("\n");
@@ -937,12 +944,49 @@ void rewriteLog(char *log_path)
   }
 }
 
+
+void initializeJalib()
+{
+  jalib::JalibFuncPtrs jalibFuncPtrs;
+
+#define INIT_JALIB_FPTR(name) jalibFuncPtrs.name = name;
+
+  jalibFuncPtrs.dmtcp_get_tmpdir = dmtcp_get_tmpdir;
+  jalibFuncPtrs.dmtcp_get_uniquepid_str = dmtcp_get_uniquepid_str;
+  jalibFuncPtrs.writeAll = dmtcp::Util::writeAll;
+  jalibFuncPtrs.readAll = dmtcp::Util::readAll;
+
+  INIT_JALIB_FPTR(open);
+  INIT_JALIB_FPTR(fopen);
+  INIT_JALIB_FPTR(close);
+  INIT_JALIB_FPTR(fclose);
+
+  INIT_JALIB_FPTR(syscall);
+
+  INIT_JALIB_FPTR(read);
+  INIT_JALIB_FPTR(write);
+  INIT_JALIB_FPTR(select);
+
+  INIT_JALIB_FPTR(socket);
+  INIT_JALIB_FPTR(connect);
+  INIT_JALIB_FPTR(bind);
+  INIT_JALIB_FPTR(listen);
+  INIT_JALIB_FPTR(accept);
+
+  INIT_JALIB_FPTR(pthread_mutex_lock);
+  INIT_JALIB_FPTR(pthread_mutex_trylock);
+  INIT_JALIB_FPTR(pthread_mutex_unlock);
+
+  jalib_init(jalibFuncPtrs, STDERR_FILENO, -1, 99);
+  JASSERT_INIT("");
+}
+
 int main(int argc, char **argv) {
   if (argc < 2) {
     fprintf(stderr, "USAGE: %s /path/to/sync-log\n", argv[0]);
     return 1;
   }
+  initializeJalib();
   rewriteLog(argv[1]);
   return 0;
 }
-#endif

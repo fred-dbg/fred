@@ -6,11 +6,11 @@ AUTOMAKE_OPTIONS = foreign
 
 #HEADERS
 #set the include path found by configure
-INCLUDES= $(all_includes)
+INCLUDES= $(all_includes) -I$(JALIB_PATH)
 
 # targets:
 noinst_LIBRARIES = libfredinternal.a
-#bin_PROGRAMS = fred_read_log 
+bin_PROGRAMS = fred_read_log 
 pkglib_PROGRAMS = fredhijack.so
 
 # headers:
@@ -29,8 +29,11 @@ fredhijack_so_SOURCES = fred_signalwrappers.cpp fred_epollwrappers.cpp \
 fredhijack_so_LDFLAGS   = -shared -module
 fredhijack_so_LDADD     = libfredinternal.a -ldl -lpthread
 
-#fred_read_log_SOURCES = fred_read_log.cpp nosyscallsreal.c 
-#fred_read_log_LDADD   = libjalib.a libfredinternal.a fredhijack.so -lpthread
+fred_read_log_SOURCES = fred_read_log.cpp nosyscallsreal.c util.cpp stubs.cpp \
+			$(JALIB_PATH)/jassert.cpp $(JALIB_PATH)/jalib.cpp \
+			$(JALIB_PATH)/jalloc.cpp $(JALIB_PATH)/jfilesystem.cpp
+
+fred_read_log_LDADD   = libfredinternal.a -lpthread
 
 
 PICFLAGS=-fPIC

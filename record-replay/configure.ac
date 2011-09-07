@@ -2,6 +2,7 @@ AC_INIT([FReD],[0.99],[],[FReD],[])
 AC_PREREQ([2.60])
 AM_INIT_AUTOMAKE([foreign])
 AM_MAINTAINER_MODE
+AC_CONFIG_FILES([Makefile])
 
 AC_LANG_CPLUSPLUS
 AC_PROG_CC
@@ -24,4 +25,20 @@ if test "$use_jassert" = "yes"; then
 fi
 
 
-AC_OUTPUT(Makefile)
+AC_ARG_WITH([dmtcp_path],
+            [AS_HELP_STRING([--with-dmtcp-path=path],
+                            [provide dmtcp sources path])],
+            [dmtcp_path=$withval],
+            [dmtcp_path=no])
+
+if test -d "$dmtcp_path/dmtcp/jalib"; then
+  jalib_path="$dmtcp_path/dmtcp/jalib"
+  AC_SUBST([JALIB_PATH], [$jalib_path])
+else
+  echo alskdfjalkdsfj "$dmtcp_path"
+  AC_MSG_ERROR([Invalid dmtcp path, use --with-dmtcp-path=<path>])
+fi
+
+AC_DEFINE([DMTCP],[],[Always enable this.])
+
+AC_OUTPUT
