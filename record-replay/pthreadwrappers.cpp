@@ -483,7 +483,7 @@ extern "C" int pthread_rwlock_unlock(pthread_rwlock_t *rwlock)
     if (retval == 0) {
       *rwlock = GET_FIELD(my_entry, pthread_rwlock_unlock, rwlock);
     }
-    WRAPPER_REPLAY_START(pthread_rwlock_unlock);
+    WRAPPER_REPLAY_END(pthread_rwlock_unlock);
   } else if (SYNC_IS_RECORD) {
     WRAPPER_LOG_SET_LOG_ID(my_entry);
     retval = _real_pthread_rwlock_unlock(rwlock);
@@ -504,7 +504,7 @@ extern "C" int pthread_rwlock_rdlock(pthread_rwlock_t *rwlock)
     if (retval == 0) {
       *rwlock = GET_FIELD(my_entry, pthread_rwlock_rdlock, rwlock);
     }
-    WRAPPER_REPLAY_START(pthread_rwlock_rdlock);
+    WRAPPER_REPLAY_END(pthread_rwlock_rdlock);
   } else if (SYNC_IS_RECORD) {
     retval = _real_pthread_rwlock_rdlock(rwlock);
     if (retval == 0) {
@@ -524,7 +524,7 @@ extern "C" int pthread_rwlock_wrlock(pthread_rwlock_t *rwlock)
     if (retval == 0) {
       *rwlock = GET_FIELD(my_entry, pthread_rwlock_wrlock, rwlock);
     }
-    WRAPPER_REPLAY_START(pthread_rwlock_wrlock);
+    WRAPPER_REPLAY_END(pthread_rwlock_wrlock);
   } else if (SYNC_IS_RECORD) {
     retval = _real_pthread_rwlock_wrlock(rwlock);
     if (retval == 0) {
@@ -832,7 +832,7 @@ extern "C" int gettimeofday(struct timeval *tv, struct timezone *tz)
     if (retval == 0 && tz != NULL) {
       *tz = GET_FIELD(currentLogEntry, gettimeofday, tz_val);
     }
-    WRAPPER_REPLAY_END(time);
+    WRAPPER_REPLAY_END(gettimeofday);
   } else if (SYNC_IS_RECORD) {
     retval = _real_gettimeofday(tv, tz);
     if (retval == 0 && tv != NULL) {
