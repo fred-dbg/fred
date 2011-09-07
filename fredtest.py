@@ -191,7 +191,15 @@ def main():
     # Don't do anything if we can't find DMTCP.
     if not fred.dmtcpmanager.is_dmtcp_in_path():
         fred.fredutil.fred_fatal("No DMTCP binaries available in your PATH.\n")
+
+    if not fred.dmtcpmanager.is_fredhijack_found():
+        fred.fredutil.fred_fatal("No fredhijack.so library found in %s.\n"
+                                 "Please edit fredtest.py and change "
+                                 "GS_FREDHIJACK_PATH to point to the directory "
+                                 "containing fredhijack.so."%
+                                 fred.dmtcpmanager.GS_FREDHIJACK_PATH)
         
+    
     initialize_tests()
 
     ls_test_list = parse_fredtest_args()

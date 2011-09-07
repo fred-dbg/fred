@@ -306,7 +306,11 @@ def setup(l_argv, b_spawn_child=True):
     #readline.parse_and_bind('tab: complete')
     #readline.set_completer(_fred_completer)
     if b_spawn_child:
-        _spawn_child(["dmtcp_checkpoint"] + l_argv)
+        _spawn_child(["dmtcp_checkpoint",
+                      "--quiet",
+                      "--with-module",
+                      fredutil.get_fredhijack_path()] +
+                     l_argv)
 
 def teardown():
     """Perform any cleanup associated with FReD exit."""

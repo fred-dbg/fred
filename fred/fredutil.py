@@ -171,3 +171,7 @@ def set_env_var_if_unset(s_name, s_val):
     except KeyError:
         os.environ[s_name] = s_val
         return
+
+def get_fredhijack_path():
+    """Return the path to fredhijack.so."""
+    return dmtcpmanager.get_fredhijack_path()

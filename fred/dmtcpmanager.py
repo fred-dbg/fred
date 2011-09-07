@@ -30,6 +30,10 @@ import subprocess
 import sys
 import time
 
+GS_FREDHIJACK_NAME = "fredhijack.so"
+GS_FREDHIJACK_PATH = os.path.join(os.environ["HOME"],
+                                  "pthread-wrappers/fred/record-replay")
+
 gn_index_suffix = 0
 
 def execute_shell_command_and_wait(l_cmd):
@@ -51,6 +55,15 @@ def is_dmtcp_in_path():
         if os.path.exists(exe_file) and os.access(exe_file, os.X_OK):
             return True
     return False
+
+def is_fredhijack_found():
+    """Return True if fredhijack.so library is in a known location."""
+    return os.path.exists(get_fredhijack_path())
+
+def get_fredhijack_path():
+    """Return the path to fredhijack.so."""
+    global GS_FREDHIJACK_PATH, GS_FREDHIJACK_NAME
+    return os.path.join(GS_FREDHIJACK_PATH, GS_FREDHIJACK_NAME)
 
 def get_num_peers():
     """Return NUM_PEERS from 'dmtcp_command s' as an integer."""
@@ -119,7 +132,7 @@ def checkpoint():
                if x.endswith(".dmtcp") or x.startswith("synchronization-")]
     map(os.remove, l_files)
     # Request the checkpoint.
-    cmdstr = ["dmtcp_command", "bc"]
+    cmdstr = ["dmtcp_command", "--quiet", "bc"]
     execute_shell_command_and_wait(cmdstr)
     fredutil.fred_debug("After blocking checkpoint command.")
 
