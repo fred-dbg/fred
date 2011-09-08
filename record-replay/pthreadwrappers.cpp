@@ -234,7 +234,7 @@ static int internal_pthread_cond_signal(pthread_cond_t *cond)
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_START(pthread_cond_signal);
     if (retval == 0) {
-      *cond = GET_FIELD(my_entry, pthread_cond_signal, cond);
+      *cond = GET_FIELD(currentLogEntry, pthread_cond_signal, cond);
     }
     WRAPPER_REPLAY_END(pthread_cond_signal);
   } else  if (SYNC_IS_RECORD) {
@@ -262,8 +262,8 @@ static int internal_pthread_cond_wait(pthread_cond_t *cond,
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_START(pthread_cond_wait);
     if (retval == 0) {
-      *cond = GET_FIELD(my_entry, pthread_cond_wait, cond);
-      *mutex = GET_FIELD(my_entry, pthread_cond_wait, mutex);
+      *cond = GET_FIELD(currentLogEntry, pthread_cond_wait, cond);
+      *mutex = GET_FIELD(currentLogEntry, pthread_cond_wait, mutex);
     }
     WRAPPER_REPLAY_END(pthread_cond_wait);
   } else if (SYNC_IS_RECORD) {
@@ -384,7 +384,7 @@ extern "C" int pthread_mutex_trylock(pthread_mutex_t *mutex)
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_START(pthread_mutex_trylock);
     if (retval == 0) {
-      *mutex = GET_FIELD(my_entry, pthread_mutex_trylock, mutex);
+      *mutex = GET_FIELD(currentLogEntry, pthread_mutex_trylock, mutex);
     }
     WRAPPER_REPLAY_END(pthread_mutex_trylock);
   } else if (SYNC_IS_RECORD) {
@@ -422,7 +422,7 @@ extern "C" int pthread_cond_broadcast(pthread_cond_t *cond)
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_START(pthread_cond_broadcast);
     if (retval == 0) {
-      *cond = GET_FIELD(my_entry, pthread_cond_broadcast, cond);
+      *cond = GET_FIELD(currentLogEntry, pthread_cond_broadcast, cond);
     }
     WRAPPER_REPLAY_END(pthread_cond_broadcast);
   } else if (SYNC_IS_RECORD) {
@@ -457,8 +457,8 @@ extern "C" int pthread_cond_timedwait(pthread_cond_t *cond,
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_START(pthread_cond_timedwait);
     if (retval == 0) {
-      *cond = GET_FIELD(my_entry, pthread_cond_timedwait, cond);
-      *mutex = GET_FIELD(my_entry, pthread_cond_timedwait, mutex);
+      *cond = GET_FIELD(currentLogEntry, pthread_cond_timedwait, cond);
+      *mutex = GET_FIELD(currentLogEntry, pthread_cond_timedwait, mutex);
     }
     WRAPPER_REPLAY_END(pthread_cond_timedwait);
   } else if (SYNC_IS_RECORD) {
@@ -481,7 +481,7 @@ extern "C" int pthread_rwlock_unlock(pthread_rwlock_t *rwlock)
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_START(pthread_rwlock_unlock);
     if (retval == 0) {
-      *rwlock = GET_FIELD(my_entry, pthread_rwlock_unlock, rwlock);
+      *rwlock = GET_FIELD(currentLogEntry, pthread_rwlock_unlock, rwlock);
     }
     WRAPPER_REPLAY_END(pthread_rwlock_unlock);
   } else if (SYNC_IS_RECORD) {
@@ -502,7 +502,7 @@ extern "C" int pthread_rwlock_rdlock(pthread_rwlock_t *rwlock)
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_START(pthread_rwlock_rdlock);
     if (retval == 0) {
-      *rwlock = GET_FIELD(my_entry, pthread_rwlock_rdlock, rwlock);
+      *rwlock = GET_FIELD(currentLogEntry, pthread_rwlock_rdlock, rwlock);
     }
     WRAPPER_REPLAY_END(pthread_rwlock_rdlock);
   } else if (SYNC_IS_RECORD) {
@@ -522,7 +522,7 @@ extern "C" int pthread_rwlock_wrlock(pthread_rwlock_t *rwlock)
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_START(pthread_rwlock_wrlock);
     if (retval == 0) {
-      *rwlock = GET_FIELD(my_entry, pthread_rwlock_wrlock, rwlock);
+      *rwlock = GET_FIELD(currentLogEntry, pthread_rwlock_wrlock, rwlock);
     }
     WRAPPER_REPLAY_END(pthread_rwlock_wrlock);
   } else if (SYNC_IS_RECORD) {
@@ -810,7 +810,7 @@ extern "C" time_t time(time_t *tloc)
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_START(time);
     if (retval != (time_t) -1 && tloc != NULL) {
-      *tloc = GET_FIELD(my_entry, time, time_retval);
+      *tloc = GET_FIELD(currentLogEntry, time, time_retval);
     }
     WRAPPER_REPLAY_END(time);
   } else if (SYNC_IS_RECORD) {
