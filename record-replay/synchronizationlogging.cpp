@@ -39,12 +39,6 @@
 #include "log.h"
 #include <sys/resource.h>
 
-/* #defined constants */
-#define MAX_OPTIONAL_EVENTS 5
-
-/* Prototypes */
-char* map_file_to_memory(const char* path, size_t size, int flags, int mode);
-/* End prototypes */
 
 // TODO: Do we need LIB_PRIVATE again here if we had already specified it in
 // the header file?
@@ -69,7 +63,6 @@ LIB_PRIVATE int             sync_logging_branch = 0;
 LIB_PRIVATE int             log_all_allocs = 0;
 LIB_PRIVATE size_t          default_stack_size = 0;
 LIB_PRIVATE pthread_cond_t  reap_cv = PTHREAD_COND_INITIALIZER;
-LIB_PRIVATE pthread_mutex_t fd_change_mutex = PTHREAD_MUTEX_INITIALIZER;
 LIB_PRIVATE pthread_mutex_t global_clone_counter_mutex = PTHREAD_MUTEX_INITIALIZER;
 LIB_PRIVATE pthread_mutex_t log_index_mutex = PTHREAD_MUTEX_INITIALIZER;
 LIB_PRIVATE pthread_mutex_t reap_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -109,6 +102,7 @@ static inline void memfence() {  asm volatile ("mfence" ::: "memory"); }
 // gcc-4.1 and later has __sync_fetch_and_add, __sync_fetch_and_xor, etc.
 // We need it for atomic_increment and atomic_decrement
 // The version below is slow, but works.  It uses GNU extensions.
+// FIXME: We should not misuse log_index_mutex for this purpose.
 #define __sync_fetch_and_add(ptr,val) \
   ({ __typeof__(*(ptr)) tmp; \
     _real_pthread_mutex_lock(&log_index_mutex); \
@@ -130,37 +124,6 @@ static inline void memfence() {  asm volatile ("mfence" ::: "memory"); }
 // Alternatively, we could copy and adjust some assembly language that we
 // generate elsewhere.
 # endif
-
-void atomic_increment(volatile int *ptr)
-{
-  // This gcc builtin should eliminate the need for protecting each
-  // increment of log_index with a mutex.
-  __sync_fetch_and_add(ptr, 1);
-}
-
-void atomic_decrement(volatile int *ptr)
-{
-  // This gcc builtin should eliminate the need for protecting each
-  // increment of log_index with a mutex.
-  __sync_fetch_and_add(ptr, -1);
-}
-
-// THIS FUNCTION EITHER HAS A BUG OR IS POORLY DOCUMENTED.
-// CURRENTLY, IT'S NOT INVOKED.  FIX IT BEFORE INVOKING.
-// WAS '__sync_fetch_and_xor(*ptr, *ptr)' INTENDED?  - Gene
-void atomic_set(volatile int *ptr, int val)
-{
-  // This isn't atomic just because we call two atomic functions...
-  // We still need a lock here.
-  _real_pthread_mutex_lock(&atomic_set_mutex);
-  if (__builtin_expect((val != 0 && val != 1), 0)) {
-    JASSERT(false).Text("atomic_set only implemented for 0 and 1.");
-  }
-  __sync_fetch_and_xor(ptr, *ptr); // Set to 0
-  if (val == 1)
-    atomic_increment(ptr);
-  _real_pthread_mutex_unlock(&atomic_set_mutex);
-}
 
 /* Switch record/replay to specified mode. mode should be one of:
    SYNC_NOOP, SYNC_RECORD, SYNC_REPLAY. */
@@ -498,43 +461,6 @@ void copyFdSet(fd_set *src, fd_set *dest)
   for (i = 0; i < length_fd_bits; i++) {
     __FDS_BITS(dest)[i] = __FDS_BITS(src)[i];
   }
-}
-
-int fdAvailable(fd_set *set)
-{
-  // Returns 1 if 'set' has at least one fd available (for any action), else 0.
-  size_t length_fd_bits = FD_SETSIZE/NFDBITS;
-  size_t i = 0, j = 0;
-  for (i = 0; i < length_fd_bits; i++) {
-    for (j = 0; j < NFDBITS; j++) {
-      if ((__FDS_BITS(set)[i]>>j) & 0x1)
-        return 1;
-    }
-  }
-  return 0;
-}
-
-int fdSetDiff(fd_set *one, fd_set *two)
-{
-  // Returns 1 if sets are different, 0 if they are the same.
-  // fd_set struct has one member: __fds_bits. which is an array of longs.
-  // length of that array is FD_SETSIZE/__NFDBITS
-  // see /usr/include/sys/select.h
-  if (one == NULL && two == NULL)
-    return 0;
-  if ((one == NULL && two != NULL) ||
-      (one != NULL && two == NULL))
-    return 1;
-  int length_fd_bits = FD_SETSIZE/NFDBITS;
-  int i = 0;
-  for (i = 0; i < length_fd_bits; i++) {
-    JTRACE ( "" ) ( __FDS_BITS(one)[i] ) ( __FDS_BITS(two)[i] );
-  }
-  for (i = 0; i < length_fd_bits; i++) {
-    if (__FDS_BITS(one)[i] != __FDS_BITS(two)[i])
-      return 1;
-  }
-  return 0;
 }
 
 void prepareNextLogEntry(log_entry_t& e)
