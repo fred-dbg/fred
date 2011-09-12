@@ -33,9 +33,10 @@ AC_ARG_WITH([dmtcp_path],
 
 if test -d "$dmtcp_path/dmtcp/jalib"; then
   jalib_path="$dmtcp_path/dmtcp/jalib"
+  dmtcp_src_path="$dmtcp_path/dmtcp/src"
   AC_SUBST([JALIB_PATH], [$jalib_path])
+  AC_SUBST([DMTCP_SRC_PATH], [$dmtcp_src_path])
 else
-  echo alskdfjalkdsfj "$dmtcp_path"
   AC_MSG_ERROR([Invalid dmtcp path, use --with-dmtcp-path=<path>])
 fi
 

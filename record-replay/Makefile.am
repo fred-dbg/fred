@@ -6,7 +6,7 @@ AUTOMAKE_OPTIONS = foreign
 
 #HEADERS
 #set the include path found by configure
-INCLUDES= $(all_includes) -I$(JALIB_PATH)
+INCLUDES= $(all_includes) -I$(JALIB_PATH) -I$(DMTCP_SRC_PATH)
 
 # targets:
 noinst_LIBRARIES = libfredinternal.a
@@ -14,9 +14,9 @@ bin_PROGRAMS = fred_read_log
 pkglib_PROGRAMS = fredhijack.so
 
 # headers:
-nobase_noinst_HEADERS = constants.h fred_wrappers.h util.h \
-			synchronizationlogging.h log.h dmtcpmodule.h \
-			trampolines.h fred_wrappers.h
+nobase_noinst_HEADERS = constants.h fred_wrappers.h synchronizationlogging.h log.h \
+			$(DMTCP_SRC_PATH)/trampolines.h $(DMTCP_SRC_PATH)/util.h \
+			$(DMTCP_SRC_PATH)/dmtcpmodule.h
 
 libfredinternal_a_SOURCES = synchronizationlogging.cpp log.cpp fred.cpp \
 			    fred_trampolines.cpp

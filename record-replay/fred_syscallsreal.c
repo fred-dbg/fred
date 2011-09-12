@@ -53,7 +53,7 @@ typedef int ( *funcptr_t ) ();
 typedef pid_t ( *funcptr_pid_t ) ();
 typedef funcptr_t ( *signal_funcptr_t ) ();
 
-extern void *dmtcp_get_real_dlsym_addr();
+extern void *dmtcp_get_libc_dlsym_addr();
 extern void prepareFredWrappers();
 
 static void *_real_func_addr[numLibcWrappers];
@@ -112,7 +112,7 @@ void *_real_dlsym ( void *handle, const char *symbol ) {
   fncptr dlsym_fptr = NULL;
 
   if (dlsym_fptr == 0) {
-    dlsym_fptr = dmtcp_get_real_dlsym_addr();
+    dlsym_fptr = dmtcp_get_libc_dlsym_addr();
     if (dlsym_fptr == NULL) {
       fprintf(stderr, "DMTCP: Internal Error: Not Reached\n");
       abort();

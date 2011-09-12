@@ -22,11 +22,9 @@
 #include <sys/syscall.h>
 #include <sys/mman.h>
 #include <dlfcn.h>
-//#define SYSCALLWRAPPERS_H
 #include "constants.h"
 #include "trampolines.h"
-//#include "fred_wrappers.h"
-#include "jassert.h"
+#include "fred_wrappers.h"
 #include "synchronizationlogging.h"
 
 static trampoline_info_t mmap_trampoline_info;

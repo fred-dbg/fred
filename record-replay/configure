@@ -565,6 +565,7 @@ ac_subst_vars='am__EXEEXT_FALSE
 am__EXEEXT_TRUE
 LTLIBOBJS
 LIBOBJS
+DMTCP_SRC_PATH
 JALIB_PATH
 RANLIB
 am__fastdepCXX_FALSE
@@ -3953,10 +3954,12 @@ fi
 
 if test -d "$dmtcp_path/dmtcp/jalib"; then
   jalib_path="$dmtcp_path/dmtcp/jalib"
+  dmtcp_src_path="$dmtcp_path/dmtcp/src"
   JALIB_PATH=$jalib_path
 
+  DMTCP_SRC_PATH=$dmtcp_src_path
+
 else
-  echo alskdfjalkdsfj "$dmtcp_path"
   as_fn_error $? "Invalid dmtcp path, use --with-dmtcp-path=<path>" "$LINENO" 5
 fi
 

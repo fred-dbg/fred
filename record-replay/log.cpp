@@ -56,7 +56,7 @@ void dmtcp::SynchronizationLog::initOnThreadCreation(size_t size)
     register_in_global_log_list(my_clone_id);
   }
 
-  JNOTE ("Initialized thread local synchronization log path to" )
+  JTRACE ("Initialized thread local synchronization log path to" )
     (_path) (*_size) (mapWithNoReserveFlag);
 }
 
