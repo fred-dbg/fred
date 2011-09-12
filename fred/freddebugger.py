@@ -117,10 +117,23 @@ class Debugger():
         bt_frame = self._p.current_position()
         self.update_state()
         for breakpoint in self.state().get_breakpoints():
-            if breakpoint.s_function == bt_frame.s_function and \
+            if self.personality_name() == "gdb" and \
+               breakpoint.s_function == bt_frame.s_function and \
                breakpoint.s_file == bt_frame.s_file and \
                breakpoint.n_line == bt_frame.n_line:
                 return True
+            if self.personality_name() == "Pdb" and \
+               breakpoint.s_file == bt_frame.s_file and \
+               breakpoint.n_line == bt_frame.n_line:
+                return True 
+            if self.personality_name() == "perl" and \
+               breakpoint.s_file == bt_frame.s_file and \
+               breakpoint.n_line == bt_frame.n_line:
+                return True 
+            if self.personality_name() == "MATLAB" and \
+               breakpoint.s_file == bt_frame.s_file and \
+               breakpoint.n_line == bt_frame.n_line:
+                return True 
         return False
 
     def state(self):
@@ -313,6 +326,8 @@ class ReversibleDebugger(Debugger):
 	or some other other lib, replace that 'step' by a special cmd
 	with name 'step' that acts when executed like 'next'."""
         l_history.append(self._p.get_personality_cmd(fred_step_cmd()))
+        if self.personality_name() == "MATLAB":
+            self.replay_history(l_history)
 	# NOTE: do_step() logs "step", but we replace history.
         if self.do_step() == "DO-NOT-STEP":
 	    l_history[-1].set_native(self._p.get_native(fred_next_cmd()))
@@ -562,7 +577,10 @@ class ReversibleDebugger(Debugger):
                 self.execute_fred_command(cmd)
                 if self.at_breakpoint():
                     n_breakpoints_found += 1
-            if n_breakpoints_found > 0:
+            if n_breakpoints_found > 1 and self.at_breakpoint() or \
+               n_breakpoints_found > 0 and not self.at_breakpoint():
+                if self.at_breakpoint():
+                    n_breakpoints_found -= 1
                 n_recount = 0
                 self.do_restart(n_to_restart)
                 for i in range(0,len(self.checkpoint.l_history)):
@@ -911,7 +929,7 @@ class ReversibleDebugger(Debugger):
 		    # This can be optimized for fewer ckpt/restarts.
 		    while self.state().level() >= level and \
 			  not self.at_breakpoint() and len(l_history)>0 and \
-		          l_history[-1].is_next() or l_history[-1].is_step():
+		          (l_history[-1].is_next() or l_history[-1].is_step()):
                         self.trim_n_cmds(l_history, 1)
 		        self.do_restart(b_clear_history = True)
 		        self.replay_history(l_history)
@@ -919,6 +937,9 @@ class ReversibleDebugger(Debugger):
             
                 elif l_history[-1].is_step():
                     self.trim_n_cmds(l_history, 1)
+		    self.do_restart(b_clear_history = True)
+		    self.replay_history(l_history)
+                    self.update_state()
 	fredutil.fred_assert(self.state().level() == level-1 or
 			     len(l_history) == 0)
 	# Gene - Am I using the next four lines correctly?
@@ -986,7 +1007,7 @@ class ReversibleDebugger(Debugger):
                         del l_history[-1]
                         self.do_restart(b_clear_history = True)
                         self.replay_history(l_history)
-		    self.append_step_over_libc(l_history)
+                    self.append_step_over_libc(l_history)
 		    # FIXME:  This is inefficient.  In gdb, we should be
 		    #   doing 'n 2', 'n 4', 'n 8', etc., and be depending
 		    #   on gdb stopping at breakpoint.  But gdb doesn't always
@@ -996,10 +1017,11 @@ class ReversibleDebugger(Debugger):
                         l_history += \
                             [self._p.get_personality_cmd(fred_next_cmd())]
                         self.replay_history([l_history[-1]])
+                    print "DONE"
 	# Gene - Am I using the next four lines correctly?
 	self.checkpoint.l_history = l_history
 	self.do_restart()
-	self.replay_history()
+	self.replay_history(l_history)
 	self.update_state()
 	fredutil.fred_debug("Reverse next finished.")
 

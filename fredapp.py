@@ -250,6 +250,21 @@ def setup_debugger(s_debugger_name):
         from fred.personalityGdb import PersonalityGdb
         g_debugger = freddebugger.ReversibleDebugger(PersonalityGdb())
         del PersonalityGdb
+    elif s_debugger_name == "pdb":
+        fredutil.fred_debug("Using python personality.")
+        from fred.personalityPython import PersonalityPython
+        g_debugger = freddebugger.ReversibleDebugger(PersonalityPython())
+        del PersonalityPython
+    elif s_debugger_name == "perl":
+        fredutil.fred_debug("Using perl personality.")
+        from fred.personalityPerl import PersonalityPerl
+        g_debugger = freddebugger.ReversibleDebugger(PersonalityPerl())
+        del PersonalityPerl
+    elif s_debugger_name == "/opt/matlab/bin/glnxa64/MATLAB":
+        fredutil.fred_debug("Using matlab personality.")
+        from fred.personalityMatlab import PersonalityMatlab
+        g_debugger = freddebugger.ReversibleDebugger(PersonalityMatlab())
+        del PersonalityMatlab
     else:
         fredutil.fred_fatal("Unimplemented debugger '%s'" % s_debugger_name)
 

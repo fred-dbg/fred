@@ -82,8 +82,18 @@ class Personality:
     def _parse_backtrace(self, where_str):
         """Return a Backtrace instance parsed from output of 'where' cmd."""
         backtrace = re.sub(self.gre_prompt, '', where_str)
-        bt_list = re.findall(self.gre_backtrace_frame,
-                             backtrace, re.MULTILINE | re.DOTALL)
+        if self.s_name == "gdb":
+            bt_list = re.findall(self.gre_backtrace_frame,
+                                 backtrace, re.MULTILINE | re.DOTALL)
+        if self.s_name == "Pdb":
+            bt_list = re.findall(self.gre_backtrace_frame,
+                                 backtrace, re.MULTILINE)
+        if self.s_name == "perl":
+            bt_list = re.findall(self.gre_backtrace_frame,
+                                 backtrace)
+        if self.s_name == "MATLAB":
+            bt_list = re.findall(self.gre_backtrace_frame,
+                                 backtrace, re.MULTILINE)
         bt = freddebugger.Backtrace()
         for f in bt_list:
             bt.add_frame(self._parse_backtrace_frame(f))
@@ -162,20 +172,33 @@ class Personality:
         """Return a FredCommand representing given personality command.
         Also sets 'native' string appropriately."""
         cmd = None
-        if re.search(self.gs_next_re, s_command) != None:
-            cmd = freddebugger.fred_next_cmd()
-            cmd.set_count_cmd(self.b_has_count_commands)
-        elif re.search(self.gs_step_re, s_command) != None:
-            cmd = freddebugger.fred_step_cmd()
-            cmd.set_count_cmd(self.b_has_count_commands)
-        elif re.search(self.gs_continue_re, s_command) != None:
-            cmd = freddebugger.fred_continue_cmd()
-            cmd.set_count_cmd(self.b_has_count_commands)
+        if self.s_name != "MATLAB":
+            if re.search(self.gs_next_re, s_command) != None:
+                cmd = freddebugger.fred_next_cmd()
+                cmd.set_count_cmd(self.b_has_count_commands)
+            elif re.search(self.gs_step_re, s_command) != None:
+                cmd = freddebugger.fred_step_cmd()
+                cmd.set_count_cmd(self.b_has_count_commands)
+            elif re.search(self.gs_continue_re, s_command) != None:
+                cmd = freddebugger.fred_continue_cmd()
+                cmd.set_count_cmd(self.b_has_count_commands)
+            else:
+                cmd = freddebugger.fred_unknown_cmd()
         else:
-            cmd = freddebugger.fred_unknown_cmd()
+            if re.search(self.gs_step_re, s_command) != None:
+                cmd = freddebugger.fred_step_cmd()
+                cmd.set_count_cmd(self.b_has_count_commands)
+            elif re.search(self.gs_next_re, s_command) != None:
+                cmd = freddebugger.fred_next_cmd()
+                cmd.set_count_cmd(self.b_has_count_commands)
+            elif re.search(self.gs_continue_re, s_command) != None:
+                cmd = freddebugger.fred_continue_cmd()
+                cmd.set_count_cmd(self.b_has_count_commands)
+            else:
+                cmd = freddebugger.fred_unknown_cmd()
         cmd.set_native(s_command.partition(' ')[0])
         cmd.s_args = s_command.partition(' ')[2]
-        if cmd.b_count_cmd and cmd.s_args != "":
+        if cmd.b_count_cmd and cmd.s_args != "" and self.s_name != "MATLAB":
             cmd.set_count(int(cmd.s_args))
         return cmd        
 
