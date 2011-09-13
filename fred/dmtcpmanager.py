@@ -65,6 +65,19 @@ def get_fredhijack_path():
     global GS_FREDHIJACK_PATH, GS_FREDHIJACK_NAME
     return os.path.join(GS_FREDHIJACK_PATH, GS_FREDHIJACK_NAME)
 
+def verify_critical_files_present():
+    """Check for DMTCP binaries, fredhijack.so, and other required files.
+    If any are not found, exit with a fatal error and appropriate message."""
+    if not is_dmtcp_in_path():
+        fredutil.fred_fatal("No DMTCP binaries available in your PATH.\n")
+    if not is_fredhijack_found():
+        fredutil.fred_fatal("No fredhijack.so library found in %s.\n"
+                            "Please edit fredtest.py and change "
+                            "GS_FREDHIJACK_PATH to point to the directory "
+                            "containing fredhijack.so."%
+                            fred.dmtcpmanager.GS_FREDHIJACK_PATH)
+
+
 def get_num_peers():
     """Return NUM_PEERS from 'dmtcp_command s' as an integer."""
     cmd = [ 'dmtcp_command', 's' ]

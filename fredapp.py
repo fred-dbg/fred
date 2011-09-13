@@ -367,15 +367,7 @@ def main():
     """Program execution starts here."""
     global gs_resume_dir_path
     # Don't do anything if we can't find DMTCP.
-    if not dmtcpmanager.is_dmtcp_in_path():
-        fredutil.fred_fatal("No DMTCP binaries available in your PATH.\n")
-    if not dmtcpmanager.is_fredhijack_found():
-        fredutil.fred_fatal("No fredhijack.so library found in %s.\n"
-                            "Please edit dmtcpmanager.py and change "
-                            "GS_FREDHIJACK_PATH to point to the directory "
-                            "containing fredhijack.so."%
-                            dmtcpmanager.GS_FREDHIJACK_PATH)
-
+    fred.dmtcpmanager.verify_critical_files_present()
     fred_setup()
     # Main input/output loop
     # skip the prompt waiting if we are resuming:

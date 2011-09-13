@@ -64,7 +64,11 @@ def execute_commands(l_cmds):
     fredapp.source_from_list(l_cmds)
 
 def store_variable(s_name):
-    """Evaluate given variable in debugger and store value."""
+    """Evaluate given variable in debugger and store value.
+    For example, if the test is for gdb, and the debugged program (a.out)
+    defines some variable 'my_var', then store_variable("my_var") will execute
+    gdb command "print my_var" and store the value of my_var in the
+    gd_stored_variables dictionary under the key "my_var"."""
     global gd_stored_variables, g_debugger
     gd_stored_variables[s_name] = g_debugger.evaluate_expression(s_name)
 
@@ -88,7 +92,7 @@ def gdb_record_replay(n_count=1):
     for i in range(0, n_count):
         print_test_name("gdb record/replay %d" % i)
         start_session(l_cmd)
-        execute_commands(["b main", "r", "fred-ckpt", "c"])
+        execute_commands(["b main", "b print_solution", "r", "fred-ckpt", "c"])
         store_variable("solution")
         execute_commands(["fred-restart", "c"])
         if check_stored_variable("solution"):
@@ -146,7 +150,7 @@ def run_tests(ls_test_list):
                 continue
 
 def parse_fredtest_args():
-    """Initialize command line options, and parse them.
+    """Parse command line args, and return list of tests to run.
     Then set up fredapp module accordingly."""
     global gs_dmtcp_port, gb_fred_debug
     parser = OptionParser()
@@ -189,16 +193,7 @@ def initialize_tests():
 def main():
     """Program execution starts here."""
     # Don't do anything if we can't find DMTCP.
-    if not fred.dmtcpmanager.is_dmtcp_in_path():
-        fred.fredutil.fred_fatal("No DMTCP binaries available in your PATH.\n")
-
-    if not fred.dmtcpmanager.is_fredhijack_found():
-        fred.fredutil.fred_fatal("No fredhijack.so library found in %s.\n"
-                                 "Please edit fredtest.py and change "
-                                 "GS_FREDHIJACK_PATH to point to the directory "
-                                 "containing fredhijack.so."%
-                                 fred.dmtcpmanager.GS_FREDHIJACK_PATH)
-        
+    fred.dmtcpmanager.verify_critical_files_present()
     
     initialize_tests()
 

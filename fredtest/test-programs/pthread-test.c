@@ -55,6 +55,13 @@ void *worker(void *arg) {
   }
 }
 
+/* Make this its own function so fredtest.py doesn't have to depend on
+   line numbers. */
+void print_solution()
+{
+  printf("Solution is: %lld\n", solution);
+}
+
 int main() {
   pthread_t threads[NUM_THREADS+1];
   struct thread_arg targs[NUM_THREADS+1];
@@ -87,7 +94,7 @@ int main() {
   for (i = 1; i < NUM_THREADS+1; i++) {
     pthread_join(threads[i], NULL);
   }
-  printf("Solution is: %lld\n", solution);
+  print_solution();
 
   exit(0);
 }
