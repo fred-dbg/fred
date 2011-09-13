@@ -367,7 +367,7 @@ def main():
     """Program execution starts here."""
     global gs_resume_dir_path
     # Don't do anything if we can't find DMTCP.
-    fred.dmtcpmanager.verify_critical_files_present()
+    dmtcpmanager.verify_critical_files_present()
     fred_setup()
     # Main input/output loop
     # skip the prompt waiting if we are resuming:
