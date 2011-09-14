@@ -1021,7 +1021,6 @@ class ReversibleDebugger(Debugger):
                         l_history += \
                             [self._p.get_personality_cmd(fred_next_cmd())]
                         self.replay_history([l_history[-1]])
-                    print "DONE"
 	# Gene - Am I using the next four lines correctly?
 	self.checkpoint.l_history = l_history
 	self.do_restart()
