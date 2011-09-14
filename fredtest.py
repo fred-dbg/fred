@@ -20,11 +20,11 @@
 # You should have received a copy of the GNU General Public License           #
 # along with FReD.  If not, see <http://www.gnu.org/licenses/>.               #
 ###############################################################################
+
 """
 This file should be executable from the command line to run several
 integration and unit tests on FReD.
 """
-
 from optparse import OptionParser
 from random import randint
 import os
@@ -46,6 +46,20 @@ g_debugger = None
 gs_dmtcp_port = ""
 gb_fred_debug = False
 gd_tests = {}
+
+"""
+This file should be executable from the command line to run several
+integration and unit tests on FReD.
+
+To add a new test:
+
+1) Define the test function. Follow the other functions
+   (e.g. gdb_reverse_next()) as a template.
+2) Add the new test function to the gd_tests dictionary in the
+   initialize_tests() function.
+3) Add call to test under run_integration_tests().
+"""
+
 
 def start_session(l_cmd):
     """Start the given command line as a fred session."""
@@ -120,11 +134,28 @@ def gdb_reverse_watch(n_count=1):
         else:
             print GS_FAILED_STRING
         end_session()
+
+def gdb_reverse_next(n_count=1):
+    """Run a reverse-next test on pthread-test."""
+    global GS_TEST_PROGRAMS_DIRECTORY
+    l_cmd = ["gdb", GS_TEST_PROGRAMS_DIRECTORY + "/pthread-test"]
+    for i in range(0, n_count):
+        print_test_name("gdb reverse next %d" % i)
+        start_session(l_cmd)
+        execute_commands(["b main", "r", "fred-ckpt", "b 85",
+                          "c", "fred-reverse-next"])
+        current_backtrace_frame = g_debugger.current_position()
+        if current_backtrace_frame.line() == 84:
+            print GS_PASSED_STRING
+        else:
+            print GS_FAILED_STRING
+        end_session()
         
 def run_integration_tests():
     """Run all available integration tests."""
     gdb_record_replay()
     gdb_reverse_watch()
+    gdb_reverse_next()
     
 def run_unit_tests():
     """Run all available unit tests."""
@@ -195,7 +226,8 @@ def initialize_tests():
     global gd_tests
     # When you add a new test, update this map from test name -> test fnc.
     gd_tests = { "gdb-record-replay" : gdb_record_replay,
-                 "gdb-reverse-watch" : gdb_reverse_watch }
+                 "gdb-reverse-watch" : gdb_reverse_watch,
+                 "gdb-reverse-next"  : gdb_reverse_next }
 
 def main():
     """Program execution starts here."""

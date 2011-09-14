@@ -111,6 +111,10 @@ class Debugger():
     def _print(self, expr):
         """Perform 'print expr' command. Returns output."""
         return self._p.do_print(expr)
+
+    def current_position(self):
+        """Return a BacktraceFrame representing current debugger position."""
+        return self._p.current_position()
     
     def at_breakpoint(self):
         """Return True if debugger is currently on a breakpoint."""
@@ -1325,6 +1329,26 @@ class BacktraceFrame():
     def __repr__(self):
         return "frame: " + str((self.n_frame_num, self.s_addr, self.s_function,
                                 self.s_args, self.s_file, self.n_line))
+
+    def addr(self):
+        """Return frame address."""
+        return self.s_line
+
+    def function(self):
+        """Return function name."""
+        return self.s_function
+
+    def args(self):
+        """Return function arguments."""
+        return self.s_args
+
+    def file(self):
+        """Return file name."""
+        return self.s_file
+
+    def line(self):
+        """Return line number."""
+        return self.n_line
 
     def copy(self):
         """Return deep copy of this instance."""
