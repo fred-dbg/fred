@@ -26,6 +26,7 @@ integration and unit tests on FReD.
 """
 
 from optparse import OptionParser
+from random import randint
 import os
 import sys
 
@@ -156,9 +157,9 @@ def parse_fredtest_args():
     parser = OptionParser()
     parser.disable_interspersed_args()
     # Note that '-h' and '--help' are supported automatically.
-    default_port = os.getenv("DMTCP_PORT") or 7779
-    parser.add_option("-p", "--port", dest="dmtcp_port", default=default_port,
-                      help="Use PORT for DMTCP port number. (default %default)",
+    parser.add_option("-p", "--port", dest="dmtcp_port",
+                      help="Use PORT for DMTCP port number. If unspecified, "
+                      "starts a background coordinator on a random port.",
                       metavar="PORT")
     parser.add_option("--enable-debug", dest="debug", default=False,
                       action="store_true",
@@ -172,7 +173,13 @@ def parse_fredtest_args():
     if options.list_tests:
         list_tests()
         sys.exit(1)
-    gs_dmtcp_port = str(options.dmtcp_port)
+    if options.dmtcp_port == None:
+        n_new_port = randint(2000,10000)
+        gs_dmtcp_port = str(n_new_port)
+        status = fred.dmtcpmanager.start_coordinator(n_new_port)
+        fred.fredutil.fred_assert(status)
+    else:
+        gs_dmtcp_port = str(options.dmtcp_port)
     gb_fred_debug = options.debug
     return options.test_list.split(",") if options.test_list != None else None
 

@@ -77,6 +77,16 @@ def verify_critical_files_present():
                             "containing fredhijack.so."%
                             fred.dmtcpmanager.GS_FREDHIJACK_PATH)
 
+def start_coordinator(n_port):
+    """Start a coordinator on given port. Return False on error."""
+    status = execute_shell_command_and_wait(["dmtcp_coordinator",
+                                             "--background",
+                                             "-p", str(n_port)])
+    return status == 0
+    
+def kill_coordinator(n_port):
+    """Kills the coordinator on given port."""
+    execute_shell_command_and_wait(["dmtcp_command", "-p", str(n_port), "q"])
 
 def get_num_peers():
     """Return NUM_PEERS from 'dmtcp_command s' as an integer."""
