@@ -86,7 +86,8 @@ def start_coordinator(n_port):
     
 def kill_coordinator(n_port):
     """Kills the coordinator on given port."""
-    execute_shell_command_and_wait(["dmtcp_command", "-p", str(n_port), "q"])
+    execute_shell_command_and_wait(["dmtcp_command",
+                                    "--quiet", "-p", str(n_port), "q"])
 
 def get_num_peers():
     """Return NUM_PEERS from 'dmtcp_command s' as an integer."""

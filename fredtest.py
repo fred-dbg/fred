@@ -46,6 +46,7 @@ g_debugger = None
 gs_dmtcp_port = ""
 gb_fred_debug = False
 gd_tests = {}
+gn_coordinator_port = -1
 
 """
 This file should be executable from the command line to run several
@@ -184,7 +185,7 @@ def run_tests(ls_test_list):
 def parse_fredtest_args():
     """Parse command line args, and return list of tests to run.
     Then set up fredapp module accordingly."""
-    global gs_dmtcp_port, gb_fred_debug
+    global gs_dmtcp_port, gb_fred_debug, gn_coordinator_port
     parser = OptionParser()
     parser.disable_interspersed_args()
     # Note that '-h' and '--help' are supported automatically.
@@ -209,6 +210,7 @@ def parse_fredtest_args():
         gs_dmtcp_port = str(n_new_port)
         status = fred.dmtcpmanager.start_coordinator(n_new_port)
         fred.fredutil.fred_assert(status)
+        gn_coordinator_port = n_new_port
     else:
         gs_dmtcp_port = str(options.dmtcp_port)
     gb_fred_debug = options.debug
@@ -231,6 +233,7 @@ def initialize_tests():
 
 def main():
     """Program execution starts here."""
+    global gn_coordinator_port
     # Don't do anything if we can't find DMTCP.
     fred.dmtcpmanager.verify_critical_files_present()
     
@@ -238,6 +241,9 @@ def main():
 
     ls_test_list = parse_fredtest_args()
     run_tests(ls_test_list)
+
+    if gn_coordinator_port != -1:
+        fred.dmtcpmanager.kill_coordinator(gn_coordinator_port)
 
 if __name__ == "__main__":
     main()
