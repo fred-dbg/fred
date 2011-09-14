@@ -117,6 +117,22 @@ def gdb_record_replay(n_count=1):
             print GS_FAILED_STRING
         end_session()
 
+def gdb_record_replay_pthread_cond(n_count=1):
+    """Run a test on deterministic record/replay on pthread-cond-var example."""
+    global GS_TEST_PROGRAMS_DIRECTORY
+    l_cmd = ["gdb", GS_TEST_PROGRAMS_DIRECTORY + "/pthread-cond-var"]
+    for i in range(0, n_count):
+        print_test_name("gdb record/replay pthread_cond %d" % i)
+        start_session(l_cmd)
+        execute_commands(["b main", "b print_solution", "r", "fred-ckpt", "c"])
+        store_variable("solution")
+        execute_commands(["fred-restart", "c"])
+        if check_stored_variable("solution"):
+            print GS_PASSED_STRING
+        else:
+            print GS_FAILED_STRING
+        end_session()
+
 def gdb_syscall_tester(n_count=1):
     """Run a test on deterministic record/replay on syscall-tester example."""
     global GS_TEST_PROGRAMS_DIRECTORY
@@ -171,6 +187,10 @@ def gdb_reverse_next(n_count=1):
 def run_integration_tests():
     """Run all available integration tests."""
     gdb_record_replay()
+    # This test is disabled from running automatically until the libc
+    # low level lock bug is fixed (pthread_cond_broadcast symbol
+    # resolution). You can still run the test manually.
+    #gdb_record_replay_pthread_cond()
     gdb_syscall_tester()
     gdb_reverse_watch()
     gdb_reverse_next()
@@ -245,6 +265,8 @@ def initialize_tests():
     global gd_tests
     # When you add a new test, update this map from test name -> test fnc.
     gd_tests = { "gdb-record-replay" : gdb_record_replay,
+                 "gdb-record-replay-pthread-cond" : 
+                 gdb_record_replay_pthread_cond,
                  "gdb-syscall-tester" : gdb_syscall_tester,
                  "gdb-reverse-watch" : gdb_reverse_watch,
                  "gdb-reverse-next"  : gdb_reverse_next }

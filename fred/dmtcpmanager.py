@@ -72,10 +72,10 @@ def verify_critical_files_present():
         fredutil.fred_fatal("No DMTCP binaries available in your PATH.\n")
     if not is_fredhijack_found():
         fredutil.fred_fatal("No fredhijack.so library found in %s.\n"
-                            "Please edit fredtest.py and change "
+                            "Please edit dmtcpmanager.py and change "
                             "GS_FREDHIJACK_PATH to point to the directory "
                             "containing fredhijack.so."%
-                            fred.dmtcpmanager.GS_FREDHIJACK_PATH)
+                            GS_FREDHIJACK_PATH)
 
 def start_coordinator(n_port):
     """Start a coordinator on given port. Return False on error."""
