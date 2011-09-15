@@ -208,7 +208,7 @@ static int internal_pthread_mutex_unlock(pthread_mutex_t *mutex)
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_START(pthread_mutex_unlock);
     if (retval == 0) {
-      *mutex = GET_FIELD(currentLogEntry, pthread_mutex_lock, mutex);
+      *mutex = GET_FIELD(currentLogEntry, pthread_mutex_unlock, mutex);
     }
     WRAPPER_REPLAY_END(pthread_mutex_unlock);
   } else if (SYNC_IS_RECORD) {
