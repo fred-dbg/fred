@@ -751,6 +751,27 @@ extern "C" FILE *freopen(const char* path, const char* mode, FILE *stream)
   return retval;
 }
 
+extern "C" FILE *tmpfile()
+{
+  WRAPPER_HEADER_NO_ARGS(FILE *, tmpfile, _real_tmpfile);
+  if (SYNC_IS_REPLAY) {
+    WRAPPER_REPLAY_START_TYPED(FILE*, tmpfile);
+    if (retval != NULL) {
+      *retval = GET_FIELD(my_entry, tmpfile, tmpfile_retval);
+    }
+    WRAPPER_REPLAY_END(tmpfile);
+  } else if (SYNC_IS_RECORD) {
+    isOptionalEvent = true;
+    retval = _real_tmpfile();
+    isOptionalEvent = false;
+    if (retval != NULL) {
+      SET_FIELD2(my_entry, tmpfile, tmpfile_retval, *retval);
+    }
+    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+  }
+  return retval;
+}
+
 extern "C" int chmod(const char *path, mode_t mode)
 {
   BASIC_SYNC_WRAPPER(int, chmod, _real_chmod, path, mode);

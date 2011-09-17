@@ -234,6 +234,7 @@ LIB_PRIVATE extern __thread int thread_performing_dlopen_dlsym;
   MACRO(rand)                                 \
   MACRO(srand)                                \
   MACRO(time)                                 \
+  MACRO(tmpfile)                              \
   MACRO(truncate)                             \
   MACRO(getsockname)                          \
   MACRO(getpeername)                          \
@@ -561,6 +562,7 @@ LIB_PRIVATE extern __thread int thread_performing_dlopen_dlsym;
   int _real_rand(void);
   void _real_srand(unsigned int seed);
   time_t _real_time(time_t *tloc);
+  FILE * _real_tmpfile(void);
   int _real_truncate(const char *path, off_t length);
   ssize_t _real_pread(int fd, void *buf, size_t count, off_t offset);
   ssize_t _real_pwrite(int fd, const void *buf, size_t count, off_t offset);

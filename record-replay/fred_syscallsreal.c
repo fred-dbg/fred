@@ -1074,6 +1074,11 @@ time_t _real_time(time_t *tloc) {
 }
 
 LIB_PRIVATE
+FILE * _real_tmpfile(void) {
+  REAL_FUNC_PASSTHROUGH_TYPED ( FILE *,tmpfile ) ( );
+}
+
+LIB_PRIVATE
 int _real_truncate(const char *path, off_t length) {
   REAL_FUNC_PASSTHROUGH_TYPED ( int,truncate ) ( path, length );
 }

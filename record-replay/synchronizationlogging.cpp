@@ -1426,6 +1426,13 @@ log_entry_t create_time_entry(clone_id_t clone_id, int event, time_t *tloc)
   return e;
 }
 
+log_entry_t create_tmpfile_entry(clone_id_t clone_id, int event)
+{
+  log_entry_t e = EMPTY_LOG_ENTRY;
+  setupCommonFields(&e, clone_id, event);
+  return e;
+}
+
 log_entry_t create_truncate_entry(clone_id_t clone_id, int event,
                                   const char *path, off_t length)
 {
@@ -1881,6 +1888,11 @@ TURN_CHECK_P(time_turn_check)
   return base_turn_check(e1, e2) &&
     GET_FIELD_PTR(e1, time, tloc) ==
       GET_FIELD_PTR(e2, time, tloc);
+}
+
+TURN_CHECK_P(tmpfile_turn_check)
+{
+  return base_turn_check(e1, e2);
 }
 
 TURN_CHECK_P(truncate_turn_check)
