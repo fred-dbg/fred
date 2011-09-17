@@ -71,10 +71,9 @@
 
 
 void print_log_entry_common(int idx, log_entry_t *entry) {
-  //char *event_type;
   std::string event_type;
   EVENT_TO_STRING(event_type, GET_COMMON_PTR(entry, event));
-  printf("%2d: clone_id=%lld, [%-20.20s]: ",
+  printf("%2d: clone_id=%ld, [%-20.20s]: ",
          idx, GET_COMMON_PTR(entry, clone_id), event_type.c_str());
 
   switch ((long) (unsigned long) GET_COMMON_PTR(entry, retval)) {
@@ -85,7 +84,7 @@ void print_log_entry_common(int idx, log_entry_t *entry) {
     default:
       printf("retval=%p, ", GET_COMMON_PTR(entry, retval)); break;
   }
-  printf("log_offset=%2lld, my_errno=%d, isOptional=%d",
+  printf("log_offset=%2ld, my_errno=%d, isOptional=%d",
          GET_COMMON_PTR(entry, log_offset), GET_COMMON_PTR(entry, my_errno),
          GET_COMMON_PTR(entry, isOptional));
 }
@@ -165,14 +164,14 @@ void print_log_entry_close(int idx, log_entry_t *entry) {
 
 void print_log_entry_chmod(int idx, log_entry_t *entry) {
   print_log_entry_common(idx, entry);
-  printf(", path=%p, mode=%Zu\n",
+  printf(", path=%p, mode=%u\n",
          GET_FIELD_PTR(entry, chmod, path),
          GET_FIELD_PTR(entry, chmod, mode));
 }
 
 void print_log_entry_chown(int idx, log_entry_t *entry) {
   print_log_entry_common(idx, entry);
-  printf(", path=%p, owner=%Zu, group=%Zu\n",
+  printf(", path=%p, owner=%u, group=%u\n",
          GET_FIELD_PTR(entry, chown, path),
          GET_FIELD_PTR(entry, chown, owner),
          GET_FIELD_PTR(entry, chown, group));

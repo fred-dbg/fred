@@ -48,17 +48,8 @@
 #undef WRAPPER_EXECUTION_DISABLE_CKPT
 #define WRAPPER_EXECUTION_ENABLE_CKPT dmtcp_module_enable_ckpt
 #define WRAPPER_EXECUTION_DISABLE_CKPT dmtcp_module_disable_ckpt
-// 'long int' IS 32 bits ON 32-bit ARCH AND 64 bits ON A 64-bit ARCH.
-// 'sizeof(long long int)==sizeof(long int)' on 64-bit arch.
-// SHOULDN'T WE JUST MAKE THESE TYPES ALWAYS 'long int', AND
-//   SIMPLIFY PRINTING THEM IN printf (USING "%ld")?  - Gene
-#ifdef __x86_64__
 typedef long int clone_id_t;
 typedef unsigned long int log_off_t;
-#else
-typedef long long int clone_id_t;
-typedef unsigned long long int log_off_t;
-#endif
 
 namespace dmtcp { class SynchronizationLog; }
 
