@@ -76,7 +76,9 @@ int accept ( int sockfd, struct sockaddr *addr, socklen_t *addrlen )
     }
     WRAPPER_REPLAY_END(accept);
   } else if (SYNC_IS_RECORD) {
+    isOptionalEvent = true;
     retval = _real_accept(sockfd, addr, addrlen);
+    isOptionalEvent = false;
     if (retval != -1) {
       SET_FIELD2(my_entry, accept, ret_addr, *addr);
       SET_FIELD2(my_entry, accept, ret_addrlen, *addrlen);

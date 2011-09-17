@@ -267,13 +267,12 @@ static void my_free_hook (void *ptr, const void *caller)
       if (retval != savedRetval) {                                          \
         JTRACE ( #name " returned wrong address on replay" )                \
           ( retval ) ( GET_COMMON(currentLogEntry, retval) )                \
-          (unified_log.currentEntryIndex());                                \
+          (global_log.currentEntryIndex());                                 \
     while (1);                                                              \
       }                                                                     \
       _real_pthread_mutex_unlock(&allocation_lock);                         \
     } else if (SYNC_IS_RECORD) {                                            \
       _real_pthread_mutex_lock(&allocation_lock);                           \
-      size_t savedOffset = my_log->dataSize();				    \
       /* We write the *alloc entry before calling _real_XXX because         \
 	 they may be internally promoted to mmap by libc. This way,         \
 	 the malloc entry appears before the mmap entry in the log and      \
@@ -284,7 +283,7 @@ static void my_free_hook (void *ptr, const void *caller)
       SET_COMMON2(my_entry, retval, (void *)retval);			    \
       SET_COMMON2(my_entry, my_errno, errno);				    \
       /* Patch in the real return value. */				    \
-      my_log->replaceEntryAtOffset(my_entry, savedOffset);		    \
+      WRAPPER_LOG_UPDATE_ENTRY(my_entry);                                   \
       _real_pthread_mutex_unlock(&allocation_lock);                         \
     }                                                                       \
   } while(0)

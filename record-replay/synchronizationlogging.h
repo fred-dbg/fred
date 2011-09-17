@@ -53,11 +53,11 @@
 // SHOULDN'T WE JUST MAKE THESE TYPES ALWAYS 'long int', AND
 //   SIMPLIFY PRINTING THEM IN printf (USING "%ld")?  - Gene
 #ifdef __x86_64__
-typedef long long int clone_id_t;
-typedef unsigned long long int log_id_t;
-#else
 typedef long int clone_id_t;
-typedef unsigned long int log_id_t;
+typedef unsigned long int log_off_t;
+#else
+typedef long long int clone_id_t;
+typedef unsigned long long int log_off_t;
 #endif
 
 namespace dmtcp { class SynchronizationLog; }
@@ -66,7 +66,8 @@ static pthread_mutex_t read_data_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 #define LIB_PRIVATE __attribute__ ((visibility ("hidden")))
 
-#define MAX_LOG_LENGTH ((size_t)50 * 1024 * 1024)
+#define MAX_LOG_LENGTH ((size_t)250 * 1024 * 1024)
+#define INVALID_LOG_OFFSET (~0U)
 #define MAX_PATCH_LIST_LENGTH MAX_LOG_LENGTH
 #define READLINK_MAX_LENGTH 256
 #define WAKE_ALL_THREADS -1
@@ -229,11 +230,11 @@ static pthread_mutex_t read_data_mutex = PTHREAD_MUTEX_INITIALIZER;
     errno = saved_errno;                                            \
   } while (0)
 
-#define WRAPPER_LOG_SET_LOG_ID(my_entry)                            \
-  do {                                                              \
-    SET_COMMON2(my_entry, log_id, -1);                              \
-    prepareNextLogEntry(my_entry);                                  \
-  } while(0)
+//#define WRAPPER_LOG_SET_LOG_OFFSET(my_entry)                        \
+//  do {                                                              \
+//    SET_COMMON2(my_entry, log_offset, INVALID_LOG_OFFSET);          \
+//    prepareNextLogEntry(my_entry);                                  \
+//  } while(0)
 
 #define WRAPPER_LOG_WRITE_ENTRY_VOID(my_entry)                      \
   do {                                                              \
@@ -248,6 +249,8 @@ static pthread_mutex_t read_data_mutex = PTHREAD_MUTEX_INITIALIZER;
     SET_COMMON2(my_entry, retval, (void*)retval);                   \
     WRAPPER_LOG_WRITE_ENTRY_VOID(my_entry);                         \
   } while (0)
+
+#define WRAPPER_LOG_UPDATE_ENTRY WRAPPER_LOG_WRITE_ENTRY
 
 #define WRAPPER_LOG(real_func, ...)                                 \
   do {                                                              \
@@ -1578,7 +1581,7 @@ typedef struct {
   //event_code_t event;
   unsigned char event;
   unsigned char isOptional;
-  log_id_t log_id;
+  log_off_t log_offset;
   clone_id_t clone_id;
   int my_errno;
   void* retval;
@@ -1715,7 +1718,7 @@ typedef struct {
 #define log_event_common_size \
   (sizeof(GET_COMMON(currentLogEntry,event))      +                    \
    sizeof(GET_COMMON(currentLogEntry,isOptional)) +                    \
-   sizeof(GET_COMMON(currentLogEntry,log_id))     +                    \
+   sizeof(GET_COMMON(currentLogEntry,log_offset))     +                \
    sizeof(GET_COMMON(currentLogEntry,clone_id))   +                    \
    sizeof(GET_COMMON(currentLogEntry,my_errno))   +                    \
    sizeof(GET_COMMON(currentLogEntry,retval)))
@@ -1736,6 +1739,8 @@ typedef struct {
 #define GET_COMMON_PTR(entry, field) entry->header.field
 
 #define SET_COMMON_PTR(entry, field) GET_COMMON_PTR(entry, field) = field
+#define SET_COMMON_PTR2(entry, field, field2) \
+  GET_COMMON_PTR(entry, field) = field2
 
 #define SET_COMMON2(entry, field, field2) GET_COMMON(entry, field) = field2
 #define SET_COMMON(entry, field) SET_COMMON2(entry, field, field)
@@ -1801,17 +1806,9 @@ static const log_entry_t EMPTY_LOG_ENTRY = {{0, 0, 0, 0, 0, 0}};
 static const int         GLOBAL_CLONE_COUNTER_INIT = 1;
 static const int         RECORD_LOG_PATH_MAX = 256;
 
-LIB_PRIVATE extern char GLOBAL_LOG_LIST_PATH[RECORD_LOG_PATH_MAX];
-LIB_PRIVATE extern char RECORD_PATCHED_LOG_PATH[RECORD_LOG_PATH_MAX];
-LIB_PRIVATE extern int global_log_list_fd;
-LIB_PRIVATE extern pthread_mutex_t global_log_list_fd_mutex;
-
 /* Library private: */
 LIB_PRIVATE extern dmtcp::map<clone_id_t, pthread_t> *clone_id_to_tid_table;
 LIB_PRIVATE extern dmtcp::map<pthread_t, clone_id_t> *tid_to_clone_id_table;
-LIB_PRIVATE extern dmtcp::map<clone_id_t, dmtcp::SynchronizationLog*> *clone_id_to_log_table;
-LIB_PRIVATE extern dmtcp::map<clone_id_t, void *> clone_id_to_recorded_addr_table;
-LIB_PRIVATE extern void* unified_log_addr;
 LIB_PRIVATE extern dmtcp::map<pthread_t, pthread_join_retval_t> pthread_join_retvals;
 LIB_PRIVATE extern log_entry_t     currentLogEntry;
 LIB_PRIVATE extern char RECORD_LOG_PATH[RECORD_LOG_PATH_MAX];
@@ -1822,7 +1819,7 @@ LIB_PRIVATE extern int             sync_logging_branch;
 LIB_PRIVATE extern int             log_all_allocs;
 LIB_PRIVATE extern size_t          default_stack_size;
 
-LIB_PRIVATE extern dmtcp::SynchronizationLog unified_log;
+LIB_PRIVATE extern dmtcp::SynchronizationLog global_log;
 
 // TODO: rename this, since a log entry is not a char. maybe log_event_TYPE_SIZE?
 #define LOG_ENTRY_SIZE sizeof(char)
@@ -1837,7 +1834,6 @@ LIB_PRIVATE extern pthread_t       thread_to_reap;
 /* Thread locals: */
 LIB_PRIVATE extern __thread clone_id_t my_clone_id;
 LIB_PRIVATE extern __thread int in_mmap_wrapper;
-LIB_PRIVATE extern __thread dmtcp::SynchronizationLog *my_log;
 LIB_PRIVATE extern __thread unsigned char isOptionalEvent;
 
 /* Volatiles: */

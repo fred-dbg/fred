@@ -154,6 +154,8 @@ int _real_dlclose(void *handle){
 
 LIB_PRIVATE
 int _real_pthread_mutex_lock(pthread_mutex_t *mutex) {
+  int i = 0;
+  i++;
   REAL_FUNC_PASSTHROUGH_TYPED ( int,pthread_mutex_lock ) ( mutex );
 }
 

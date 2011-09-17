@@ -85,8 +85,8 @@ void print_log_entry_common(int idx, log_entry_t *entry) {
     default:
       printf("retval=%p, ", GET_COMMON_PTR(entry, retval)); break;
   }
-  printf("log_id=%2lld, my_errno=%d, isOptional=%d",
-         GET_COMMON_PTR(entry, log_id), GET_COMMON_PTR(entry, my_errno),
+  printf("log_offset=%2lld, my_errno=%d, isOptional=%d",
+         GET_COMMON_PTR(entry, log_offset), GET_COMMON_PTR(entry, my_errno),
          GET_COMMON_PTR(entry, isOptional));
 }
 
@@ -927,12 +927,12 @@ void rewriteLog(char *log_path)
 {
   dmtcp::SynchronizationLog log;
   /* Only need enough room for the metadata. */
-  log.initGlobalLog(log_path, LOG_OFFSET_FROM_START);
-  size_t logSize = log.dataSize();
+  log.initialize(log_path, LOG_OFFSET_FROM_START);
+  size_t logSize = log.getDataSize();
   log.destroy();
-  log.initGlobalLog(log_path, logSize + LOG_OFFSET_FROM_START + 1);
-  printf("Metadata: isUnified=%d, dataSize=%Zu, numEntries=%Zu\n",
-         log.isUnified(), log.dataSize(), log.numEntries());
+  log.initialize(log_path, logSize + LOG_OFFSET_FROM_START + 1);
+  printf("Metadata: dataSize=%Zu, numEntries=%Zu\n",
+         log.getDataSize(), log.numEntries());
   log_entry_t entry = EMPTY_LOG_ENTRY;
   for (size_t i = 0; i < log.numEntries(); i++) {
     if (log.getNextEntry(entry) == 0) {

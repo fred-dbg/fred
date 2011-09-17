@@ -56,14 +56,12 @@ static void recordReplayInit()
      counter. */
   JTRACE ( "resetting global clone counter." );
   global_clone_counter = GLOBAL_CLONE_COUNTER_INIT;
+  my_clone_id = global_clone_counter;
 
   clone_id_to_tid_table = new dmtcp::map<clone_id_t, pthread_t>;
   tid_to_clone_id_table = new dmtcp::map<pthread_t, clone_id_t>;
-  clone_id_to_log_table = new dmtcp::map<clone_id_t,
-                                         dmtcp::SynchronizationLog*>;
 
   clone_id_to_tid_table->clear();
-  clone_id_to_log_table->clear();
   tid_to_clone_id_table->clear();
 
   initialize_thread();
@@ -123,7 +121,6 @@ void fred_post_suspend ()
     }
     for (size_t i = 0; i < stale_clone_ids.size(); i++) {
       clone_id_to_tid_table->erase(stale_clone_ids[i]);
-      clone_id_to_log_table->erase(stale_clone_ids[i]);
     }
   }
 }
@@ -163,25 +160,16 @@ void fred_reset_on_fork()
 
 static void initialize_thread()
 {
-  pthread_t pthread_id = pthread_self();
-  pid_t clone_id = global_clone_counter++;
+  /* Assigning my_clone_id should be the very first thing.*/
+  my_clone_id = global_clone_counter++;
 
-  // XXX: Should make global_clone_counter atomic increment like log ids.
-  dmtcp::SynchronizationLog *log = new dmtcp::SynchronizationLog();
+  pid_t clone_id = my_clone_id;
+  pthread_t pthread_id = pthread_self();
 
   (*clone_id_to_tid_table)[clone_id] = pthread_id;
-  (*clone_id_to_log_table)[clone_id] = log;
   (*tid_to_clone_id_table)[pthread_id] = clone_id;
 
-  my_clone_id = clone_id;
-  my_log = log;
-
-  if (SYNC_IS_RECORD || SYNC_IS_REPLAY) {
-    log->initOnThreadCreation();
-  }
-
-  JTRACE("Thread Initialized") (my_clone_id) (my_log) (pthread_self());
-
+  JTRACE("Thread Initialized") (my_clone_id) (pthread_self());
 }
 
 /* This event happens as the *first* task in a new thread. Specifically, this

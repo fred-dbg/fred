@@ -145,7 +145,7 @@ static void setupThreadStack(pthread_attr_t *attr_out,
   void *s = mmap(NULL, mmap_size, PROT_READ | PROT_WRITE, mmap_flags, -1, 0);
   if (s == MAP_FAILED)  {
     JTRACE ( "Failed to map thread stack." ) ( mmap_size )
-      ( strerror(errno) ) (unified_log.currentEntryIndex());
+      ( strerror(errno) ) (global_log.currentEntryIndex());
     JASSERT ( false );
   }
   pthread_attr_setstack(attr_out, s, mmap_size);
@@ -212,12 +212,12 @@ static int internal_pthread_mutex_unlock(pthread_mutex_t *mutex)
     }
     WRAPPER_REPLAY_END(pthread_mutex_unlock);
   } else if (SYNC_IS_RECORD) {
-    WRAPPER_LOG_SET_LOG_ID(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(my_entry);
     retval = _real_pthread_mutex_unlock(mutex);
     if (retval == 0) {
       SET_FIELD2(my_entry, pthread_mutex_unlock, mutex, *mutex);
     }
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_UPDATE_ENTRY(my_entry);
   }
   return retval;
 }
@@ -334,8 +334,6 @@ static int internal_pthread_create(pthread_t *thread,
     pthread_attr_destroy(&the_attr);
 
   } else  if (SYNC_IS_RECORD) {
-    // Log annotation on the fly.
-    size_t savedOffset = my_log->dataSize();
     WRAPPER_LOG_WRITE_ENTRY(my_entry);
 
     ACQUIRE_THREAD_CREATE_DESTROY_LOCK();
@@ -359,7 +357,7 @@ static int internal_pthread_create(pthread_t *thread,
     SET_FIELD(my_entry, pthread_create, stack_addr);
     SET_FIELD(my_entry, pthread_create, stack_size);
     // Log annotation on the fly.
-    my_log->replaceEntryAtOffset(my_entry, savedOffset);
+    WRAPPER_LOG_UPDATE_ENTRY(my_entry);
   }
   return retval;
 }
@@ -485,12 +483,12 @@ extern "C" int pthread_rwlock_unlock(pthread_rwlock_t *rwlock)
     }
     WRAPPER_REPLAY_END(pthread_rwlock_unlock);
   } else if (SYNC_IS_RECORD) {
-    WRAPPER_LOG_SET_LOG_ID(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(my_entry);
     retval = _real_pthread_rwlock_unlock(rwlock);
     if (retval == 0) {
       SET_FIELD2(my_entry, pthread_rwlock_unlock, rwlock, *rwlock);
     }
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_UPDATE_ENTRY(my_entry);
   }
   return retval;
 }
@@ -559,14 +557,9 @@ static void reapThread()
   join_retval.value_ptr = value_ptr;
   pthread_join_retvals[thread_to_reap] = join_retval;
   teardownThreadStack(stack_addr, stack_size);
-  {
-    clone_id_t clone_id = (*tid_to_clone_id_table)[thread_to_reap];
-    dmtcp::SynchronizationLog *log = (*clone_id_to_log_table)[clone_id];
-    JASSERT(log != NULL);
-    log->destroy();
-    clone_id_to_log_table->erase(clone_id);
-    tid_to_clone_id_table->erase(thread_to_reap);
-  }
+  
+  tid_to_clone_id_table->erase(thread_to_reap);
+
   //mtcpFuncPtrs.process_pthread_join ( thread_to_reap );
   RELEASE_THREAD_CREATE_DESTROY_LOCK(); // End of thread destruction.
 }
@@ -679,9 +672,9 @@ static void *signal_thread(void *arg)
     // Lock this so it doesn't change from underneath:
     _real_pthread_mutex_lock(&log_index_mutex);
     if (__builtin_expect(GET_COMMON(currentLogEntry,event) == signal_handler_event, 0)) {
-      if (signal_sent_on != unified_log.currentEntryIndex()) {
+      if (signal_sent_on != global_log.currentEntryIndex()) {
         // Only send one signal per sig_handler entry.
-        signal_sent_on = unified_log.currentEntryIndex();
+        signal_sent_on = global_log.currentEntryIndex();
         _real_pthread_kill((*clone_id_to_tid_table)[GET_COMMON(currentLogEntry,clone_id)],
             GET_FIELD(currentLogEntry, signal_handler, sig));
       }

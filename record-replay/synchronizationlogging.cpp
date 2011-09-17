@@ -45,15 +45,9 @@
 /* Library private: */
 LIB_PRIVATE dmtcp::map<clone_id_t, pthread_t> *clone_id_to_tid_table = NULL;
 LIB_PRIVATE dmtcp::map<pthread_t, clone_id_t> *tid_to_clone_id_table = NULL;
-LIB_PRIVATE dmtcp::map<clone_id_t, dmtcp::SynchronizationLog*>
-  *clone_id_to_log_table = NULL;
-LIB_PRIVATE dmtcp::map<clone_id_t, void *> clone_id_to_recorded_addr_table;
-LIB_PRIVATE void* unified_log_addr = NULL;
 LIB_PRIVATE dmtcp::map<pthread_t, pthread_join_retval_t> pthread_join_retvals;
 LIB_PRIVATE log_entry_t     currentLogEntry = EMPTY_LOG_ENTRY;
-LIB_PRIVATE char GLOBAL_LOG_LIST_PATH[RECORD_LOG_PATH_MAX];
 LIB_PRIVATE char RECORD_LOG_PATH[RECORD_LOG_PATH_MAX];
-LIB_PRIVATE char RECORD_PATCHED_LOG_PATH[RECORD_LOG_PATH_MAX];
 LIB_PRIVATE char RECORD_READ_DATA_LOG_PATH[RECORD_LOG_PATH_MAX];
 LIB_PRIVATE int             read_data_fd = -1;
 LIB_PRIVATE int             sync_logging_branch = 0;
@@ -70,12 +64,11 @@ LIB_PRIVATE pthread_mutex_t thread_transition_mutex = PTHREAD_MUTEX_INITIALIZER;
 LIB_PRIVATE pthread_t       thread_to_reap;
 
 
-LIB_PRIVATE dmtcp::SynchronizationLog unified_log;
+LIB_PRIVATE dmtcp::SynchronizationLog global_log;
 
 /* Thread locals: */
 LIB_PRIVATE __thread clone_id_t my_clone_id = -1;
 LIB_PRIVATE __thread int in_mmap_wrapper = 0;
-LIB_PRIVATE __thread dmtcp::SynchronizationLog *my_log;
 LIB_PRIVATE __thread unsigned char isOptionalEvent = 0;
 
 
@@ -83,18 +76,12 @@ LIB_PRIVATE __thread unsigned char isOptionalEvent = 0;
 LIB_PRIVATE volatile clone_id_t global_clone_counter = 0;
 LIB_PRIVATE volatile off_t         read_log_pos = 0;
 
-LIB_PRIVATE int global_log_list_fd = -1;
-LIB_PRIVATE pthread_mutex_t global_log_list_fd_mutex = PTHREAD_MUTEX_INITIALIZER;
-
 static char *code_lower  = 0;
 static char *data_break  = 0;
 static char *stack_lower = 0;
 static char *stack_upper = 0;
 
 static pthread_mutex_t   atomic_set_mutex     = PTHREAD_MUTEX_INITIALIZER;
-
-/* File private volatiles: */
-static volatile log_id_t next_log_id = 0;
 
 static inline void memfence() {  asm volatile ("mfence" ::: "memory"); }
 
@@ -144,15 +131,15 @@ inline void set_sync_mode(int mode)
   sync_logging_branch = mode;
 }
 
-clone_id_t get_next_clone_id()
+static inline clone_id_t get_next_clone_id()
 {
   return __sync_fetch_and_add (&global_clone_counter, 1);
 }
 
-log_id_t get_next_log_id()
-{
-  return __sync_fetch_and_add (&next_log_id, 1);
-}
+//log_off_t get_next_log_offset(size_t delta)
+//{
+//  return __sync_fetch_and_add (global_log.dataSizeAddr(), delta);
+//}
 
 int shouldSynchronize(void *return_addr)
 {
@@ -170,37 +157,6 @@ int shouldSynchronize(void *return_addr)
   return 1;
 }
 
-void register_in_global_log_list(clone_id_t clone_id)
-{
-  _real_pthread_mutex_lock(&global_log_list_fd_mutex);
-  if (global_log_list_fd == -1) {
-    global_log_list_fd = _real_open(GLOBAL_LOG_LIST_PATH,
-                                    O_WRONLY | O_CREAT | O_APPEND,
-                                    S_IRUSR | S_IWUSR);
-    JASSERT(global_log_list_fd != -1) (JASSERT_ERRNO);
-  }
-
-  dmtcp::Util::writeAll(global_log_list_fd, &clone_id, sizeof(clone_id));
-  _real_close(global_log_list_fd);
-  global_log_list_fd = -1;
-  _real_pthread_mutex_unlock(&global_log_list_fd_mutex);
-}
-
-dmtcp::vector<clone_id_t> get_log_list()
-{
-  dmtcp::vector<clone_id_t> clone_ids;
-  int fd = _real_open(GLOBAL_LOG_LIST_PATH, O_RDONLY, 0);
-  if (fd < 0) {
-    return clone_ids;
-  }
-  clone_id_t id;
-  while (dmtcp::Util::readAll(fd, &id, sizeof(id)) != 0) {
-    clone_ids.push_back(id);
-  }
-  _real_close(fd);
-  JTRACE("Total number of log files") (clone_ids.size());
-  return clone_ids;
-}
 
 /* Initializes log pathnames. One log per process. */
 void initializeLogNames()
@@ -209,28 +165,16 @@ void initializeLogNames()
   dmtcp::string tmpdir = dmtcp_get_tmpdir();
   snprintf(RECORD_LOG_PATH, RECORD_LOG_PATH_MAX,
       "%s/synchronization-log-%d", tmpdir.c_str(), pid);
-  snprintf(RECORD_PATCHED_LOG_PATH, RECORD_LOG_PATH_MAX,
-      "%s/synchronization-log-%d-patched", tmpdir.c_str(), pid);
   snprintf(RECORD_READ_DATA_LOG_PATH, RECORD_LOG_PATH_MAX,
       "%s/synchronization-read-log-%d", tmpdir.c_str(), pid);
-  snprintf(GLOBAL_LOG_LIST_PATH, RECORD_LOG_PATH_MAX,
-      "%s/synchronization-global_log_list-%d", tmpdir.c_str(), pid);
 }
 
 /* Truncate all logs to their current positions. */
 void truncate_all_logs()
 {
   JASSERT ( SYNC_IS_REPLAY );
-  dmtcp::map<clone_id_t, dmtcp::SynchronizationLog *>::iterator it;
-  for (it = clone_id_to_log_table->begin();
-       it != clone_id_to_log_table->end();
-       it++) {
-    if (it->second->isMappedIn()) {
-      it->second->truncate();
-    }
-  }
-  if (unified_log.isMappedIn()) {
-    unified_log.truncate();
+  if (global_log.isMappedIn()) {
+    global_log.truncate();
   }
 }
 
@@ -238,52 +182,18 @@ void truncate_all_logs()
    unmapped. */
 bool close_all_logs()
 {
-  bool result = false;
-  dmtcp::map<clone_id_t, pthread_t>::iterator it;
-  for (it = clone_id_to_tid_table->begin();
-       it != clone_id_to_tid_table->end();
-       it++) {
-    if ((*clone_id_to_log_table)[it->first]->isMappedIn()) {
-      (*clone_id_to_log_table)[it->first]->destroy();
-      result = true;
-    }
+  if (global_log.isMappedIn()) {
+    global_log.destroy();
+    return true;
   }
-  if (unified_log.isMappedIn()) {
-    unified_log.destroy();
-    result = true;
-  }
-  return result;
+  return false;
 }
 
 void initLogsForRecordReplay()
 {
-  // Initialize mmap()'d logs for the current threads.
-  unified_log.initGlobalLog(RECORD_LOG_PATH, 10 * MAX_LOG_LENGTH);
-  dmtcp::vector<clone_id_t> clone_ids = get_log_list();
-  dmtcp::map<clone_id_t, pthread_t>::iterator it;
-  size_t s = clone_id_to_tid_table->size();
-  for (it = clone_id_to_tid_table->begin(); it != clone_id_to_tid_table->end(); it++) {
-    dmtcp::SynchronizationLog *log = (*clone_id_to_log_table)[it->first];
-    // Only append to global log if it doesn't already exist:
-    log->initForCloneId(it->first, it->first > clone_ids.size());
-    sleep(s);
-  }
-
+  global_log.initialize(RECORD_LOG_PATH, MAX_LOG_LENGTH);
   if (SYNC_IS_REPLAY) {
-    if (!unified_log.isUnified()) {
-      JTRACE ( "Merging/Unifying Logs." );
-      //SYNC_TIMER_START(merge_logs);
-      unified_log.mergeLogs(clone_ids);
-      //SYNC_TIMER_STOP(merge_logs);
-    }
     getNextLogEntry();
-  }
-  // Move to end of each log we have so we don't overwrite old entries.
-  dmtcp::map<clone_id_t, dmtcp::SynchronizationLog*>::iterator it2;
-  for (it2 = clone_id_to_log_table->begin();
-       it2 != clone_id_to_log_table->end();
-       it2++) {
-    it2->second->moveMarkersToEnd();
   }
 }
 
@@ -463,37 +373,42 @@ void copyFdSet(fd_set *src, fd_set *dest)
   }
 }
 
-void prepareNextLogEntry(log_entry_t& e)
-{
-  if (SYNC_IS_REPLAY) {
-    JASSERT (false).Text("Asked to log an event while in replay. "
-        "This is probably not intended.");
-  }
-  JASSERT(GET_COMMON(e, log_id) == (log_id_t)-1) (GET_COMMON(e, log_id));
-  log_id_t log_id = get_next_log_id();
-  SET_COMMON2(e, log_id, log_id);
-}
+//void prepareNextLogEntry(log_entry_t& e)
+//{
+//  if (SYNC_IS_REPLAY) {
+//    JASSERT (false).Text("Asked to log an event while in replay. "
+//        "This is probably not intended.");
+//  }
+//  JASSERT(GET_COMMON(e, log_offset) == INVALID_LOG_OFFSET)
+//    (GET_COMMON(e, log_offset));
+//  int eventSize = -1;
+//  GET_EVENT_SIZE(GET_COMMON(e, event), eventSize);
+//  JASSERT( eventSize > 0 );
+//  eventSize += log_event_common_size;
+//  log_off_t offset = get_next_log_offset(eventSize);
+//  SET_COMMON2(e, log_offset, offset);
+//}
 
 void addNextLogEntry(log_entry_t& e)
 {
-  if (GET_COMMON(e, log_id) == 0) {
-    log_id_t log_id = get_next_log_id();
-    SET_COMMON2(e, log_id, log_id);
+  if (GET_COMMON(e, log_offset) == INVALID_LOG_OFFSET) {
+    global_log.appendEntry(e);
+  } else {
+    global_log.updateEntry(e);
+    // Offset already supplied (by prepareNextLogEntry).
+    // global_log.writeEntryAtOffset(e, GET_COMMON(e, log_offset));
   }
-  my_log->appendEntry(e);
 }
 
 void getNextLogEntry()
 {
   // If log is empty, don't do anything
-  if (unified_log.numEntries() == 0) {
+  if (global_log.numEntries() == 0) {
     return;
   }
   _real_pthread_mutex_lock(&log_index_mutex);
-  if (unified_log.getNextEntry(currentLogEntry) == 0) {
+  if (global_log.getNextEntry(currentLogEntry) == 0) {
     JTRACE ( "Switching back to record." );
-    next_log_id = unified_log.numEntries();
-    unified_log.setUnified(false);
     set_sync_mode(SYNC_RECORD);
   }
   _real_pthread_mutex_unlock(&log_index_mutex);
@@ -541,7 +456,7 @@ static void setupCommonFields(log_entry_t *e, clone_id_t clone_id, int event)
   SET_COMMON_PTR(e, event);
   // Zero out all other fields:
   // FIXME: Shouldn't we replace the memset with a simpler SET_COMMON_PTR()?
-  memset(&(GET_COMMON_PTR(e, log_id)), 0, sizeof(GET_COMMON_PTR(e, log_id)));
+  SET_COMMON_PTR2(e, log_offset, INVALID_LOG_OFFSET);
   memset(&(GET_COMMON_PTR(e, my_errno)), 0, sizeof(GET_COMMON_PTR(e, my_errno)));
   memset(&(GET_COMMON_PTR(e, retval)), 0, sizeof(GET_COMMON_PTR(e, retval)));
 }

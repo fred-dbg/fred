@@ -31,10 +31,6 @@
 
 #define DMTCP_PAGE_SIZE sysconf(_SC_PAGESIZE)
 
-#define LOG_IS_UNIFIED_VALUE 1
-#define LOG_IS_UNIFIED_TYPE char
-#define LOG_IS_UNIFIED_SIZE sizeof(LOG_IS_UNIFIED_TYPE)
-
 /* This offset is how far from the beginning of the mmapped region the actual
    log starts. I.e. the LogMetadata struct lives within the first
    LOG_OFFSET_FROM_START bytes of the log. Making this a full page so that
@@ -47,7 +43,6 @@
 namespace dmtcp
 {
   typedef struct LogMetadata {
-    bool   isUnified;
     size_t size;
     size_t dataSize;
     size_t numEntries;
@@ -73,54 +68,49 @@ namespace dmtcp
         , _size (NULL)
         , _dataSize (NULL)
         , _numEntries (NULL)
-        , _isUnified (NULL)
       {}
 
       ~SynchronizationLog() {}
 
-      void initGlobalLog(const char* path, size_t size = MAX_LOG_LENGTH);
-      void initOnThreadCreation(size_t size = MAX_LOG_LENGTH);
-      void initForCloneId(clone_id_t clone_id, bool register_globally);
+      void initialize(const char* path, size_t size = MAX_LOG_LENGTH);
 
     private:
-      void init2(clone_id_t clone_id, size_t size, bool mapWithNoReserveFlag);
-      void init3(clone_id_t clone_id, const char *path, size_t size, bool mapWithNoReserveFlag);
-
       void init_common(size_t size);
 
     public:
       void   destroy();
       void   unmap();
-      void   map_in(clone_id_t clone_id, const char *path, size_t size,
+      void   map_in(const char *path, size_t size,
 		    bool mapWithNoReserveFlag);
       void   map_in();
       void   truncate();
       size_t currentIndex() { return _index; }
       size_t currentEntryIndex() { return _entryIndex; }
       bool   empty() { return numEntries() == 0; }
-      size_t dataSize() { return _dataSize == NULL ? 0 : *_dataSize; }
+      size_t getDataSize();
+      void   setDataSize(log_off_t newVal);
       size_t numEntries() { return _numEntries == NULL ? 0 : *_numEntries; }
-      bool   isUnified() { return _isUnified == NULL ? false : *_isUnified; }
       void * getRecordedStartAddr() { return _recordedStartAddr == NULL ? NULL : *_recordedStartAddr; }
-      void   setUnified(bool b) { *_isUnified = b; }
       bool   isMappedIn() { return _startAddr != NULL; }
       string getPath() { return _path; }
       void   mergeLogs(dmtcp::vector<clone_id_t> clone_ids);
 
       int    getNextEntry(log_entry_t& entry);
-      int    appendEntry(const log_entry_t& entry);
-      void   replaceEntryAtOffset(const log_entry_t& entry, size_t index);
+      void   appendEntry(log_entry_t& entry);
+      void   updateEntry(const log_entry_t& entry);
       void   moveMarkersToEnd();
 
     private:
       void   resetIndex() { _index = 0; _entryIndex = 0; }
       void   resetMarkers()
-        { resetIndex(); *_dataSize = 0; *_numEntries = 0; *_isUnified = false; }
+        { resetIndex(); *_dataSize = 0; *_numEntries = 0; }
 
+      int    writeEntryAtOffset(const log_entry_t& entry, size_t index);
       void   writeEntryHeaderAtOffset(const log_entry_t& entry, size_t index);
       size_t getEntryHeaderAtOffset(log_entry_t& entry, size_t index);
-      int    writeEntryAtOffset(const log_entry_t& entry, size_t index);
       int    getEntryAtOffset(log_entry_t& entry, size_t index);
+
+      inline log_off_t atomicIncrementOffset(log_off_t delta);
 
     private:
       string  _path;
@@ -130,10 +120,9 @@ namespace dmtcp
       size_t  _index;
       size_t  _entryIndex;
       size_t *_size;
-      size_t _savedSize; // Only used between checkpoints
-      size_t *_dataSize;
-      size_t *_numEntries;
-      bool   *_isUnified;
+      size_t _savedSize;   // Only used between checkpoints
+      size_t *_dataSize;   // Must be modified atomically.
+      size_t *_numEntries; // Must be modified atomically.
       void ** _recordedStartAddr;
   };
 
