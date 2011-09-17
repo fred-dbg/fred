@@ -314,6 +314,9 @@ static pthread_mutex_t read_data_mutex = PTHREAD_MUTEX_INITIALIZER;
     MACRO(fdopen, __VA_ARGS__);                                                \
     MACRO(fdopendir, __VA_ARGS__);                                             \
     MACRO(fgets, __VA_ARGS__);                                                 \
+    MACRO(ferror, __VA_ARGS__);                                                \
+    MACRO(feof, __VA_ARGS__);                                                  \
+    MACRO(fileno, __VA_ARGS__);                                                \
     MACRO(fflush, __VA_ARGS__);                                                \
     MACRO(fopen, __VA_ARGS__);                                                 \
     MACRO(fopen64, __VA_ARGS__);                                               \
@@ -434,6 +437,9 @@ typedef enum {
   fdopen_event,
   fdopendir_event,
   fgets_event,
+  ferror_event,
+  feof_event,
+  fileno_event,
   fflush_event,
   fopen_event,
   fopen64_event,
@@ -924,6 +930,27 @@ typedef struct {
 } log_event_fgets_t;
 
 static const int log_event_fgets_size = sizeof(log_event_fgets_t);
+
+typedef struct {
+  // For ferror():
+  FILE *stream;
+} log_event_ferror_t;
+
+static const int log_event_ferror_size = sizeof(log_event_ferror_t);
+
+typedef struct {
+  // For feof():
+  FILE *stream;
+} log_event_feof_t;
+
+static const int log_event_feof_size = sizeof(log_event_feof_t);
+
+typedef struct {
+  // For fileno():
+  FILE *stream;
+} log_event_fileno_t;
+
+static const int log_event_fileno_size = sizeof(log_event_fileno_t);
 
 typedef struct {
   // For fflush():
@@ -1620,6 +1647,9 @@ typedef struct {
     log_event_fdopen_t                           log_event_fdopen;
     log_event_fdopendir_t                        log_event_fdopendir;
     log_event_fgets_t                            log_event_fgets;
+    log_event_ferror_t                           log_event_ferror;
+    log_event_feof_t                             log_event_feof;
+    log_event_fileno_t                           log_event_fileno;
     log_event_fflush_t                           log_event_fflush;
     log_event_fopen_t                            log_event_fopen;
     log_event_fopen64_t                          log_event_fopen64;
@@ -1875,6 +1905,9 @@ CREATE_ENTRY_FUNC(fdatasync, int fd);
 CREATE_ENTRY_FUNC(fdopen, int fd, const char *mode);
 CREATE_ENTRY_FUNC(fdopendir, int fd);
 CREATE_ENTRY_FUNC(fgets, char *s, int size, FILE *stream);
+CREATE_ENTRY_FUNC(ferror, FILE *stream);
+CREATE_ENTRY_FUNC(feof, FILE *stream);
+CREATE_ENTRY_FUNC(fileno, FILE *stream);
 CREATE_ENTRY_FUNC(fflush, FILE *stream);
 CREATE_ENTRY_FUNC(fopen, const char *name, const char *mode);
 CREATE_ENTRY_FUNC(fopen64, const char *name, const char *mode);
@@ -2026,6 +2059,9 @@ LIB_PRIVATE TURN_CHECK_P(fdatasync_turn_check);
 LIB_PRIVATE TURN_CHECK_P(fdopen_turn_check);
 LIB_PRIVATE TURN_CHECK_P(fdopendir_turn_check);
 LIB_PRIVATE TURN_CHECK_P(fgets_turn_check);
+LIB_PRIVATE TURN_CHECK_P(ferror_turn_check);
+LIB_PRIVATE TURN_CHECK_P(feof_turn_check);
+LIB_PRIVATE TURN_CHECK_P(fileno_turn_check);
 LIB_PRIVATE TURN_CHECK_P(fflush_turn_check);
 LIB_PRIVATE TURN_CHECK_P(fopen_turn_check);
 LIB_PRIVATE TURN_CHECK_P(fopen64_turn_check);

@@ -845,6 +845,21 @@ char * _real_fgets(char *s, int size, FILE *stream) {
 }
 
 LIB_PRIVATE
+int _real_ferror(FILE *stream) {
+  REAL_FUNC_PASSTHROUGH_TYPED ( int, ferror ) ( stream );
+}
+
+LIB_PRIVATE
+int _real_feof(FILE *stream) {
+  REAL_FUNC_PASSTHROUGH_TYPED ( int, feof ) ( stream );
+}
+
+LIB_PRIVATE
+int _real_fileno(FILE *stream) {
+  REAL_FUNC_PASSTHROUGH_TYPED ( int, fileno ) ( stream );
+}
+
+LIB_PRIVATE
 int _real_fflush(FILE *stream) {
   REAL_FUNC_PASSTHROUGH_TYPED ( int, fflush ) ( stream );
 }

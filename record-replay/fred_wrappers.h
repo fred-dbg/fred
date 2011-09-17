@@ -249,6 +249,9 @@ LIB_PRIVATE extern __thread int thread_performing_dlopen_dlsym;
   MACRO(pwrite)                               \
   MACRO(fdopen)                               \
   MACRO(fgets)                                \
+  MACRO(ferror)                               \
+  MACRO(feof)                                 \
+  MACRO(fileno)                               \
   MACRO(fflush)                               \
   MACRO(putc)                                 \
   MACRO(fputc)                                \
@@ -512,6 +515,9 @@ LIB_PRIVATE extern __thread int thread_performing_dlopen_dlsym;
   int _real_mkstemp(char *temp);
   FILE * _real_fdopen(int fd, const char *mode);
   char * _real_fgets(char *s, int size, FILE *stream);
+  int _real_ferror(FILE *stream);
+  int _real_feof(FILE *stream);
+  int _real_fileno(FILE *stream);
   int _real_fflush(FILE *stream);
   ssize_t _real_getline(char **lineptr, size_t *n, FILE *stream);
   int _real_getc(FILE *stream);

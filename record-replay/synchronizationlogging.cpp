@@ -612,6 +612,30 @@ log_entry_t create_fgets_entry(clone_id_t clone_id, int event, char *s, int size
   return e;
 }
 
+log_entry_t create_ferror_entry(clone_id_t clone_id, int event, FILE *stream)
+{
+  log_entry_t e = EMPTY_LOG_ENTRY;
+  setupCommonFields(&e, clone_id, event);
+  SET_FIELD2(e, ferror, stream, stream);
+  return e;
+}
+
+log_entry_t create_feof_entry(clone_id_t clone_id, int event, FILE *stream)
+{
+  log_entry_t e = EMPTY_LOG_ENTRY;
+  setupCommonFields(&e, clone_id, event);
+  SET_FIELD2(e, feof, stream, stream);
+  return e;
+}
+
+log_entry_t create_fileno_entry(clone_id_t clone_id, int event, FILE *stream)
+{
+  log_entry_t e = EMPTY_LOG_ENTRY;
+  setupCommonFields(&e, clone_id, event);
+  SET_FIELD2(e, fileno, stream, stream);
+  return e;
+}
+
 log_entry_t create_fflush_entry(clone_id_t clone_id, int event, FILE *stream)
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
@@ -2039,6 +2063,27 @@ TURN_CHECK_P(fgets_turn_check)
       GET_FIELD_PTR(e2, fgets, size);
 }
 
+TURN_CHECK_P(ferror_turn_check)
+{
+  return base_turn_check(e1,e2) &&
+    GET_FIELD_PTR(e1, ferror, stream) ==
+      GET_FIELD_PTR(e2, ferror, stream);
+}
+
+TURN_CHECK_P(feof_turn_check)
+{
+  return base_turn_check(e1,e2) &&
+    GET_FIELD_PTR(e1, feof, stream) ==
+      GET_FIELD_PTR(e2, feof, stream);
+}
+
+TURN_CHECK_P(fileno_turn_check)
+{
+  return base_turn_check(e1,e2) &&
+    GET_FIELD_PTR(e1, fileno, stream) ==
+      GET_FIELD_PTR(e2, fileno, stream);
+}
+
 TURN_CHECK_P(fflush_turn_check)
 {
   return base_turn_check(e1,e2) &&
@@ -2651,6 +2696,9 @@ static inline bool is_optional_event_for(event_code_t event,
   case accept4_event:
   case accept_event:
   case fgets_event:
+  case ferror_event:
+  case feof_event:
+  case fileno_event:
   case fprintf_event:
   case fputc_event:
   case fputs_event:

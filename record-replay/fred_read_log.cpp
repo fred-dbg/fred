@@ -235,6 +235,24 @@ void print_log_entry_fgets(int idx, log_entry_t *entry) {
          GET_FIELD_PTR(entry, fgets, stream));
 }
 
+void print_log_entry_ferror(int idx, log_entry_t *entry) {
+  print_log_entry_common(idx, entry);
+  printf(", stream=%p\n",
+         GET_FIELD_PTR(entry, ferror, stream));
+}
+
+void print_log_entry_feof(int idx, log_entry_t *entry) {
+  print_log_entry_common(idx, entry);
+  printf(", stream=%p\n",
+         GET_FIELD_PTR(entry, feof, stream));
+}
+
+void print_log_entry_fileno(int idx, log_entry_t *entry) {
+  print_log_entry_common(idx, entry);
+  printf(", stream=%p\n",
+         GET_FIELD_PTR(entry, fileno, stream));
+}
+
 void print_log_entry_fopen(int idx, log_entry_t *entry) {
   print_log_entry_common(idx, entry);
   printf(", name=%p, mode=%p\n",

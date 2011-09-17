@@ -449,6 +449,21 @@ extern "C" char *fgets(char *s, int size, FILE *stream)
   return retval;
 }
 
+extern "C" int ferror(FILE *stream)
+{
+  BASIC_SYNC_WRAPPER(int, ferror, _real_ferror, stream);
+}
+
+extern "C" int feof(FILE *stream)
+{
+  BASIC_SYNC_WRAPPER(int, feof, _real_feof, stream);
+}
+
+extern "C" int fileno(FILE *stream)
+{
+  BASIC_SYNC_WRAPPER(int, fileno, _real_fileno, stream);
+}
+
 static int _fprintf(FILE *stream, const char *format, va_list arg)
 {
   return vfprintf(stream, format, arg);

@@ -11,3 +11,8 @@ clean:
 
 check: all fredtest.py
 	PYTHONPATH=$(PYTHONPATH) ./fredtest.py
+
+tidy:
+	rm -rf ckpt_*_files
+	rm -f ckpt_* dmtcp_restart_script* \
+	  dmtcp-shared-memory.* dmtcp-test-typescript.tmp core*
