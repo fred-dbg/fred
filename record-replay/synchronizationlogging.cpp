@@ -26,8 +26,6 @@
 #include <stdio.h>
 #include <fcntl.h>
 #include <time.h>
-//#include "dmtcpworker.h"
-//#include "protectedfds.h"
 #include "fred_wrappers.h"
 #include "dmtcpmodule.h"
 #include "util.h"
@@ -60,7 +58,6 @@ LIB_PRIVATE pthread_cond_t  reap_cv = PTHREAD_COND_INITIALIZER;
 LIB_PRIVATE pthread_mutex_t global_clone_counter_mutex = PTHREAD_MUTEX_INITIALIZER;
 LIB_PRIVATE pthread_mutex_t log_index_mutex = PTHREAD_MUTEX_INITIALIZER;
 LIB_PRIVATE pthread_mutex_t reap_mutex = PTHREAD_MUTEX_INITIALIZER;
-LIB_PRIVATE pthread_mutex_t thread_transition_mutex = PTHREAD_MUTEX_INITIALIZER;
 LIB_PRIVATE pthread_t       thread_to_reap;
 
 
@@ -80,8 +77,6 @@ static char *code_lower  = 0;
 static char *data_break  = 0;
 static char *stack_lower = 0;
 static char *stack_upper = 0;
-
-static pthread_mutex_t   atomic_set_mutex     = PTHREAD_MUTEX_INITIALIZER;
 
 static inline void memfence() {  asm volatile ("mfence" ::: "memory"); }
 
@@ -135,11 +130,6 @@ static inline clone_id_t get_next_clone_id()
 {
   return __sync_fetch_and_add (&global_clone_counter, 1);
 }
-
-//log_off_t get_next_log_offset(size_t delta)
-//{
-//  return __sync_fetch_and_add (global_log.dataSizeAddr(), delta);
-//}
 
 int shouldSynchronize(void *return_addr)
 {
@@ -373,30 +363,12 @@ void copyFdSet(fd_set *src, fd_set *dest)
   }
 }
 
-//void prepareNextLogEntry(log_entry_t& e)
-//{
-//  if (SYNC_IS_REPLAY) {
-//    JASSERT (false).Text("Asked to log an event while in replay. "
-//        "This is probably not intended.");
-//  }
-//  JASSERT(GET_COMMON(e, log_offset) == INVALID_LOG_OFFSET)
-//    (GET_COMMON(e, log_offset));
-//  int eventSize = -1;
-//  GET_EVENT_SIZE(GET_COMMON(e, event), eventSize);
-//  JASSERT( eventSize > 0 );
-//  eventSize += log_event_common_size;
-//  log_off_t offset = get_next_log_offset(eventSize);
-//  SET_COMMON2(e, log_offset, offset);
-//}
-
 void addNextLogEntry(log_entry_t& e)
 {
   if (GET_COMMON(e, log_offset) == INVALID_LOG_OFFSET) {
     global_log.appendEntry(e);
   } else {
     global_log.updateEntry(e);
-    // Offset already supplied (by prepareNextLogEntry).
-    // global_log.writeEntryAtOffset(e, GET_COMMON(e, log_offset));
   }
 }
 
@@ -429,25 +401,6 @@ void logReadData(void *buf, int count)
   int written = _real_write(read_data_fd, buf, count);
   JASSERT ( written == count );
   read_log_pos += written;
-}
-
-ssize_t pwriteAll(int fd, const void *buf, size_t count, off_t offset)
-{
-  ssize_t retval = 0;
-  ssize_t to_write = count;
-  while (1) {
-    retval = _real_pwrite(fd, buf, to_write, offset);
-    if (retval == to_write) break;
-    if (errno == EINTR || errno == EAGAIN) {
-      buf = (char *)buf + retval;
-      to_write -= retval;
-      offset += retval;
-    } else {
-      // other error
-      break;
-    }
-  }
-  return retval;
 }
 
 static void setupCommonFields(log_entry_t *e, clone_id_t clone_id, int event)

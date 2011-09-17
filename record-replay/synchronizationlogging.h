@@ -59,9 +59,6 @@ static pthread_mutex_t read_data_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 #define MAX_LOG_LENGTH ((size_t)250 * 1024 * 1024)
 #define INVALID_LOG_OFFSET (~0U)
-#define MAX_PATCH_LIST_LENGTH MAX_LOG_LENGTH
-#define READLINK_MAX_LENGTH 256
-#define WAKE_ALL_THREADS -1
 #define SYNC_NOOP   0
 #define SYNC_RECORD 1
 #define SYNC_REPLAY 2
@@ -220,12 +217,6 @@ static pthread_mutex_t read_data_mutex = PTHREAD_MUTEX_INITIALIZER;
     _real_pthread_mutex_unlock(&read_data_mutex);                   \
     errno = saved_errno;                                            \
   } while (0)
-
-//#define WRAPPER_LOG_SET_LOG_OFFSET(my_entry)                        \
-//  do {                                                              \
-//    SET_COMMON2(my_entry, log_offset, INVALID_LOG_OFFSET);          \
-//    prepareNextLogEntry(my_entry);                                  \
-//  } while(0)
 
 #define WRAPPER_LOG_WRITE_ENTRY_VOID(my_entry)                      \
   do {                                                              \
@@ -1804,7 +1795,6 @@ LIB_PRIVATE extern dmtcp::map<pthread_t, pthread_join_retval_t> pthread_join_ret
 LIB_PRIVATE extern log_entry_t     currentLogEntry;
 LIB_PRIVATE extern char RECORD_LOG_PATH[RECORD_LOG_PATH_MAX];
 LIB_PRIVATE extern char RECORD_READ_DATA_LOG_PATH[RECORD_LOG_PATH_MAX];
-LIB_PRIVATE extern int             record_log_fd;
 LIB_PRIVATE extern int             read_data_fd;
 LIB_PRIVATE extern int             sync_logging_branch;
 LIB_PRIVATE extern int             log_all_allocs;
@@ -1818,8 +1808,6 @@ LIB_PRIVATE extern pthread_cond_t  reap_cv;
 LIB_PRIVATE extern pthread_mutex_t global_clone_counter_mutex;
 LIB_PRIVATE extern pthread_mutex_t log_index_mutex;
 LIB_PRIVATE extern pthread_mutex_t reap_mutex;
-LIB_PRIVATE extern pthread_mutex_t thread_transition_mutex;
-LIB_PRIVATE extern pthread_mutex_t wake_target_mutex;
 LIB_PRIVATE extern pthread_t       thread_to_reap;
 
 /* Thread locals: */
@@ -1828,17 +1816,11 @@ LIB_PRIVATE extern __thread int in_mmap_wrapper;
 LIB_PRIVATE extern __thread unsigned char isOptionalEvent;
 
 /* Volatiles: */
-LIB_PRIVATE extern volatile size_t        record_log_entry_index;
-LIB_PRIVATE extern volatile size_t        record_log_index;
-LIB_PRIVATE extern volatile int           record_log_loaded;
-LIB_PRIVATE extern volatile int           threads_to_wake_index;
 LIB_PRIVATE extern volatile clone_id_t    global_clone_counter;
 LIB_PRIVATE extern volatile off_t         read_log_pos;
 
 /* Functions */
-LIB_PRIVATE void   register_in_global_log_list(clone_id_t clone_id);
 LIB_PRIVATE void   addNextLogEntry(log_entry_t&);
-LIB_PRIVATE void   prepareNextLogEntry(log_entry_t& e);
 LIB_PRIVATE void   set_sync_mode(int mode);
 LIB_PRIVATE void   truncate_all_logs();
 LIB_PRIVATE bool   close_all_logs();
@@ -1846,26 +1828,15 @@ LIB_PRIVATE void   copyFdSet(fd_set *src, fd_set *dest);
 LIB_PRIVATE void   getNextLogEntry();
 LIB_PRIVATE void   initializeLogNames();
 LIB_PRIVATE void   initLogsForRecordReplay();
-LIB_PRIVATE dmtcp::vector<clone_id_t> get_log_list();
 LIB_PRIVATE void   logReadData(void *buf, int count);
-LIB_PRIVATE void   sync_and_close_record_log();
-LIB_PRIVATE void   map_record_log_to_read();
-LIB_PRIVATE void   map_record_log_to_write();
-LIB_PRIVATE void   primeLog();
-//LIB_PRIVATE ssize_t pwriteAll(int fd, const void *buf, size_t count, off_t off);
 LIB_PRIVATE void   reapThisThread();
 LIB_PRIVATE void   recordDataStackLocations();
-LIB_PRIVATE void   removeThreadToWake(clone_id_t clone_id);
 LIB_PRIVATE int    shouldSynchronize(void *return_addr);
-LIB_PRIVATE int    signalThread(int target, pthread_cond_t *cv);
-LIB_PRIVATE int    threadsToWakeContains(clone_id_t clone_id);
-LIB_PRIVATE int    threadsToWakeEmpty();
 LIB_PRIVATE void   userSynchronizedEvent();
 LIB_PRIVATE void   userSynchronizedEventBegin();
 LIB_PRIVATE void   userSynchronizedEventEnd();
 LIB_PRIVATE int    validAddress(void *addr);
 LIB_PRIVATE ssize_t writeAll(int fd, const void *buf, size_t count);
-LIB_PRIVATE void   writeLogsToDisk();
 
 /* These 'create_XXX_entry' functions are used library-wide by their
    respective wrapper functions. Their usages are hidden by the
@@ -2153,4 +2124,4 @@ LIB_PRIVATE TURN_CHECK_P(getaddrinfo_turn_check);
 LIB_PRIVATE TURN_CHECK_P(freeaddrinfo_turn_check);
 LIB_PRIVATE TURN_CHECK_P(getnameinfo_turn_check);
 
-#endif // pthread_WRAPPERS_H
+#endif // SYNCHRONIZATION_LOGGING_H

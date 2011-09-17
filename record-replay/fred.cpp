@@ -35,7 +35,6 @@
 #include "jassert.h"
 #include "jfilesystem.h"
 
-//#include "fred_wrappers.h"
 #include "synchronizationlogging.h"
 #include "log.h"
 
@@ -97,8 +96,6 @@ static void recordReplayInit()
  */
 void fred_post_suspend ()
 {
-  //printf("fredhijack preckpt*****\n\n");
-
   if (SYNC_IS_REPLAY) {
     /* Checkpointing during replay -- we will truncate the log to the current
        position, and begin recording again. */
