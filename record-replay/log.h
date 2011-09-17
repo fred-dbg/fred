@@ -84,9 +84,9 @@ namespace dmtcp
 		    bool mapWithNoReserveFlag);
       void   map_in();
       void   truncate();
-      size_t currentIndex() { return _index; }
       size_t currentEntryIndex() { return _entryIndex; }
       bool   empty() { return numEntries() == 0; }
+      size_t getIndex();
       size_t getDataSize();
       void   setDataSize(log_off_t newVal);
       size_t numEntries() { return _numEntries == NULL ? 0 : *_numEntries; }
@@ -95,7 +95,8 @@ namespace dmtcp
       string getPath() { return _path; }
       void   mergeLogs(dmtcp::vector<clone_id_t> clone_ids);
 
-      int    getNextEntry(log_entry_t& entry);
+      int    advanceToNextEntry();
+      int    getCurrentEntry(log_entry_t& entry);
       void   appendEntry(log_entry_t& entry);
       void   updateEntry(const log_entry_t& entry);
       void   moveMarkersToEnd();
@@ -111,6 +112,8 @@ namespace dmtcp
       int    getEntryAtOffset(log_entry_t& entry, size_t index);
 
       inline log_off_t atomicIncrementOffset(log_off_t delta);
+      size_t atomicIncrementIndex(log_off_t delta);
+      size_t atomicIncrementEntryIndex();
 
     private:
       string  _path;

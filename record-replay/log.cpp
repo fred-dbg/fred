@@ -188,21 +188,28 @@ void dmtcp::SynchronizationLog::map_in()
 void dmtcp::SynchronizationLog::truncate()
 {
   JTRACE ( "Truncating log to current position." )
-    ( _path ) ( _entryIndex ) ( _index );
-  memset(&_log[_index], 0, getDataSize() - _index);
+    ( _path ) ( _entryIndex ) ( getIndex() );
+  memset(&_log[getIndex()], 0, getDataSize() - getIndex());
   // Note that currently _size is constant, so we don't modify it here.
   *_numEntries = _entryIndex;
-  setDataSize(_index);
+  setDataSize(getIndex());
 }
 
-int dmtcp::SynchronizationLog::getNextEntry(log_entry_t& entry)
+int dmtcp::SynchronizationLog::advanceToNextEntry()
 {
-  int entrySize = getEntryAtOffset(entry, _index);
+  log_entry_t temp_entry = EMPTY_LOG_ENTRY;
+  int entrySize = getEntryAtOffset(temp_entry, getIndex());
   if (entrySize != 0) {
-    _index += entrySize;
-    _entryIndex++;
+    atomicIncrementIndex(entrySize);
+    atomicIncrementEntryIndex();
   }
   return entrySize;
+}
+
+int dmtcp::SynchronizationLog::getCurrentEntry(log_entry_t& entry)
+{
+  int entrySize = getEntryAtOffset(entry, getIndex());
+  return entrySize;  
 }
 
 // Reads the entry from log and returns the length of entry
@@ -242,7 +249,8 @@ void dmtcp::SynchronizationLog::appendEntry(log_entry_t& entry)
   GET_EVENT_SIZE(GET_COMMON(entry, event), eventSize);
   JASSERT( eventSize > 0 );
   eventSize += log_event_common_size;
-  offset = atomicIncrementOffset(eventSize);
+  offset = atomicIncrementOffset(eventSize);  
+  __sync_fetch_and_add(_numEntries, 1);
   SET_COMMON2(entry, log_offset, offset);
 
   JASSERT(eventSize == writeEntryAtOffset(entry, offset));
@@ -315,8 +323,6 @@ int dmtcp::SynchronizationLog::writeEntryAtOffset(const log_entry_t& entry,
   GET_EVENT_DATA_PTR(entry, ptr);
   memcpy(&_log[index + log_event_common_size], ptr, event_size);
 #endif
-  
-  __sync_fetch_and_add(_numEntries, 1);
 
   return log_event_common_size + event_size;
 }
@@ -383,6 +389,21 @@ void dmtcp::SynchronizationLog::writeEntryHeaderAtOffset(const log_entry_t& entr
   JASSERT((buffer - &_log[index]) == log_event_common_size)
     (index) (log_event_common_size) (buffer);
 #endif
+}
+
+size_t dmtcp::SynchronizationLog::getIndex()
+{
+  return __sync_fetch_and_add(&_index, 0);  
+}
+
+size_t dmtcp::SynchronizationLog::atomicIncrementIndex(size_t delta)
+{
+  return __sync_fetch_and_add(&_index, delta);
+}
+
+size_t dmtcp::SynchronizationLog::atomicIncrementEntryIndex()
+{
+  return __sync_fetch_and_add(&_entryIndex, 1);
 }
 
 /*

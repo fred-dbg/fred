@@ -144,7 +144,7 @@ EXTERNC int sigwait(const sigset_t *set, int *sig)
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_START(sigwait);
     if (sig != NULL) {
-      *sig = GET_FIELD(currentLogEntry, sigwait, sig);
+      *sig = GET_FIELD(my_entry, sigwait, sig);
     }
     WRAPPER_REPLAY_END(sigwait);
   } else if (SYNC_IS_RECORD) {

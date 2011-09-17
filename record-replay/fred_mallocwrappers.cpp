@@ -259,14 +259,14 @@ static void my_free_hook (void *ptr, const void *caller)
   do {                                                                      \
     if (SYNC_IS_REPLAY) {                                                   \
       MALLOC_FAMILY_WRAPPER_REPLAY_START(name);                             \
-      void *savedRetval = GET_COMMON(currentLogEntry, retval);              \
+      void *savedRetval = GET_COMMON(my_entry, retval);                     \
       /* We have to end it immediately because there may be an mmap. */     \
       MALLOC_FAMILY_WRAPPER_REPLAY_END(name);                               \
       _real_pthread_mutex_lock(&allocation_lock);                           \
       retval = _real_ ## name(__VA_ARGS__);                                 \
       if (retval != savedRetval) {                                          \
         JTRACE ( #name " returned wrong address on replay" )                \
-          ( retval ) ( GET_COMMON(currentLogEntry, retval) )                \
+          ( retval ) ( savedRetval )                                        \
           (global_log.currentEntryIndex());                                 \
     while (1);                                                              \
       }                                                                     \
@@ -353,7 +353,7 @@ extern "C" void free(void *ptr)
   void *retval = NULL;
 
   if (SYNC_IS_REPLAY) {
-    waitForTurn(my_entry, &free_turn_check);
+    waitForTurn(&my_entry, &free_turn_check);
     _real_pthread_mutex_lock(&allocation_lock);
     _real_free(ptr);
     _real_pthread_mutex_unlock(&allocation_lock);
@@ -387,7 +387,7 @@ extern "C" void *mmap(void *addr, size_t length, int prot, int flags,
     bool mmap_read_from_readlog = false;
     MMAP_WRAPPER_REPLAY_START(mmap);
     JASSERT ( addr == NULL ).Text("Unimplemented to have non-null addr.");
-    addr = GET_COMMON(currentLogEntry, retval);
+    addr = GET_COMMON(my_entry, retval);
     if (retval != MAP_FAILED && fd != -1 &&
         ((flags & MAP_PRIVATE) != 0 || (flags & MAP_SHARED) != 0)) {
       flags &= ~MAP_SHARED;
@@ -402,9 +402,9 @@ extern "C" void *mmap(void *addr, size_t length, int prot, int flags,
     }
     flags |= MAP_FIXED;
     retval = _real_mmap (addr, length, prot | PROT_WRITE, flags, fd, offset);
-    if (retval != GET_COMMON(currentLogEntry, retval)) sleep(20);
-    JASSERT ( retval == GET_COMMON(currentLogEntry, retval) ) (retval)
-      (GET_COMMON(currentLogEntry, retval)) (JASSERT_ERRNO);
+    if (retval != GET_COMMON(my_entry, retval)) sleep(20);
+    JASSERT ( retval == GET_COMMON(my_entry, retval) ) (retval)
+      (GET_COMMON(my_entry, retval)) (JASSERT_ERRNO);
     if (mmap_read_from_readlog) {
       WRAPPER_REPLAY_READ_FROM_READ_LOG(mmap, retval, length);
     }
@@ -432,7 +432,7 @@ extern "C" void *mmap64 (void *addr, size_t length, int prot, int flags,
     bool mmap_read_from_readlog = false;
     MMAP_WRAPPER_REPLAY_START(mmap64);
     JASSERT ( addr == NULL ).Text("Unimplemented to have non-null addr.");
-    addr = GET_COMMON(currentLogEntry, retval);
+    addr = GET_COMMON(my_entry, retval);
     if (retval != MAP_FAILED && fd != -1 &&
         ((flags & MAP_PRIVATE) != 0 || (flags & MAP_SHARED) != 0)) {
       flags &= ~MAP_SHARED;
@@ -447,7 +447,7 @@ extern "C" void *mmap64 (void *addr, size_t length, int prot, int flags,
     }
     flags |= MAP_FIXED;
     retval = _real_mmap64 (addr, length, prot | PROT_WRITE, flags, fd, offset);
-    JASSERT ( retval == GET_COMMON(currentLogEntry, retval) );
+    JASSERT ( retval == GET_COMMON(my_entry, retval) );
     if (mmap_read_from_readlog) {
       WRAPPER_REPLAY_READ_FROM_READ_LOG(mmap64, retval, length);
     }
@@ -473,7 +473,7 @@ extern "C" int munmap(void *addr, size_t length)
     WRAPPER_REPLAY_START(munmap);
     _real_pthread_mutex_lock(&allocation_lock);
     retval = _real_munmap (addr, length);
-    JASSERT (retval == (int)(unsigned long)GET_COMMON(currentLogEntry, retval));
+    JASSERT (retval == (int)(unsigned long)GET_COMMON(my_entry, retval));
     _real_pthread_mutex_unlock(&allocation_lock);
     WRAPPER_REPLAY_END(munmap);
   } else if (SYNC_IS_RECORD) {
@@ -500,10 +500,10 @@ extern "C" void *mremap(void *old_address, size_t old_size,
                                new_address);
   if (SYNC_IS_REPLAY) {
     MALLOC_FAMILY_WRAPPER_REPLAY_START(mremap);
-    void *addr = GET_COMMON(currentLogEntry, retval);
+    void *addr = GET_COMMON(my_entry, retval);
     flags |= (MREMAP_MAYMOVE | MREMAP_FIXED);
     retval = _real_mremap (old_address, old_size, new_size, flags, addr);
-    JASSERT ( retval == GET_COMMON(currentLogEntry, retval) );
+    JASSERT ( retval == GET_COMMON(my_entry, retval) );
     MALLOC_FAMILY_WRAPPER_REPLAY_END(mremap);
   } else if (SYNC_IS_RECORD) {
     _real_pthread_mutex_lock(&mmap_lock);
@@ -522,10 +522,10 @@ extern "C" void *mremap(void *old_address, size_t old_size,
 			       NULL);
   if (SYNC_IS_REPLAY) {
     MALLOC_FAMILY_WRAPPER_REPLAY_START(mremap);
-    void *addr = GET_COMMON(currentLogEntry, retval);
+    void *addr = GET_COMMON(my_entry, retval);
     flags |= MREMAP_MAYMOVE;
     retval = _real_mremap (old_address, old_size, new_size, flags, addr);
-    JASSERT ( retval == GET_COMMON(currentLogEntry, retval) );
+    JASSERT ( retval == GET_COMMON(my_entry, retval) );
     MALLOC_FAMILY_WRAPPER_REPLAY_END(mremap);
   } else if (SYNC_IS_RECORD) {
     _real_pthread_mutex_lock(&mmap_lock);

@@ -123,7 +123,7 @@ extern "C" FILE *fdopen(int fd, const char *mode)
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_START_TYPED(FILE*, fdopen);
     if (retval != NULL) {
-      *retval = GET_FIELD(currentLogEntry, fdopen, fdopen_retval);
+      *retval = GET_FIELD(my_entry, fdopen, fdopen_retval);
     }
     WRAPPER_REPLAY_END(fdopen);
   } else if (SYNC_IS_RECORD) {
@@ -207,8 +207,8 @@ extern "C" ssize_t getline(char **lineptr, size_t *n, FILE *stream)
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_START_TYPED(ssize_t, getline);
     if (retval != -1) {
-      *lineptr = GET_FIELD(currentLogEntry, getline, new_lineptr);
-      *n       = GET_FIELD(currentLogEntry, getline, new_n);
+      *lineptr = GET_FIELD(my_entry, getline, new_lineptr);
+      *n       = GET_FIELD(my_entry, getline, new_n);
       WRAPPER_REPLAY_READ_FROM_READ_LOG(getline, *lineptr, *n);
     }
     WRAPPER_REPLAY_END(getline);
@@ -401,7 +401,7 @@ extern "C" int __isoc99_fscanf (FILE *stream, const char *format, ...)
         read_data_fd = _real_open(RECORD_READ_DATA_LOG_PATH, O_RDONLY, 0);
       }
       JASSERT ( read_data_fd != -1 );
-      lseek(read_data_fd, GET_FIELD(currentLogEntry,fscanf,data_offset), SEEK_SET);
+      lseek(read_data_fd, GET_FIELD(my_entry,fscanf,data_offset), SEEK_SET);
       read_data_from_log_into_va_list (arg, format);
       va_end(arg);
     }
@@ -465,6 +465,8 @@ extern "C" int __fprintf_chk (FILE *stream, int flag, const char *format, ...)
   WRAPPER_HEADER(int, fprintf, _fprintf, stream, format, arg);
 
   if (SYNC_IS_REPLAY) {
+    // XXX: FIXME: why are we calling WRAPPER_REPLAY instead of
+    // WRAPPER_REPLAY_START and _END?
     WRAPPER_REPLAY(fprintf);
     /* If we're writing to stdout, we want to see the data to screen.
      * Thus execute the real system call. */
@@ -474,7 +476,7 @@ extern "C" int __fprintf_chk (FILE *stream, int flag, const char *format, ...)
     /*if (stream == stdout || stream == stderr) {
       retval = _fprintf(stream, format, arg);
       }*/
-    retval = (int)(unsigned long)GET_COMMON(currentLogEntry,
+    retval = (int)(unsigned long)GET_COMMON(my_entry,
                                             retval);
   } else if (SYNC_IS_RECORD) {
     isOptionalEvent = true;
@@ -501,8 +503,7 @@ extern "C" int fprintf (FILE *stream, const char *format, ...)
     /*if (stream == stdout || stream == stderr) {
       retval = _fprintf(stream, format, arg);
       }*/
-    retval = (int)(unsigned long)GET_COMMON(currentLogEntry,
-                                            retval);
+    retval = (int)(unsigned long)GET_COMMON(my_entry, retval);
     WRAPPER_REPLAY_END(fprintf);
   } else if (SYNC_IS_RECORD) {
     isOptionalEvent = true;
@@ -678,7 +679,7 @@ extern "C" FILE *fopen (const char* path, const char* mode)
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_START_TYPED(FILE*, fopen);
     if (retval != NULL) {
-      *retval = GET_FIELD(currentLogEntry, fopen, fopen_retval);
+      *retval = GET_FIELD(my_entry, fopen, fopen_retval);
     }
     WRAPPER_REPLAY_END(fopen);
   } else if (SYNC_IS_RECORD) {
@@ -699,7 +700,7 @@ extern "C" FILE *fopen64 (const char* path, const char* mode)
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_START_TYPED(FILE*, fopen64);
     if (retval != NULL) {
-      *retval = GET_FIELD(currentLogEntry, fopen64, fopen64_retval);
+      *retval = GET_FIELD(my_entry, fopen64, fopen64_retval);
     }
     WRAPPER_REPLAY_END(fopen64);
   } else if (SYNC_IS_RECORD) {
@@ -720,7 +721,7 @@ extern "C" FILE *freopen(const char* path, const char* mode, FILE *stream)
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_START_TYPED(FILE *, freopen);
     if (retval != NULL) {
-      *retval = GET_FIELD(currentLogEntry, freopen, freopen_retval);
+      *retval = GET_FIELD(my_entry, freopen, freopen_retval);
     }
     WRAPPER_REPLAY_END(freopen);
   } else if (SYNC_IS_RECORD) {
@@ -800,9 +801,9 @@ extern "C" int fcntl(int fd, int cmd, ...)
   do {                                                                      \
     if (SYNC_IS_REPLAY) {                                                   \
       WRAPPER_REPLAY_START(name);                                           \
-      int saved_errno = GET_COMMON(currentLogEntry, my_errno);              \
+      int saved_errno = GET_COMMON(my_entry, my_errno);                     \
       if (retval == 0 && buf != NULL) {                                     \
-        *buf = GET_FIELD(currentLogEntry, name, buf);                       \
+        *buf = GET_FIELD(my_entry, name, buf);                              \
       }                                                                     \
       getNextLogEntry();                                                    \
       if (saved_errno != 0) {                                               \
@@ -899,8 +900,8 @@ extern "C" int select(int nfds, fd_set *readfds, fd_set *writefds,
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_START(select);
     if (retval != -1) {
-      copyFdSet(&GET_FIELD(currentLogEntry, select, readfds), readfds);
-      copyFdSet(&GET_FIELD(currentLogEntry, select, writefds), writefds);
+      copyFdSet(&GET_FIELD(my_entry, select, readfds), readfds);
+      copyFdSet(&GET_FIELD(my_entry, select, writefds), writefds);
     }
     WRAPPER_REPLAY_END(select);
   } else if (SYNC_IS_RECORD) {
@@ -1080,7 +1081,7 @@ extern "C" struct dirent * /*__attribute__ ((optimize(0)))*/ readdir(DIR *dirp)
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_START_TYPED(struct dirent*, readdir);
     if (retval != NULL) {
-      buf = GET_FIELD(currentLogEntry, readdir, retval);
+      buf = GET_FIELD(my_entry, readdir, retval);
     }
     WRAPPER_REPLAY_END(readdir);
   } else if (SYNC_IS_RECORD) {
@@ -1117,10 +1118,10 @@ extern "C" int readdir_r(DIR *dirp, struct dirent *entry,
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_START(readdir_r);
     if (retval == 0 && entry != NULL) {
-      *entry = GET_FIELD(currentLogEntry, readdir_r, ret_entry);
+      *entry = GET_FIELD(my_entry, readdir_r, ret_entry);
     }
     if (retval == 0 && result != NULL) {
-      *result = GET_FIELD(currentLogEntry, readdir_r, ret_result);
+      *result = GET_FIELD(my_entry, readdir_r, ret_result);
     }
     if (retval != 0) {
       *result = NULL;
@@ -1175,13 +1176,13 @@ void ioctl_helper(log_entry_t &my_entry, int &retval, int d, int request,
     WRAPPER_REPLAY_START(ioctl);
     switch (request) {
       case SIOCGIFCONF: {
-        *((struct ifconf *)arg) = GET_FIELD(currentLogEntry,ioctl,ifconf_val);
+        *((struct ifconf *)arg) = GET_FIELD(my_entry, ioctl, ifconf_val);
         struct ifconf *i = (struct ifconf *)arg;
         WRAPPER_REPLAY_READ_FROM_READ_LOG(ioctl, i->ifc_buf, i->ifc_len);
         break;
       }
       case TIOCGWINSZ: {
-        *((struct winsize *)arg) = GET_FIELD(currentLogEntry,ioctl,win_val);
+        *((struct winsize *)arg) = GET_FIELD(my_entry, ioctl, win_val);
         break;
       }
       default:

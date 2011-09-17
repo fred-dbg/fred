@@ -71,8 +71,8 @@ int accept ( int sockfd, struct sockaddr *addr, socklen_t *addrlen )
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_START(accept);
     if (retval != -1) {
-      *addr = GET_FIELD(currentLogEntry, accept, ret_addr);
-      *addrlen = GET_FIELD(currentLogEntry, accept, ret_addrlen);
+      *addr = GET_FIELD(my_entry, accept, ret_addr);
+      *addrlen = GET_FIELD(my_entry, accept, ret_addrlen);
     }
     WRAPPER_REPLAY_END(accept);
   } else if (SYNC_IS_RECORD) {
@@ -95,8 +95,8 @@ int accept4 ( int sockfd, struct sockaddr *addr, socklen_t *addrlen, int flags )
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_START(accept4);
     if (retval != -1) {
-      *addr = GET_FIELD(currentLogEntry, accept4, ret_addr);
-      *addrlen = GET_FIELD(currentLogEntry, accept4, ret_addrlen);
+      *addr = GET_FIELD(my_entry, accept4, ret_addr);
+      *addrlen = GET_FIELD(my_entry, accept4, ret_addrlen);
     }
     WRAPPER_REPLAY_END(accept4);
   } else if (SYNC_IS_RECORD) {
@@ -135,7 +135,7 @@ int getsockopt ( int sockfd, int  level,  int  optname,  void  *optval,
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_START(getsockopt);
     if (retval == 0 && optval != NULL) {
-      *optlen = GET_FIELD(currentLogEntry, getsockopt, ret_optlen);
+      *optlen = GET_FIELD(my_entry, getsockopt, ret_optlen);
       WRAPPER_REPLAY_READ_FROM_READ_LOG(getsockopt, optval, *optlen);
     }
     WRAPPER_REPLAY_END(getsockopt);

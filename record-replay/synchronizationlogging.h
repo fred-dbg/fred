@@ -159,8 +159,8 @@ static pthread_mutex_t read_data_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 #define WRAPPER_REPLAY_START_TYPED(ret_type, name)                                    \
   do {                                                                \
-    waitForTurn(my_entry, &name##_turn_check);                        \
-    retval = (ret_type) (unsigned long) GET_COMMON(currentLogEntry,   \
+    waitForTurn(&my_entry, &name##_turn_check);                        \
+    retval = (ret_type) (unsigned long) GET_COMMON(my_entry,          \
                                                    retval);           \
   } while (0)
 
@@ -169,7 +169,7 @@ static pthread_mutex_t read_data_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 #define WRAPPER_REPLAY_END(name)                                      \
   do {                                                                \
-    int saved_errno = GET_COMMON(currentLogEntry, my_errno);          \
+    int saved_errno = GET_COMMON(my_entry, my_errno);                 \
     getNextLogEntry();                                              \
     if (saved_errno != 0) {                                         \
       errno = saved_errno;                                          \
@@ -187,8 +187,8 @@ static pthread_mutex_t read_data_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 #define WRAPPER_REPLAY_VOID(name)                                   \
   do {                                                              \
-    waitForTurn(my_entry, &name##_turn_check);                      \
-    int saved_errno = GET_COMMON(currentLogEntry, my_errno);        \
+    waitForTurn(&my_entry, &name##_turn_check);                     \
+    int saved_errno = GET_COMMON(my_entry, my_errno);               \
     getNextLogEntry();                                              \
     if (saved_errno != 0) {                                         \
       errno = saved_errno;                                          \
@@ -204,7 +204,7 @@ static pthread_mutex_t read_data_mutex = PTHREAD_MUTEX_INITIALIZER;
     }                                                               \
     JASSERT ( read_data_fd != -1 );                                 \
     lseek(read_data_fd,                                             \
-          GET_FIELD(currentLogEntry, name, data_offset), SEEK_SET); \
+          GET_FIELD(my_entry, name, data_offset), SEEK_SET);        \
     dmtcp::Util::readAll(read_data_fd, ptr, len);                   \
   } while (0)
 
@@ -1697,14 +1697,13 @@ typedef struct {
   } event_data;
 } log_entry_t;
 
-#define log_event_common_size \
-  (sizeof(GET_COMMON(currentLogEntry,event))      +                    \
-   sizeof(GET_COMMON(currentLogEntry,isOptional)) +                    \
-   sizeof(GET_COMMON(currentLogEntry,log_offset))     +                \
-   sizeof(GET_COMMON(currentLogEntry,clone_id))   +                    \
-   sizeof(GET_COMMON(currentLogEntry,my_errno))   +                    \
-   sizeof(GET_COMMON(currentLogEntry,retval)))
-
+#define log_event_common_size                                          \
+  (sizeof(unsigned char) +  /* event */                                \
+   sizeof(unsigned char) +  /* isOptional */                           \
+   sizeof(log_off_t)     +  /* log_offset */                           \
+   sizeof(clone_id_t)    +  /* clone_id */                             \
+   sizeof(int)           +  /* my_errno */                             \
+   sizeof(void *))          /* retval */
 
 
 #define GET_FIELD(entry, event, field)     entry.event_data.log_event_##event.field
@@ -1792,7 +1791,6 @@ static const int         RECORD_LOG_PATH_MAX = 256;
 LIB_PRIVATE extern dmtcp::map<clone_id_t, pthread_t> *clone_id_to_tid_table;
 LIB_PRIVATE extern dmtcp::map<pthread_t, clone_id_t> *tid_to_clone_id_table;
 LIB_PRIVATE extern dmtcp::map<pthread_t, pthread_join_retval_t> pthread_join_retvals;
-LIB_PRIVATE extern log_entry_t     currentLogEntry;
 LIB_PRIVATE extern char RECORD_LOG_PATH[RECORD_LOG_PATH_MAX];
 LIB_PRIVATE extern char RECORD_READ_DATA_LOG_PATH[RECORD_LOG_PATH_MAX];
 LIB_PRIVATE extern int             read_data_fd;
@@ -1806,7 +1804,6 @@ LIB_PRIVATE extern dmtcp::SynchronizationLog global_log;
 #define LOG_ENTRY_SIZE sizeof(char)
 LIB_PRIVATE extern pthread_cond_t  reap_cv;
 LIB_PRIVATE extern pthread_mutex_t global_clone_counter_mutex;
-LIB_PRIVATE extern pthread_mutex_t log_index_mutex;
 LIB_PRIVATE extern pthread_mutex_t reap_mutex;
 LIB_PRIVATE extern pthread_t       thread_to_reap;
 
@@ -2005,7 +2002,7 @@ CREATE_ENTRY_FUNC(user);
 /* Special case: exec barrier (notice no clone id or event). */
 LIB_PRIVATE log_entry_t create_exec_barrier_entry();
 
-LIB_PRIVATE void waitForTurn(log_entry_t my_entry, turn_pred_t pred);
+LIB_PRIVATE void waitForTurn(log_entry_t *my_entry, turn_pred_t pred);
 LIB_PRIVATE void waitForExecBarrier();
 
 /* Turn check predicates: */

@@ -44,7 +44,6 @@
 LIB_PRIVATE dmtcp::map<clone_id_t, pthread_t> *clone_id_to_tid_table = NULL;
 LIB_PRIVATE dmtcp::map<pthread_t, clone_id_t> *tid_to_clone_id_table = NULL;
 LIB_PRIVATE dmtcp::map<pthread_t, pthread_join_retval_t> pthread_join_retvals;
-LIB_PRIVATE log_entry_t     currentLogEntry = EMPTY_LOG_ENTRY;
 LIB_PRIVATE char RECORD_LOG_PATH[RECORD_LOG_PATH_MAX];
 LIB_PRIVATE char RECORD_READ_DATA_LOG_PATH[RECORD_LOG_PATH_MAX];
 LIB_PRIVATE int             read_data_fd = -1;
@@ -56,7 +55,6 @@ LIB_PRIVATE int             log_all_allocs = 0;
 LIB_PRIVATE size_t          default_stack_size = 0;
 LIB_PRIVATE pthread_cond_t  reap_cv = PTHREAD_COND_INITIALIZER;
 LIB_PRIVATE pthread_mutex_t global_clone_counter_mutex = PTHREAD_MUTEX_INITIALIZER;
-LIB_PRIVATE pthread_mutex_t log_index_mutex = PTHREAD_MUTEX_INITIALIZER;
 LIB_PRIVATE pthread_mutex_t reap_mutex = PTHREAD_MUTEX_INITIALIZER;
 LIB_PRIVATE pthread_t       thread_to_reap;
 
@@ -84,19 +82,21 @@ static inline void memfence() {  asm volatile ("mfence" ::: "memory"); }
 // gcc-4.1 and later has __sync_fetch_and_add, __sync_fetch_and_xor, etc.
 // We need it for atomic_increment and atomic_decrement
 // The version below is slow, but works.  It uses GNU extensions.
-// FIXME: We should not misuse log_index_mutex for this purpose.
+
+static log_mutex_t sync_fetch_mutex = PTHREAD_MUTEX_INITIALIZER;
+
 #define __sync_fetch_and_add(ptr,val) \
   ({ __typeof__(*(ptr)) tmp; \
-    _real_pthread_mutex_lock(&log_index_mutex); \
+    _real_pthread_mutex_lock(&sync_fetch_mutex); \
     tmp = *(ptr); *(ptr) += (val); \
-    _real_pthread_mutex_unlock(&log_index_mutex); \
+    _real_pthread_mutex_unlock(&sync_fetch_mutex); \
     tmp; \
   })
 #define __sync_fetch_and_xor(ptr,val) \
   ({ __typeof__(*(ptr)) tmp; \
-    _real_pthread_mutex_lock(&log_index_mutex); \
+    _real_pthread_mutex_lock(&sync_fetch_mutex); \
     tmp = *(ptr); *(ptr) ^= (val); \
-    _real_pthread_mutex_unlock(&log_index_mutex); \
+    _real_pthread_mutex_unlock(&sync_fetch_mutex); \
     tmp; \
   })
 #warning **********************************************************************
@@ -182,9 +182,6 @@ bool close_all_logs()
 void initLogsForRecordReplay()
 {
   global_log.initialize(RECORD_LOG_PATH, MAX_LOG_LENGTH);
-  if (SYNC_IS_REPLAY) {
-    getNextLogEntry();
-  }
 }
 
 
@@ -378,12 +375,10 @@ void getNextLogEntry()
   if (global_log.numEntries() == 0) {
     return;
   }
-  _real_pthread_mutex_lock(&log_index_mutex);
-  if (global_log.getNextEntry(currentLogEntry) == 0) {
+  if (global_log.advanceToNextEntry() == 0) {
     JTRACE ( "Switching back to record." );
     set_sync_mode(SYNC_RECORD);
   }
-  _real_pthread_mutex_unlock(&log_index_mutex);
 }
 
 void logReadData(void *buf, int count)
@@ -2689,99 +2684,72 @@ static inline bool is_optional_event_for(event_code_t event,
   }
 }
 
-/* Returns true if the given event has any registered optional events. */
-static inline bool has_optional_event(event_code_t event)
-{
-  return is_optional_event_for(event, unknown_event, true);
-}
-
 /* Given the event number of an optional event, executes the action to fulfill
    that event. */
 static void execute_optional_event(int opt_event_num)
 {
-  _real_pthread_mutex_lock(&log_index_mutex);
+  log_entry_t temp_entry = EMPTY_LOG_ENTRY;
+  global_log.getCurrentEntry(temp_entry);
+
   if (opt_event_num == mmap_event) {
-    size_t length = GET_FIELD(currentLogEntry, mmap, length);
-    int prot      = GET_FIELD(currentLogEntry, mmap, prot);
-    int flags     = GET_FIELD(currentLogEntry, mmap, flags);
-    int fd        = GET_FIELD(currentLogEntry, mmap, fd);
-    off_t offset  = GET_FIELD(currentLogEntry, mmap, offset);
-    _real_pthread_mutex_unlock(&log_index_mutex);
+    size_t length = GET_FIELD(temp_entry, mmap, length);
+    int prot      = GET_FIELD(temp_entry, mmap, prot);
+    int flags     = GET_FIELD(temp_entry, mmap, flags);
+    int fd        = GET_FIELD(temp_entry, mmap, fd);
+    off_t offset  = GET_FIELD(temp_entry, mmap, offset);
     JASSERT(mmap(NULL, length, prot, flags, fd, offset) != MAP_FAILED);
   } else if (opt_event_num == malloc_event) {
-    size_t size = GET_FIELD(currentLogEntry, malloc, size);
-    _real_pthread_mutex_unlock(&log_index_mutex);
+    size_t size = GET_FIELD(temp_entry, malloc, size);
     JASSERT(malloc(size) != NULL);
   } else if (opt_event_num == free_event) {
     /* The fact that this works depends on memory-accurate replay. */
-    void *ptr = (void *)GET_FIELD(currentLogEntry, free, ptr);
-    _real_pthread_mutex_unlock(&log_index_mutex);
+    void *ptr = (void *)GET_FIELD(temp_entry, free, ptr);
     free(ptr);
   } else if (opt_event_num == calloc_event) {
-    size_t size = GET_FIELD(currentLogEntry, calloc, size);
-    size_t nmemb = GET_FIELD(currentLogEntry, calloc, nmemb);
-    _real_pthread_mutex_unlock(&log_index_mutex);
+    size_t size = GET_FIELD(temp_entry, calloc, size);
+    size_t nmemb = GET_FIELD(temp_entry, calloc, nmemb);
     JASSERT(calloc(nmemb, size) != NULL);
   } else {
     JASSERT (false)(opt_event_num).Text("No action known for optional event.");
   }
 }
 
-/* Like waitForTurn(), but also handles events with "optional" events. For
-   example, fscanf() can call mmap() sometimes. This method will execute that
-   optional event if it occurs before the regular fscanf_event. If it never
-   occurs, this function will also return when the regular fscanf_event is
-   encountered.
-
-   This function is useful for fscanf and others since they are NOT called on
-   replay. If we don't call _real_fscanf, for example, libc is never able to
-   call mmap. So we must do it manually. */
-static void waitForTurnWithOptional(log_entry_t *my_entry, turn_pred_t pred)
+/* Waits until the head of the log contains an entry matching pertinent fields
+   of 'my_entry'. When it does, 'my_entry' is modified to point to the head of
+   the log. */
+void waitForTurn(log_entry_t *my_entry, turn_pred_t pred)
 {
- while (1) {
-  if ((*pred)(&currentLogEntry, my_entry))
-    break;
-  /* For the optional event, we can only check the clone_id and the event
-     number, since we don't know any more information. */
-  if (GET_COMMON(currentLogEntry, clone_id) == my_clone_id &&
-      GET_COMMON(currentLogEntry, isOptional) == 1) {
-    if (!is_optional_event_for((event_code_t)GET_COMMON_PTR(my_entry, event),
-                               (event_code_t)GET_COMMON(currentLogEntry, event),
-                               false)) {
-      JASSERT(false);
-    }
-    execute_optional_event(GET_COMMON(currentLogEntry, event));
-  }
+  log_entry_t temp_entry = EMPTY_LOG_ENTRY;
   memfence();
-  usleep(15);
- }
-}
 
-// FIXME: REDO the logic to get rid of mutex
-// FIXME: update my_entry <- currentLogEntry so that we do _not_ refer
-//        currentLogEntry in the wrappers.
-void waitForTurn(log_entry_t my_entry, turn_pred_t pred)
-{
-  memfence();
-  if (has_optional_event((event_code_t)GET_COMMON(my_entry, event))) {
-    waitForTurnWithOptional(&my_entry, pred);
-  } else {
-    while (1) {
-    _real_pthread_mutex_lock(&log_index_mutex);
-      if ((*pred)(&currentLogEntry, &my_entry))
-        break;
-      _real_pthread_mutex_unlock(&log_index_mutex);
-      memfence();
-      usleep(15);
+  while (1) {
+    global_log.getCurrentEntry(temp_entry);
+    if ((*pred)(&temp_entry, my_entry))
+      break;
+    /* Also check for an optional event for this clone_id. */
+    if (GET_COMMON(temp_entry, clone_id) == my_clone_id &&
+        GET_COMMON(temp_entry, isOptional) == 1) {
+      if (!is_optional_event_for((event_code_t)GET_COMMON_PTR(my_entry, event),
+                                 (event_code_t)GET_COMMON(temp_entry, event),
+                                 false)) {
+        JASSERT(false);
+      }
+      execute_optional_event(GET_COMMON(temp_entry, event));
     }
+
+    memfence();
+    usleep(1);
   }
-  _real_pthread_mutex_unlock(&log_index_mutex);
+
+  global_log.getCurrentEntry(*my_entry);
 }
 
 void waitForExecBarrier()
 {
+  log_entry_t temp_entry = EMPTY_LOG_ENTRY;
   while (1) {
-    if (GET_COMMON(currentLogEntry, event) == exec_barrier_event) {
+    global_log.getCurrentEntry(temp_entry);
+    if (GET_COMMON(temp_entry, event) == exec_barrier_event) {
       // We don't check clone ids because anyone can do an exec.
       break;
     }
@@ -2798,7 +2766,7 @@ void userSynchronizedEvent()
 {
   log_entry_t my_entry = create_user_entry(my_clone_id, user_event);
   if (SYNC_IS_REPLAY) {
-    waitForTurn(my_entry, user_turn_check);
+    waitForTurn(&my_entry, user_turn_check);
     getNextLogEntry();
   } else if (SYNC_IS_RECORD) {
     addNextLogEntry(my_entry);
@@ -2809,7 +2777,7 @@ void userSynchronizedEventBegin()
 {
   log_entry_t my_entry = create_user_entry(my_clone_id, user_event);
   if (SYNC_IS_REPLAY) {
-    waitForTurn(my_entry, user_turn_check);
+    waitForTurn(&my_entry, user_turn_check);
     getNextLogEntry();
   } else if (SYNC_IS_RECORD) {
     addNextLogEntry(my_entry);

@@ -59,8 +59,8 @@ extern "C" int getsockname(int sockfd, struct sockaddr *addr,
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_START(getsockname);
     if (retval != -1) {
-      *addr = GET_FIELD(currentLogEntry, getsockname, ret_addr);
-      *addrlen = GET_FIELD(currentLogEntry, getsockname, ret_addrlen);
+      *addr = GET_FIELD(my_entry, getsockname, ret_addr);
+      *addrlen = GET_FIELD(my_entry, getsockname, ret_addrlen);
     }
     WRAPPER_REPLAY_END(getsockname);
   } else if (SYNC_IS_RECORD) {
@@ -84,8 +84,8 @@ extern "C" int getpeername(int sockfd, struct sockaddr *addr,
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_START(getpeername);
     if (retval != -1) {
-      *addr = GET_FIELD(currentLogEntry, getpeername, ret_addr);
-      *addrlen = GET_FIELD(currentLogEntry, getpeername, ret_addrlen);
+      *addr = GET_FIELD(my_entry, getpeername, ret_addr);
+      *addrlen = GET_FIELD(my_entry, getpeername, ret_addrlen);
     }
     WRAPPER_REPLAY_END(getpeername);
   } else if (SYNC_IS_RECORD) {
@@ -183,11 +183,11 @@ extern "C" int getpwnam_r(const char *name, struct passwd *pwd,
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_START(getpwnam_r);
     if (retval == 0 &&
-        GET_FIELD(currentLogEntry, getpwnam_r, ret_result) != NULL) {
-      *pwd = GET_FIELD(currentLogEntry, getpwnam_r, ret_pwd);
+        GET_FIELD(my_entry, getpwnam_r, ret_result) != NULL) {
+      *pwd = GET_FIELD(my_entry, getpwnam_r, ret_pwd);
       WRAPPER_REPLAY_READ_FROM_READ_LOG(getpwnam_r, buf, buflen);
     }
-    *result = GET_FIELD(currentLogEntry, getpwnam_r, ret_result);
+    *result = GET_FIELD(my_entry, getpwnam_r, ret_result);
     WRAPPER_REPLAY_END(getpwnam_r);
   } else if (SYNC_IS_RECORD) {
     isOptionalEvent = true;
@@ -218,11 +218,11 @@ extern "C" int getpwuid_r(uid_t uid, struct passwd *pwd,
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_START(getpwuid_r);
     if (retval == 0 &&
-        GET_FIELD(currentLogEntry, getpwuid_r, ret_result) != NULL) {
-      *pwd = GET_FIELD(currentLogEntry, getpwuid_r, ret_pwd);
+        GET_FIELD(my_entry, getpwuid_r, ret_result) != NULL) {
+      *pwd = GET_FIELD(my_entry, getpwuid_r, ret_pwd);
       WRAPPER_REPLAY_READ_FROM_READ_LOG(getpwuid_r, buf, buflen);
     }
-    *result = GET_FIELD(currentLogEntry, getpwuid_r, ret_result);
+    *result = GET_FIELD(my_entry, getpwuid_r, ret_result);
     WRAPPER_REPLAY_END(getpwuid_r);
   } else if (SYNC_IS_RECORD) {
     isOptionalEvent = true;
@@ -253,11 +253,11 @@ extern "C" int getgrnam_r(const char *name, struct group *grp,
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_START(getgrnam_r);
     if (retval == 0 &&
-        GET_FIELD(currentLogEntry, getgrnam_r, ret_result) != NULL) {
-      *grp = GET_FIELD(currentLogEntry, getgrnam_r, ret_grp);
+        GET_FIELD(my_entry, getgrnam_r, ret_result) != NULL) {
+      *grp = GET_FIELD(my_entry, getgrnam_r, ret_grp);
       WRAPPER_REPLAY_READ_FROM_READ_LOG(getgrnam_r, buf, buflen);
     }
-    *result = GET_FIELD(currentLogEntry, getgrnam_r, ret_result);
+    *result = GET_FIELD(my_entry, getgrnam_r, ret_result);
     WRAPPER_REPLAY_END(getgrnam_r);
   } else if (SYNC_IS_RECORD) {
     isOptionalEvent = true;
@@ -288,11 +288,11 @@ extern "C" int getgrgid_r(gid_t gid, struct group *grp,
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_START(getgrgid_r);
     if (retval == 0 &&
-        GET_FIELD(currentLogEntry, getgrgid_r, ret_result) != NULL) {
-      *grp = GET_FIELD(currentLogEntry, getgrgid_r, ret_grp);
+        GET_FIELD(my_entry, getgrgid_r, ret_result) != NULL) {
+      *grp = GET_FIELD(my_entry, getgrgid_r, ret_grp);
       WRAPPER_REPLAY_READ_FROM_READ_LOG(getgrgid_r, buf, buflen);
     }
-    *result = GET_FIELD(currentLogEntry, getgrgid_r, ret_result);
+    *result = GET_FIELD(my_entry, getgrgid_r, ret_result);
     WRAPPER_REPLAY_END(getgrgid_r);
   } else if (SYNC_IS_RECORD) {
     isOptionalEvent = true;
@@ -328,8 +328,8 @@ extern "C" int getaddrinfo(const char *node, const char *service,
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_START(getaddrinfo);
     if (retval == 0) {
-      *res = GET_FIELD(currentLogEntry, getaddrinfo, ret_res);
-      numResults = GET_FIELD(currentLogEntry, getaddrinfo, num_res);
+      *res = GET_FIELD(my_entry, getaddrinfo, ret_res);
+      numResults = GET_FIELD(my_entry, getaddrinfo, num_res);
 
       WRAPPER_REPLAY_READ_FROM_READ_LOG(getaddrinfo, (void*) addrinfo_res,
                                         (numResults *
@@ -401,10 +401,10 @@ extern "C" int getnameinfo(const struct sockaddr *sa, socklen_t salen,
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_START(getnameinfo);
     if (retval == 0 && host != NULL) {
-      strncpy(host, GET_FIELD(currentLogEntry, getnameinfo, ret_host), hostlen);
+      strncpy(host, GET_FIELD(my_entry, getnameinfo, ret_host), hostlen);
     }
     if (retval == 0 && host != NULL) {
-      strncpy(serv, GET_FIELD(currentLogEntry, getnameinfo, ret_serv), servlen);
+      strncpy(serv, GET_FIELD(my_entry, getnameinfo, ret_serv), servlen);
     }
     WRAPPER_REPLAY_END(getnameinfo);
   } else if (SYNC_IS_RECORD) {
