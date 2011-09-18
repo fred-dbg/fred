@@ -543,6 +543,7 @@ static void reapThread()
   size_t stack_size;
   void *stack_addr;
   int retval = 0;
+  clone_id_t cid_to_reap;
   pthread_getattr_np(thread_to_reap, &attr); // calls realloc().
   pthread_attr_getstack(&attr, &stack_addr, &stack_size);
   pthread_attr_destroy(&attr);
@@ -558,6 +559,11 @@ static void reapThread()
   pthread_join_retvals[thread_to_reap] = join_retval;
   teardownThreadStack(stack_addr, stack_size);
   
+  if (tid_to_clone_id_table->find(thread_to_reap) != 
+      tid_to_clone_id_table->end()) {
+    cid_to_reap = tid_to_clone_id_table->find(thread_to_reap)->second;
+    clone_id_to_tid_table->erase(cid_to_reap);
+  }
   tid_to_clone_id_table->erase(thread_to_reap);
 
   //mtcpFuncPtrs.process_pthread_join ( thread_to_reap );
