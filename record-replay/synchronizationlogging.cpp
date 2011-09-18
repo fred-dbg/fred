@@ -2727,6 +2727,7 @@ static inline bool is_optional_event_for(event_code_t event,
   case freopen_event:
   case getsockopt_event:
   case setsockopt_event:
+  case tmpfile_event:
     return query || opt_event == malloc_event ||
       opt_event == free_event || opt_event == mmap_event;
   case freeaddrinfo_event:

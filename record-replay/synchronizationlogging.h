@@ -394,6 +394,7 @@ static pthread_mutex_t read_data_mutex = PTHREAD_MUTEX_INITIALIZER;
     MACRO(srand, __VA_ARGS__);                                                 \
     MACRO(socket, __VA_ARGS__);                                                \
     MACRO(time, __VA_ARGS__);                                                  \
+    MACRO(tmpfile, __VA_ARGS__);                                               \
     MACRO(truncate, __VA_ARGS__);                                              \
     MACRO(unlink, __VA_ARGS__);                                                \
     MACRO(write, __VA_ARGS__);                                                 \

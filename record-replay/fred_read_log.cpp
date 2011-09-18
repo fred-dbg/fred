@@ -758,6 +758,11 @@ void print_log_entry_time(int idx, log_entry_t *entry) {
   printf(", tloc=%p\n", GET_FIELD_PTR(entry, time, tloc));
 }
 
+void print_log_entry_tmpfile(int idx, log_entry_t *entry) {
+  print_log_entry_common(idx, entry);
+  printf("\n");
+}
+
 void print_log_entry_gettimeofday(int idx, log_entry_t *entry) {
   print_log_entry_common(idx, entry);
   printf(", tv=%p, tz=%p\n", GET_FIELD_PTR(entry, gettimeofday, tv),
