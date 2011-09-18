@@ -1,4 +1,4 @@
-all: pthread-test test-list syscall-tester pthread-cond-var
+all: pthread-test test-list syscall-tester pthread-cond-var time
 
 clean:
 	rm -f pthread-test test-list syscall-tester
@@ -14,3 +14,6 @@ test-list: test-list.c
 
 syscall-tester: syscall-tester.c
 	gcc -o syscall-tester syscall-tester.c -g -O0 -DLINUX -DGLIBC
+
+time: time.c
+	gcc -o time time.c -g -O0 -lpthread

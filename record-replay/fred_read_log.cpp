@@ -397,6 +397,12 @@ void print_log_entry_listen(int idx, log_entry_t *entry) {
          GET_FIELD_PTR(entry, listen, backlog));
 }
 
+void print_log_entry_localtime(int idx, log_entry_t *entry) {
+  print_log_entry_common(idx, entry);
+  printf(", timep=%p\n",
+         GET_FIELD_PTR(entry, localtime, timep));
+}
+
 void print_log_entry_lxstat(int idx, log_entry_t *entry) {
   print_log_entry_common(idx, entry);
   printf(", vers=%d, path=%p\n",

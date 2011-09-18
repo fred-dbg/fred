@@ -347,6 +347,7 @@ static pthread_mutex_t read_data_mutex = PTHREAD_MUTEX_INITIALIZER;
     MACRO(lseek, __VA_ARGS__);                                                 \
     MACRO(link, __VA_ARGS__);                                                  \
     MACRO(listen, __VA_ARGS__);                                                \
+    MACRO(localtime, __VA_ARGS__);                                             \
     MACRO(lxstat, __VA_ARGS__);                                                \
     MACRO(lxstat64, __VA_ARGS__);                                              \
     MACRO(malloc, __VA_ARGS__);                                                \
@@ -470,6 +471,7 @@ typedef enum {
   libc_memalign_event,
   link_event,
   listen_event,
+  localtime_event,
   lseek_event,
   lxstat_event,
   lxstat64_event,
@@ -1107,6 +1109,14 @@ typedef struct {
 static const int log_event_listen_size = sizeof(log_event_listen_t);
 
 typedef struct {
+  // For localtime():
+  time_t *timep;
+  struct tm localtime_retval;
+} log_event_localtime_t;
+
+static const int log_event_localtime_size = sizeof(log_event_localtime_t);
+
+typedef struct {
   // For lseek():
   int fd;
   off_t offset;
@@ -1687,6 +1697,7 @@ typedef struct {
     log_event_pthread_detach_t                   log_event_pthread_detach;
     log_event_link_t                             log_event_link;
     log_event_listen_t                           log_event_listen;
+    log_event_localtime_t                        log_event_localtime;
     log_event_lseek_t                            log_event_lseek;
     log_event_lxstat_t                           log_event_lxstat;
     log_event_lxstat64_t                         log_event_lxstat64;
@@ -1948,6 +1959,7 @@ CREATE_ENTRY_FUNC(getsockname, int sockfd,
 CREATE_ENTRY_FUNC(libc_memalign, size_t boundary, size_t size);
 CREATE_ENTRY_FUNC(link, const char *oldpath, const char *newpath);
 CREATE_ENTRY_FUNC(listen, int sockfd, int backlog);
+CREATE_ENTRY_FUNC(localtime, const time_t *timep);
 CREATE_ENTRY_FUNC(lseek, int fd, off_t offset, int whence);
 CREATE_ENTRY_FUNC(lxstat, int vers, const char *path, struct stat *buf);
 CREATE_ENTRY_FUNC(lxstat64, int vers, const char *path, struct stat64 *buf);
@@ -2101,6 +2113,7 @@ LIB_PRIVATE TURN_CHECK_P(libc_memalign_turn_check);
 LIB_PRIVATE TURN_CHECK_P(lseek_turn_check);
 LIB_PRIVATE TURN_CHECK_P(link_turn_check);
 LIB_PRIVATE TURN_CHECK_P(listen_turn_check);
+LIB_PRIVATE TURN_CHECK_P(localtime_turn_check);
 LIB_PRIVATE TURN_CHECK_P(lxstat_turn_check);
 LIB_PRIVATE TURN_CHECK_P(lxstat64_turn_check);
 LIB_PRIVATE TURN_CHECK_P(malloc_turn_check);

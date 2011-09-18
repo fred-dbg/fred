@@ -135,6 +135,18 @@ def gdb_record_replay_pthread_cond(n_count=1):
             print GS_FAILED_STRING
         end_session()
 
+def gdb_record_replay_time(n_count=1):
+    """Run a test on deterministic record/replay on time.c example."""
+    global GS_TEST_PROGRAMS_DIRECTORY
+    l_cmd = ["gdb", GS_TEST_PROGRAMS_DIRECTORY + "/time"]
+    for i in range(0, n_count):
+        print_test_name("gdb record/replay time %d" % i)
+        start_session(l_cmd)
+        execute_commands(["b main", "r", "fred-ckpt", "c"])
+        execute_commands(["fred-restart", "c"])
+        print GS_PASSED_STRING
+        end_session()
+
 def gdb_syscall_tester(n_count=1):
     """Run a test on deterministic record/replay on syscall-tester example."""
     global GS_TEST_PROGRAMS_DIRECTORY
@@ -190,6 +202,7 @@ def run_integration_tests():
     """Run all available integration tests."""
     gdb_record_replay()
     gdb_record_replay_pthread_cond()
+    gdb_record_replay_time()
     gdb_syscall_tester()
     gdb_reverse_watch()
     gdb_reverse_next()
@@ -264,6 +277,7 @@ def initialize_tests():
     global gd_tests
     # When you add a new test, update this map from test name -> test fnc.
     gd_tests = { "gdb-record-replay" : gdb_record_replay,
+                 "gdb-record-replay-time" : gdb_record_replay_time,
                  "gdb-record-replay-pthread-cond" : 
                  gdb_record_replay_pthread_cond,
                  "gdb-syscall-tester" : gdb_syscall_tester,

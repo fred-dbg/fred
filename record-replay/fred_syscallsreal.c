@@ -227,6 +227,12 @@ int _real_listen ( int sockfd, int backlog )
 }
 
 LIB_PRIVATE
+struct tm * _real_localtime ( const time_t *timep )
+{
+  REAL_FUNC_PASSTHROUGH_TYPED ( struct tm *, localtime ) ( timep );
+}
+
+LIB_PRIVATE
 int _real_accept ( int sockfd, struct sockaddr *addr, socklen_t *addrlen )
 {
   REAL_FUNC_PASSTHROUGH ( accept ) ( sockfd,addr,addrlen );

@@ -83,6 +83,7 @@ static void recordReplayInit()
   } else if (SYNC_IS_RECORD) {
     addNextLogEntry(my_entry);
   }
+  JTRACE ( "Record/replay finished initializing." );
 }
 
 /* This code used to be called from preCheckpoint hooks. However, in order to
@@ -159,6 +160,7 @@ static void initialize_thread()
 {
   /* Assigning my_clone_id should be the very first thing.*/
   my_clone_id = global_clone_counter++;
+  JTRACE ( "Thread start initialization." ) ( my_clone_id );
 
   pid_t clone_id = my_clone_id;
   pthread_t pthread_id = pthread_self();
@@ -166,7 +168,7 @@ static void initialize_thread()
   (*clone_id_to_tid_table)[clone_id] = pthread_id;
   (*tid_to_clone_id_table)[pthread_id] = clone_id;
 
-  JTRACE("Thread Initialized") (my_clone_id) (pthread_self());
+  JTRACE ( "Thread Initialized" ) ( my_clone_id ) ( pthread_id );
 }
 
 /* This event happens as the *first* task in a new thread. Specifically, this
