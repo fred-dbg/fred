@@ -83,6 +83,13 @@ class PersonalityGdb(personality.Personality):
         # GDB only: name of inferior process.
         self.s_inferior_name = ""
         
+    def destroy(self):
+        """Destroy any state associated with the Personality instance."""
+        global gn_user_code_min, gn_user_code_max, gs_inferior_name
+        self.reset_user_code_interval()
+        gs_inferior_name = ""
+        self.s_inferior_name = ""
+
     def prompt_string(self):
         """Return the debugger's prompt string."""
         return self.GS_PROMPT

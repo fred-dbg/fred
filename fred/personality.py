@@ -57,6 +57,11 @@ class Personality:
         # backtraces. -2 is to check for initialization.
         self.n_top_backtrace_frame = -2
         
+    def destroy(self):
+        """Destroy any state associated with the Personality instance.
+        May be overloaded for personality-specific behavior."""
+        pass
+
     def get_backtrace(self):
         """Return a Backtrace object representing the current backtrace."""
         return self._parse_backtrace(self.do_where())

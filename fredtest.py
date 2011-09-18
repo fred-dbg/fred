@@ -29,6 +29,7 @@ from optparse import OptionParser
 from random import randint
 import os
 import sys
+import traceback
 
 import fredapp
 import fred.fredutil
@@ -71,6 +72,7 @@ def start_session(l_cmd):
 def end_session():
     """End the current debugger session."""
     global g_debugger
+    fred.dmtcpmanager.kill_peers()
     fred.fredutil.fred_teardown()
     g_debugger.destroy()
     g_debugger = None
@@ -98,7 +100,7 @@ def check_variable(s_name, s_value):
     return s_value == str(g_debugger.evaluate_expression(s_name))
 
 def print_test_name(s_name):
-    print "%-30s | " % s_name,
+    print "%-40s | " % s_name,
     sys.stdout.flush()
 
 def gdb_record_replay(n_count=1):
@@ -187,10 +189,7 @@ def gdb_reverse_next(n_count=1):
 def run_integration_tests():
     """Run all available integration tests."""
     gdb_record_replay()
-    # This test is disabled from running automatically until the libc
-    # low level lock bug is fixed (pthread_cond_broadcast symbol
-    # resolution). You can still run the test manually.
-    #gdb_record_replay_pthread_cond()
+    gdb_record_replay_pthread_cond()
     gdb_syscall_tester()
     gdb_reverse_watch()
     gdb_reverse_next()
@@ -202,8 +201,8 @@ def run_unit_tests():
 def run_tests(ls_test_list):
     """Run given list of tests, or all tests if None."""
     global gd_tests
-    print "%-30s | %-15s" % ("Test name", "Result")
-    print "-" * 31 + "+" + "-" * 15
+    print "%-40s | %-15s" % ("Test name", "Result")
+    print "-" * 41 + "+" + "-" * 15
     # TODO: This is hackish. Used to hide fred_info() messages.
     fred.fredio.gb_hide_output = True
     if ls_test_list == None:
@@ -280,8 +279,13 @@ def main():
     initialize_tests()
 
     ls_test_list = parse_fredtest_args()
-    run_tests(ls_test_list)
+    try:
+        run_tests(ls_test_list)
+    except:
+        traceback.print_exc()
 
+    if fred.dmtcpmanager.is_running():
+        fred.dmtcpmanager.kill_peers()
     if gn_coordinator_port != -1:
         fred.dmtcpmanager.kill_coordinator(gn_coordinator_port)
 

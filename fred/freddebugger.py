@@ -202,6 +202,7 @@ class ReversibleDebugger(Debugger):
         """Perform any cleanup associated with a ReversibleDebugger inst."""
         # XXX: Should get rid of this Checkpoint variable.
         Checkpoint.n_next_index = 0
+        self._p.destroy()
 
     def setup_from_resume(self):
         """Set up data structures from a resume."""

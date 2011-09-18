@@ -86,8 +86,13 @@ def start_coordinator(n_port):
     
 def kill_coordinator(n_port):
     """Kills the coordinator on given port."""
-    execute_shell_command_and_wait(["dmtcp_command",
-                                    "--quiet", "-p", str(n_port), "q"])
+    try:
+        execute_shell_command_and_wait(["dmtcp_command",
+                                        "--quiet", "-p", str(n_port), "q"])
+    except subprocess.CalledProcessError:
+        pass
+    except:
+        raise
 
 def get_num_peers():
     """Return NUM_PEERS from 'dmtcp_command s' as an integer."""
@@ -113,8 +118,12 @@ def is_running():
     cmd = ["dmtcp_command", "s"]
     output = execute_shell_command(cmd)
     if output != None:
-        running = re.search('RUNNING=(\w+)', output, re.MULTILINE).group(1)
-        return running == 'yes'
+        m = re.search('RUNNING=(\w+)', output, re.MULTILINE)
+        if m != None:
+            running = m.group(1)
+            return running == 'yes'
+        else:
+            return False
     else:
         fredutil.fred_error("ERROR: Can't get RUNNING. "
                             "Did the coordinator die?")
