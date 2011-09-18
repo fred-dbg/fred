@@ -30,6 +30,7 @@ import sys
 import signal
 import threading
 import pdb
+import select
 
 import fredutil
 
@@ -137,8 +138,11 @@ def _send_child_input(input):
 def _get_child_output():
     """Read and return a string of output from the child process."""
     global gn_child_fd
+    output = None
     try:
-        output = os.read(gn_child_fd, 1000)
+        l_ready = select.select([gn_child_fd], [], [], 1)
+        if l_ready[0] == [gn_child_fd]:
+            output = os.read(gn_child_fd, 1000)
     except:
         return None
     return output
