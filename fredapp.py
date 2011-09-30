@@ -29,6 +29,7 @@ import signal
 import sys
 
 from fred import dmtcpmanager
+from fred import fredmanager
 from fred import fredio
 from fred import freddebugger
 from fred import fredutil
@@ -174,10 +175,17 @@ def handle_fred_command(s_command):
 def dispatch_command(s_command):
     """Given a user command, dispatches and executes it in the right way."""
     fredutil.fred_timer_start(s_command)
+    # TODO: Currently we do not log fred commands. Do we need to?
     if is_fred_command(s_command):
         handle_fred_command(s_command)
-    # TODO: Currently we do not log fred commands. Do we need to?
     else:
+        # XXX: Figure out a more elegant way to do this. We can't set the
+        # inferior pid until we know the inferior is alive, so we keep trying
+        # to update it with every command issued until it succeeds.
+        if fredmanager.get_pid() == -1:
+            n_inf_pid = fredutil.get_inferior_pid(fredio.get_child_pid())
+            fredmanager.set_pid(n_inf_pid)
+
         fredio.send_command(s_command)
         g_debugger.log_command(s_command)
     fredutil.fred_timer_stop(s_command)
@@ -291,7 +299,7 @@ def setup_fredio(l_cmd, b_spawn_child=True):
     fredio.gre_prompt              = g_debugger.get_prompt_regex()
     fredio.gls_needs_user_input    = g_debugger.get_ls_needs_input()
     fredio.setup(l_cmd, b_spawn_child)
-
+    
 def interactive_debugger_setup():
     """Perform any debugger setup that requires a debugger prompt."""
     global g_debugger, g_source_script
@@ -342,6 +350,18 @@ def cleanup_fred_files():
     fredutil.fred_assert(GS_FRED_TMPDIR.find("/tmp") != -1)
     shutil.rmtree(GS_FRED_TMPDIR, ignore_errors=True)
 
+def verify_critical_files_present():
+    """Check for DMTCP binaries, fredhijack.so, and other required files.
+    If any are not found, exit with a fatal error and appropriate message."""
+    if not dmtcpmanager.is_dmtcp_in_path():
+        fredutil.fred_fatal("No DMTCP binaries available in your PATH.\n")
+    if not fredmanager.is_fredhijack_found():
+        fredutil.fred_fatal("No fredhijack.so library found in %s.\n"
+                            "Please edit fredmanager.py and change "
+                            "GS_FREDHIJACK_PATH to point to the directory "
+                            "containing fredhijack.so."%
+                            GS_FREDHIJACK_PATH)
+
 def main_io_loop(b_skip_prompt=False):
     """Main I/O loop to get and handle user commands."""
     global g_source_script
@@ -367,7 +387,7 @@ def main():
     """Program execution starts here."""
     global gs_resume_dir_path
     # Don't do anything if we can't find DMTCP.
-    dmtcpmanager.verify_critical_files_present()
+    verify_critical_files_present()
     fred_setup()
     # Main input/output loop
     # skip the prompt waiting if we are resuming:

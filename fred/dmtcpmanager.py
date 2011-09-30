@@ -30,23 +30,7 @@ import subprocess
 import sys
 import time
 
-GS_FREDHIJACK_NAME = "fredhijack.so"
-GS_FREDHIJACK_PATH = os.path.join(os.environ["HOME"],
-                                  "pthread-wrappers/fred/record-replay")
-
 gn_index_suffix = 0
-
-def execute_shell_command_and_wait(l_cmd):
-    """Executes a shell command and calls waitpid() on it."""
-    return subprocess.check_call(l_cmd, stderr=subprocess.STDOUT)
-
-def execute_shell_command(l_cmd):
-    """Executes a shell command and returns its output."""
-    # If we omit stdin arg and p.stdin.close(), then this doesn't work.  Why?
-    p = subprocess.Popen(l_cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                         stderr=subprocess.STDOUT, close_fds=True)
-    p.stdin.close()
-    return p.stdout.read()
 
 def is_dmtcp_in_path():
     """Check to see if DMTCP binaries are in the user's path."""
@@ -56,39 +40,19 @@ def is_dmtcp_in_path():
             return True
     return False
 
-def is_fredhijack_found():
-    """Return True if fredhijack.so library is in a known location."""
-    return os.path.exists(get_fredhijack_path())
-
-def get_fredhijack_path():
-    """Return the path to fredhijack.so."""
-    global GS_FREDHIJACK_PATH, GS_FREDHIJACK_NAME
-    return os.path.join(GS_FREDHIJACK_PATH, GS_FREDHIJACK_NAME)
-
-def verify_critical_files_present():
-    """Check for DMTCP binaries, fredhijack.so, and other required files.
-    If any are not found, exit with a fatal error and appropriate message."""
-    if not is_dmtcp_in_path():
-        fredutil.fred_fatal("No DMTCP binaries available in your PATH.\n")
-    if not is_fredhijack_found():
-        fredutil.fred_fatal("No fredhijack.so library found in %s.\n"
-                            "Please edit dmtcpmanager.py and change "
-                            "GS_FREDHIJACK_PATH to point to the directory "
-                            "containing fredhijack.so."%
-                            GS_FREDHIJACK_PATH)
-
 def start_coordinator(n_port):
     """Start a coordinator on given port. Return False on error."""
-    status = execute_shell_command_and_wait(["dmtcp_coordinator",
-                                             "--background",
-                                             "-p", str(n_port)])
+    status = fredutil.execute_shell_command_and_wait(["dmtcp_coordinator",
+                                                      "--background",
+                                                      "-p", str(n_port)])
     return status == 0
     
 def kill_coordinator(n_port):
     """Kills the coordinator on given port."""
     try:
-        execute_shell_command_and_wait(["dmtcp_command",
-                                        "--quiet", "-p", str(n_port), "q"])
+        fredutil.execute_shell_command_and_wait(["dmtcp_command",
+                                                 "--quiet", "-p",
+                                                 str(n_port), "q"])
     except subprocess.CalledProcessError:
         pass
     except:
@@ -97,7 +61,7 @@ def kill_coordinator(n_port):
 def get_num_peers():
     """Return NUM_PEERS from 'dmtcp_command s' as an integer."""
     cmd = [ 'dmtcp_command', 's' ]
-    output = execute_shell_command(cmd)
+    output = fredutil.execute_shell_command(cmd)
     if output != None:
         exp = '^NUM_PEERS=(\d+)'
         m = re.search(exp, output, re.MULTILINE)
@@ -116,7 +80,7 @@ def get_num_peers():
 def is_running():
     """Return True if dmtcp_command reports RUNNING as 'yes'."""
     cmd = ["dmtcp_command", "s"]
-    output = execute_shell_command(cmd)
+    output = fredutil.execute_shell_command(cmd)
     if output != None:
         m = re.search('RUNNING=(\w+)', output, re.MULTILINE)
         if m != None:
@@ -166,7 +130,7 @@ def checkpoint():
     map(os.remove, l_files)
     # Request the checkpoint.
     cmdstr = ["dmtcp_command", "--quiet", "bc"]
-    execute_shell_command_and_wait(cmdstr)
+    fredutil.execute_shell_command_and_wait(cmdstr)
     fredutil.fred_debug("After blocking checkpoint command.")
 
 def restart(n_index):

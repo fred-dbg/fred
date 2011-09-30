@@ -210,7 +210,7 @@ class PersonalityGdb(personality.Personality):
         global gn_user_code_min, gn_user_code_max, gs_inferior_name
         fredutil.fred_assert(gs_inferior_name != "", "Empty inferior name.")
         n_gdb_pid = fredio.get_child_pid()
-        n_inferior_pid = self.get_inferior_pid(n_gdb_pid)
+        n_inferior_pid = fredutil.get_inferior_pid(n_gdb_pid)
         fredutil.fred_assert(n_inferior_pid != -1,
                              "Error finding inferior pid.")
         permissions_re = "\sr.xp\s" # Matches an executable segment in proc maps
@@ -231,20 +231,6 @@ class PersonalityGdb(personality.Personality):
             int(re.search(interval_re, executable_lines[0]).group(1), 16)
         gn_user_code_max = \
             int(re.search(interval_re, executable_lines[-1]).group(2), 16)
-
-    def get_inferior_pid(self, n_gdb_pid):
-        """Given the pid of gdb, return the pid of the inferior or -1 on error.
-        This is inefficiently implemented by scanning entries in /proc."""
-        l_pid_dirs = glob.glob("/proc/[0-9]*")
-        for pid_dir in l_pid_dirs:
-            n_pid = fredutil.to_int(re.search("/proc/([0-9]+).*",
-                                    pid_dir).group(1))
-            f = open(pid_dir + "/stat")
-            n_ppid = fredutil.to_int(f.read().split()[3])
-            f.close()
-            if n_ppid == n_gdb_pid:
-                return n_pid
-        return -1
 
     def at_breakpoint(self, bt_frame, breakpoints):
         for breakpoint in breakpoints:

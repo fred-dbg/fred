@@ -288,7 +288,7 @@ def main():
     """Program execution starts here."""
     global gn_coordinator_port
     # Don't do anything if we can't find DMTCP.
-    fred.dmtcpmanager.verify_critical_files_present()
+    fredapp.verify_critical_files_present()
     
     initialize_tests()
 

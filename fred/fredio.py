@@ -33,6 +33,7 @@ import pdb
 import select
 
 import fredutil
+import fredmanager
 
 GB_FRED_DEMO = False
 GB_FRED_DEMO_FROM_USER = False
@@ -313,7 +314,7 @@ def setup(l_argv, b_spawn_child=True):
         _spawn_child(["dmtcp_checkpoint",
                       "--quiet",
                       "--with-module",
-                      fredutil.get_fredhijack_path()] +
+                      fredmanager.get_fredhijack_path()] +
                      l_argv)
 
 def teardown():
