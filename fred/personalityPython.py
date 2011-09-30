@@ -47,7 +47,7 @@ class PersonalityPython(personality.Personality):
         self.GS_PRINT = "print"
         self.GS_FINISH = "return\nnext"
         self.GS_CURRENT_POS = "where"
-        
+
         self.gs_next_re = fredutil.getRE(self.GS_NEXT, 4) + "|^n$|^n\s+.*$"
         self.gs_step_re = fredutil.getRE(self.GS_STEP, 4) + "|^s$|^s\s+.*$"
         self.gs_continue_re = fredutil.getRE(self.GS_CONTINUE, 3) + "|^c$"
@@ -56,7 +56,7 @@ class PersonalityPython(personality.Personality):
         self.gs_info_breakpoints_re = fredutil.getRE(self.GS_INFO_BREAKPOINTS)
         self.gs_print_re = fredutil.getRE(self.GS_PRINT, 5) + "|^p(/\w)?"
         self.gs_program_not_running_re = "The program finished and will be restarted"
-        
+
         self.GS_PROMPT = "(Pdb) "
         self.gre_prompt = re.compile("\(Pdb\) $")
         self.gre_backtrace_frame = ".+/(.+?)\((\d+)\)(.+?)\(.*?\).*?\n-\>" 
@@ -64,13 +64,10 @@ class PersonalityPython(personality.Personality):
         # List of regexes that match debugger prompts for user input
         self.ls_needs_user_input = []
         # Things like 'next 5' are allowed:
-        self.b_has_count_commands = True
+        self.b_has_count_commands = False 
         self.b_coalesce_support = False
-        # Gdb orders backtraces with topmost at the beginning (list idx 0):
         self.n_top_backtrace_frame = 0
-        # GDB only: name of inferior process.
-        self.s_inferior_name = ""
-        
+
     def prompt_string(self):
         """Return the debugger's prompt string."""
         return self.GS_PROMPT
@@ -113,3 +110,6 @@ class PersonalityPython(personality.Personality):
         breakpoint.n_line     = int(match_obj[5])
         breakpoint.n_count    = fredutil.to_int(match_obj[6])
         return breakpoint
+
+    def _parse_backtrace_internal(self, backtrace):
+        return re.findall(self.gre_backtrace_frame, backtrace, re.MULTILINE) 

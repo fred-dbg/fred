@@ -44,10 +44,11 @@ class PersonalityMatlab(personality.Personality):
         self.GS_BREAKPOINT = "dbstop"
         self.GS_WHERE = "dbstack"
         self.GS_INFO_BREAKPOINTS = "dbstatus"
+        # MATLAB print command is disp(i), if you want to display the value of i
         self.GS_PRINT = None
         self.GS_FINISH = "dbstep out"
         self.GS_CURRENT_POS = "dbstack"
-        
+
         self.gs_next_re = fredutil.getRE(self.GS_NEXT)
         self.gs_step_re = fredutil.getRE(self.GS_STEP)
         self.gs_continue_re = fredutil.getRE(self.GS_CONTINUE)
@@ -55,7 +56,7 @@ class PersonalityMatlab(personality.Personality):
         self.gs_where_re = fredutil.getRE(self.GS_WHERE)
         self.gs_info_breakpoints_re = fredutil.getRE(self.GS_INFO_BREAKPOINTS)
         self.gs_program_not_running_re = "Error using ==>"
-        
+
         self.GS_PROMPT = ">> "
         self.gre_prompt = "\w?" + self.GS_PROMPT
         self.gre_backtrace_frame = "^\>?\s*In (.+) (?:at|after) (\d+)"
@@ -63,13 +64,11 @@ class PersonalityMatlab(personality.Personality):
         # List of regexes that match debugger prompts for user input
         self.ls_needs_user_input = []
         # Things like 'next 5' are allowed:
-        self.b_has_count_commands = True
+        self.b_has_count_commands = False
         self.b_coalesce_support = False
-        # Gdb orders backtraces with topmost at the beginning (list idx 0):
+        # MATLAB orders backtraces with topmost at the beginning (list idx 0):
         self.n_top_backtrace_frame = 0
-        # GDB only: name of inferior process.
-        self.s_inferior_name = ""
-        
+
     def prompt_string(self):
         """Return the debugger's prompt string."""
         return self.GS_PROMPT
@@ -124,3 +123,26 @@ class PersonalityMatlab(personality.Personality):
                 breakpoint.n_line         = int(brkpLineNumber)
                 l_breakpoints.append(breakpoint)
         return l_breakpoints
+
+    def _parse_one_backtrace(self, backtrace):
+        return re.findall(self.gre_backtrace_frame, backtrace, re.MULTILINE)
+
+    def identify_command(self, s_command):
+        cmd = None
+        if re.search(self.gs_step_re, s_command) != None:
+            cmd = freddebugger.fred_step_cmd()
+            cmd.set_count_cmd(self.b_has_count_commands)
+        elif re.search(self.gs_next_re, s_command) != None:
+            cmd = freddebugger.fred_next_cmd()
+            cmd.set_count_cmd(self.b_has_count_commands)
+        elif re.search(self.gs_continue_re, s_command) != None:
+            cmd = freddebugger.fred_continue_cmd()
+            cmd.set_count_cmd(self.b_has_count_commands)
+        else:
+            cmd = freddebugger.fred_unknown_cmd()
+                cmd.set_native(s_command.partition(' ')[0])
+        cmd.s_args = s_command.partition(' ')[2]
+        return cmd
+
+    def _parse_backtrace_internal(self, backtrace):
+        return re.findall(self.gre_backtrace_frame, backtrace, re.MULTILINE) 

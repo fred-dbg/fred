@@ -120,7 +120,7 @@ class PersonalityGdb(personality.Personality):
         output = self.execute_command(self.GS_STEP + " " + str(n))
         bt = self.get_backtrace()
         cur_func = bt.l_frames[0].s_function
-        n_cur_addr = parse_address(self.do_print("&" + cur_func))
+        n_cur_addr = self.parse_address(self.do_print("&" + cur_func))
         if not self.within_user_code(n_cur_addr):
             self.execute_command(self.GS_FINISH)
             # TODO: Think of more portable way to do this:
@@ -182,9 +182,9 @@ class PersonalityGdb(personality.Personality):
         if n_addr == -1:
             bt = self.get_backtrace()
             cur_func = bt.l_frames[0].s_function
-            n_addr = parse_address(self.do_print("&" + cur_func))
+            n_addr = self.parse_address(self.do_print("&" + cur_func))
         if gn_user_code_min == 0:
-            get_user_code_addresses()
+            self.get_user_code_addresses()
         return n_addr > gn_user_code_min and n_addr < gn_user_code_max
 
     def set_scheduler_locking(self, b_value):
@@ -192,55 +192,69 @@ class PersonalityGdb(personality.Personality):
         s_value = "on" if b_value else "off"
         self.execute_command("set scheduler-locking %s" % s_value)
 
-def parse_address(s_addr):
-    """Parse the given address string from gdb and return a number."""
-    # Example input: "$2 = (int (*)(item *)) 0x8048508 <list_len>"
-    global gn_user_code_min
-    exp = ".+\(.+\) (0x[0-9A-Fa-f]+).+"
-    m = re.search(exp, s_addr)
-    if m != None:
-        n_addr = int(m.group(1), 16)
-        return n_addr
-    # TODO: hackish: return an address within the user space to fool whoever
-    # is calling this.  need to investigate why m can be None.
-    return gn_user_code_min + 10
+    def parse_address(self, s_addr):
+        """Parse the given address string from gdb and return a number."""
+        # Example input: "$2 = (int (*)(item *)) 0x8048508 <list_len>"
+        global gn_user_code_min
+        exp = ".+\(.+\) (0x[0-9A-Fa-f]+).+"
+        m = re.search(exp, s_addr)
+        if m != None:
+            n_addr = int(m.group(1), 16)
+            return n_addr
+        # TODO: hackish: return an address within the user space to fool whoever
+        # is calling this.  need to investigate why m can be None.
+        return gn_user_code_min + 10
 
-def get_user_code_addresses():
-    """Get user code ranges from /proc/pid/maps."""
-    global gn_user_code_min, gn_user_code_max, gs_inferior_name
-    fredutil.fred_assert(gs_inferior_name != "", "Empty inferior name.")
-    n_gdb_pid = fredio.get_child_pid()
-    n_inferior_pid = get_inferior_pid(n_gdb_pid)
-    fredutil.fred_assert(n_inferior_pid != -1, "Error finding inferior pid.")
-    permissions_re = "\sr.xp\s" # Matches an executable segment in proc maps
-    interval_re = "([0-9A-Fa-f]+)-([0-9A-Fa-f]+)\s.+"
-    f = open("/proc/%d/maps" % n_inferior_pid, "r")
-    executable_lines = []
-    for line in f:
-        if re.search(gs_inferior_name, line) != None:
-            # There may be more than one executable segment (for instance, the
-            # current iteration of DMTCP trampolines splits the code segment
-            # into several).
-            if re.search(permissions_re, line) != None:
-                executable_lines.append(line)
-    f.close()
-    fredutil.fred_assert(len(executable_lines) > 0,
-        "Failed to find executable in /proc/%d/maps :" % n_inferior_pid)
-    gn_user_code_min = \
-        int(re.search(interval_re, executable_lines[0]).group(1), 16)
-    gn_user_code_max = \
-        int(re.search(interval_re, executable_lines[-1]).group(2), 16)
-
-def get_inferior_pid(n_gdb_pid):
-    """Given the pid of gdb, return the pid of the inferior or -1 on error.
-    This is inefficiently implemented by scanning entries in /proc."""
-    l_pid_dirs = glob.glob("/proc/[0-9]*")
-    for pid_dir in l_pid_dirs:
-        n_pid = fredutil.to_int(re.search("/proc/([0-9]+).*", pid_dir).group(1))
-        f = open(pid_dir + "/stat")
-        n_ppid = fredutil.to_int(f.read().split()[3])
+    def get_user_code_addresses(self):
+        """Get user code ranges from /proc/pid/maps."""
+        global gn_user_code_min, gn_user_code_max, gs_inferior_name
+        fredutil.fred_assert(gs_inferior_name != "", "Empty inferior name.")
+        n_gdb_pid = fredio.get_child_pid()
+        n_inferior_pid = self.get_inferior_pid(n_gdb_pid)
+        fredutil.fred_assert(n_inferior_pid != -1,
+                             "Error finding inferior pid.")
+        permissions_re = "\sr.xp\s" # Matches an executable segment in proc maps
+        interval_re = "([0-9A-Fa-f]+)-([0-9A-Fa-f]+)\s.+"
+        f = open("/proc/%d/maps" % n_inferior_pid, "r")
+        executable_lines = []
+        for line in f:
+            if re.search(gs_inferior_name, line) != None:
+                # There may be more than one executable segment (for instance,
+                # the current iteration of DMTCP trampolines splits the code
+                # segment into several).
+                if re.search(permissions_re, line) != None:
+                    executable_lines.append(line)
         f.close()
-        if n_ppid == n_gdb_pid:
-            return n_pid
-    return -1
+        fredutil.fred_assert(len(executable_lines) > 0,
+            "Failed to find executable in /proc/%d/maps :" % n_inferior_pid)
+        gn_user_code_min = \
+            int(re.search(interval_re, executable_lines[0]).group(1), 16)
+        gn_user_code_max = \
+            int(re.search(interval_re, executable_lines[-1]).group(2), 16)
+
+    def get_inferior_pid(self, n_gdb_pid):
+        """Given the pid of gdb, return the pid of the inferior or -1 on error.
+        This is inefficiently implemented by scanning entries in /proc."""
+        l_pid_dirs = glob.glob("/proc/[0-9]*")
+        for pid_dir in l_pid_dirs:
+            n_pid = fredutil.to_int(re.search("/proc/([0-9]+).*",
+                                    pid_dir).group(1))
+            f = open(pid_dir + "/stat")
+            n_ppid = fredutil.to_int(f.read().split()[3])
+            f.close()
+            if n_ppid == n_gdb_pid:
+                return n_pid
+        return -1
+
+    def at_breakpoint(self, bt_frame, breakpoints):
+        for breakpoint in breakpoints:
+            if breakpoint.s_function == bt_frame.s_function and \
+               breakpoint.s_file == bt_frame.s_file and \
+               breakpoint.n_line == bt_frame.n_line:
+                return True
+        return False
+
+    def _parse_backtrace_internal(self, backtrace):
+        return re.findall(self.gre_backtrace_frame,backtrace,
+                          re.MULTILINE | re.DOTALL)
     

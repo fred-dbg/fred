@@ -260,7 +260,7 @@ def setup_debugger(s_debugger_name):
         from fred.personalityPerl import PersonalityPerl
         g_debugger = freddebugger.ReversibleDebugger(PersonalityPerl())
         del PersonalityPerl
-    elif s_debugger_name == "/opt/matlab/bin/glnxa64/MATLAB":
+    elif s_debugger_name.endswith("MATLAB"):
         fredutil.fred_debug("Using matlab personality.")
         from fred.personalityMatlab import PersonalityMatlab
         g_debugger = freddebugger.ReversibleDebugger(PersonalityMatlab())

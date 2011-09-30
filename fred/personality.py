@@ -83,22 +83,15 @@ class Personality:
         """Return a Breakpoint from the given re Match object.
         The Match object should be a tuple (the result of gre_breakpoint)."""
         fredutil.fred_assert(False, "Must be implemented in subclass.")
-        
+
+    def _parse_backtrace_internal(self, backtrace):
+        """Return the backtrace list"""
+        fredutil.fred_assert(False, "Must be implemented in subclass.")
+
     def _parse_backtrace(self, where_str):
         """Return a Backtrace instance parsed from output of 'where' cmd."""
         backtrace = re.sub(self.gre_prompt, '', where_str)
-        if self.s_name == "gdb":
-            bt_list = re.findall(self.gre_backtrace_frame,
-                                 backtrace, re.MULTILINE | re.DOTALL)
-        if self.s_name == "Pdb":
-            bt_list = re.findall(self.gre_backtrace_frame,
-                                 backtrace, re.MULTILINE)
-        if self.s_name == "perl":
-            bt_list = re.findall(self.gre_backtrace_frame,
-                                 backtrace)
-        if self.s_name == "MATLAB":
-            bt_list = re.findall(self.gre_backtrace_frame,
-                                 backtrace, re.MULTILINE)
+        bt_list = self._parse_backtrace_internal(backtrace)
         bt = freddebugger.Backtrace()
         for f in bt_list:
             bt.add_frame(self._parse_backtrace_frame(f))
@@ -177,33 +170,20 @@ class Personality:
         """Return a FredCommand representing given personality command.
         Also sets 'native' string appropriately."""
         cmd = None
-        if self.s_name != "MATLAB":
-            if re.search(self.gs_next_re, s_command) != None:
-                cmd = freddebugger.fred_next_cmd()
-                cmd.set_count_cmd(self.b_has_count_commands)
-            elif re.search(self.gs_step_re, s_command) != None:
-                cmd = freddebugger.fred_step_cmd()
-                cmd.set_count_cmd(self.b_has_count_commands)
-            elif re.search(self.gs_continue_re, s_command) != None:
-                cmd = freddebugger.fred_continue_cmd()
-                cmd.set_count_cmd(self.b_has_count_commands)
-            else:
-                cmd = freddebugger.fred_unknown_cmd()
+        if re.search(self.gs_next_re, s_command) != None:
+            cmd = freddebugger.fred_next_cmd()
+            cmd.set_count_cmd(self.b_has_count_commands)
+        elif re.search(self.gs_step_re, s_command) != None:
+            cmd = freddebugger.fred_step_cmd()
+            cmd.set_count_cmd(self.b_has_count_commands)
+        elif re.search(self.gs_continue_re, s_command) != None:
+            cmd = freddebugger.fred_continue_cmd()
+            cmd.set_count_cmd(self.b_has_count_commands)
         else:
-            if re.search(self.gs_step_re, s_command) != None:
-                cmd = freddebugger.fred_step_cmd()
-                cmd.set_count_cmd(self.b_has_count_commands)
-            elif re.search(self.gs_next_re, s_command) != None:
-                cmd = freddebugger.fred_next_cmd()
-                cmd.set_count_cmd(self.b_has_count_commands)
-            elif re.search(self.gs_continue_re, s_command) != None:
-                cmd = freddebugger.fred_continue_cmd()
-                cmd.set_count_cmd(self.b_has_count_commands)
-            else:
-                cmd = freddebugger.fred_unknown_cmd()
+            cmd = freddebugger.fred_unknown_cmd()
         cmd.set_native(s_command.partition(' ')[0])
         cmd.s_args = s_command.partition(' ')[2]
-        if cmd.b_count_cmd and cmd.s_args != "" and self.s_name != "MATLAB":
+        if cmd.b_count_cmd and cmd.s_args != "":
             cmd.set_count(int(cmd.s_args))
         return cmd        
 
@@ -226,3 +206,12 @@ class Personality:
           $XX = 16
         Where $XX changes with each command executed."""
         fredutil.fred_assert(False, "Must be implemented in subclass.")
+
+    def at_breakpoint(self, bt_frame, breakpoints):
+        """Returns True if at a breakpoint"""
+        for breakpoint in breakpoints:
+            if breakpoint.s_file == bt_frame.s_file and \
+               breakpoint.n_line == bt_frame.n_line:
+                return True
+        return False
+

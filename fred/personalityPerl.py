@@ -47,7 +47,7 @@ class PersonalityPerl(personality.Personality):
         self.GS_PRINT = "p"
         self.GS_FINISH = "r"
         self.GS_CURRENT_POS = "."
-        
+
         self.gs_next_re = fredutil.getRE(self.GS_NEXT)
         self.gs_step_re = fredutil.getRE(self.GS_STEP)
         self.gs_continue_re = fredutil.getRE(self.GS_CONTINUE)
@@ -59,21 +59,18 @@ class PersonalityPerl(personality.Personality):
   """Debugged program terminated.  Use q to quit or R to restart,
   use o inhibit_exit to avoid stopping after program termination,
   h q, h R or h o to get additional info."""
-        
+
         self.GS_PROMPT = "DB"
         self.gre_prompt = self.GS_PROMPT + "<\d+>"
-        self.gre_backtrace_frame = ". = (\w+::\w+)\(?.*?\)? called from file `(.+)\' line (\d+)" 
+        self.gre_backtrace_frame = ". = (\w+::\w+)\(?.*?\)? called from file `(.+)\' line (\d+)"
         self.gre_breakpoint = "\s*(\d+):\s+.+$"
         # List of regexes that match debugger prompts for user input
         self.ls_needs_user_input = []
         # Things like 'next 5' are allowed:
-        self.b_has_count_commands = True
+        self.b_has_count_commands = False 
         self.b_coalesce_support = False
-        # Gdb orders backtraces with topmost at the beginning (list idx 0):
         self.n_top_backtrace_frame = 0
-        # GDB only: name of inferior process.
-        self.s_inferior_name = ""
-        
+
     def prompt_string(self):
         """Return the debugger's prompt string."""
         return self.GS_PROMPT
@@ -142,3 +139,6 @@ class PersonalityPerl(personality.Personality):
             return frame
         print "ERROR"
         return None
+
+    def _parse_backtrace_internal(self, backtrace):
+        return re.findall(self.gre_backtrace_frame, backtrace)
