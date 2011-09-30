@@ -37,6 +37,7 @@
 #include "log.h"
 #include "synchronizationlogging.h"
 #include "fred_wrappers.h"
+#include "fred_interface.h"
 #include "util.h"
 #include "jassert.h"
 
@@ -51,12 +52,59 @@ void dmtcp::SynchronizationLog::initialize(const char *path, size_t size)
   JASSERT(_dataSize == NULL);
   JASSERT(_entryIndex == 0);
   JASSERT(_numEntries == NULL);
+  JASSERT(_sharedInterfaceInfo == NULL);
 
   /* map_in calls init_common if appropriate. */
   map_in(path, size, mapWithNoReserveFlag);
 
+  init_shm();
+
   JTRACE ("Initialized global synchronization log path to" )
     (_path) ((long)_startAddr) (*_size) (mapWithNoReserveFlag);
+}
+
+/* Initialize shared memory region to be used by fred_command. */
+void dmtcp::SynchronizationLog::init_shm()
+{
+  char name[PATH_MAX];
+  int fd, retval;
+  sprintf(name, FRED_INTERFACE_SHM_FILE_FMT, dmtcp_get_tmpdir(), getpid());
+  
+  fd = open(name, O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
+  if (fd == -1 && errno == EEXIST) {
+    retval = unlink(name);
+    JASSERT ( retval != -1 );
+    fd = open(name, O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
+    JASSERT ( fd != -1 ) (name) ( strerror(errno) );
+  } else {
+    JASSERT ( fd != -1 ) (name) ( strerror(errno) );
+  }
+  
+  retval = ftruncate(fd, FRED_INTERFACE_SHM_SIZE);
+  JASSERT ( retval != -1 ) ( strerror(errno) );
+  JTRACE ( "Opened shared memory region." ) ( name );
+  
+  _sharedInterfaceInfo =
+    (fred_interface_info_t *)mmap(NULL, FRED_INTERFACE_SHM_SIZE,
+                                  PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+  JASSERT((void *)_sharedInterfaceInfo != MAP_FAILED);
+  JTRACE ( "Mapped shared memory region." ) ( _sharedInterfaceInfo );
+  
+  _sharedInterfaceInfo->total_entries = *_numEntries;
+}
+
+/* Destroy shared memory region. */
+void dmtcp::SynchronizationLog::destroy_shm()
+{
+  if (_sharedInterfaceInfo == NULL) {
+    return;
+  }
+
+  char name[PATH_MAX];
+  sprintf(name, FRED_INTERFACE_SHM_FILE_FMT, dmtcp_get_tmpdir(), getpid());
+
+  munmap(_sharedInterfaceInfo, FRED_INTERFACE_SHM_SIZE);
+  unlink(name);
 }
 
 void dmtcp::SynchronizationLog::init_common(size_t size)
@@ -92,6 +140,7 @@ void dmtcp::SynchronizationLog::destroy()
   _entryIndex = 0;
   _dataSize = NULL;
   _numEntries = NULL;
+  destroy_shm();
 }
 
 void dmtcp::SynchronizationLog::unmap()
@@ -197,12 +246,29 @@ void dmtcp::SynchronizationLog::truncate()
 
 int dmtcp::SynchronizationLog::advanceToNextEntry()
 {
+  if (_sharedInterfaceInfo->breakpoint_at_index == _entryIndex + 1) {
+    // A breakpoint has been hit. Don't advance the log yet.
+    _sharedInterfaceInfo->breakpoint_at_index = FRED_INTERFACE_BP_HIT;
+    // XXX: Can this be a condition variable wait instead?
+    while (1) {
+      // Wait until the breakpoint has been cleared.
+      if (_sharedInterfaceInfo->breakpoint_at_index == FRED_INTERFACE_NO_BP) {
+        break;
+      }
+      usleep(1);
+    }
+  }
+
   log_entry_t temp_entry = EMPTY_LOG_ENTRY;
   int entrySize = getEntryAtOffset(temp_entry, getIndex());
   if (entrySize != 0) {
     atomicIncrementIndex(entrySize);
     atomicIncrementEntryIndex();
   }
+  /* Keep interface info up to date. */
+  _sharedInterfaceInfo->current_clone_id = GET_COMMON(temp_entry, clone_id);
+  _sharedInterfaceInfo->current_log_entry_index = _entryIndex;
+
   return entrySize;
 }
 

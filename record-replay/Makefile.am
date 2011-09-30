@@ -10,7 +10,7 @@ INCLUDES= $(all_includes) -I$(JALIB_PATH) -I$(DMTCP_SRC_PATH)
 
 # targets:
 noinst_LIBRARIES = libfredinternal.a
-bin_PROGRAMS = fred_read_log 
+bin_PROGRAMS = fred_read_log fred_command
 pkglib_PROGRAMS = fredhijack.so
 
 # headers:
@@ -35,6 +35,9 @@ fred_read_log_SOURCES = fred_read_log.cpp nosyscallsreal.c util.cpp stubs.cpp \
 
 fred_read_log_LDADD   = libfredinternal.a -lpthread
 
+fred_command_SOURCES = fred_command.cpp
+
+fred_command_LDADD = libfredinternal.a
 
 PICFLAGS=-fPIC
 AM_CFLAGS = $(PICFLAGS)

@@ -27,6 +27,7 @@
 #include "dmtcpalloc.h"
 #include "jassert.h"
 #include "synchronizationlogging.h"
+#include "fred_interface.h"
 #include <unistd.h>
 
 #define DMTCP_PAGE_SIZE sysconf(_SC_PAGESIZE)
@@ -76,7 +77,9 @@ namespace dmtcp
 
     private:
       void init_common(size_t size);
-
+      void init_shm();
+      void destroy_shm();
+  
     public:
       void   destroy();
       void   unmap();
@@ -127,6 +130,7 @@ namespace dmtcp
       size_t *_dataSize;   // Must be modified atomically.
       size_t *_numEntries; // Must be modified atomically.
       void ** _recordedStartAddr;
+      fred_interface_info_t *_sharedInterfaceInfo;
   };
 
 }
