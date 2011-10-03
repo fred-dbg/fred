@@ -33,6 +33,12 @@ from fred import fredmanager
 from fred import fredio
 from fred import freddebugger
 from fred import fredutil
+from fred.algorithms import reverse_watch
+from fred.algorithms import reverse_next
+from fred.algorithms import reverse_step
+from fred.algorithms import reverse_finish
+from fred.algorithms import reverse_continue
+from fred.algorithms import undo
 
 '''
 STYLE CONVENTIONS
@@ -139,18 +145,18 @@ def handle_fred_command(s_command):
     if is_quit_command(s_command_name):
         fredutil.fred_quit(0)
     elif s_command_name == "undo":
-        g_debugger.undo(n_count)
+        undo.undo(g_debugger, n_count)
     elif s_command_name in ["reverse-next", "rn"]:
         # iF THIS DOESN'T WORK FOR YOU, CHANGE IT BACK TO reverse_next().
-        g_debugger.NEW_reverse_next(n_count)
+        reverse_next.NEW_reverse_next(g_debugger, n_count)
     elif s_command_name in ["reverse-step", "rs"]:
         # iF THIS DOESN'T WORK FOR YOU, CHANGE IT BACK TO reverse_step().
-        g_debugger.NEW_reverse_step(n_count)
+        reverse_step.NEW_reverse_step(g_debugger, n_count)
     elif s_command_name in ["reverse-finish", "rf"]:
         # iF THIS DOESN'T WORK FOR YOU, CHANGE IT BACK TO reverse_step().
-        g_debugger.NEW_reverse_finish(n_count)
+        reverse_finish.NEW_reverse_finish(g_debugger, n_count)
     elif s_command_name in ["reverse-continue", "rc"]:
-        g_debugger.reverse_continue()
+        reverse_continue.reverse_continue(g_debugger)
     elif s_command_name in ["checkpoint", "ckpt"]:
         g_debugger.do_checkpoint()
     elif s_command_name == "restart":
@@ -158,7 +164,7 @@ def handle_fred_command(s_command):
         n_index = fredutil.to_int(s_command_name, 0)
         g_debugger.do_restart(n_index, b_clear_history=True)
     elif s_command_name in ["reverse-watch", "rw"]:
-        g_debugger.reverse_watch(s_command_args)
+        reverse_watch.reverse_watch(g_debugger, s_command_args)
     elif s_command_name == "source":
         source_from_file(s_command_args)
     elif s_command_name == "list":
@@ -255,22 +261,22 @@ def setup_debugger(s_debugger_name):
     global g_debugger, gs_resume_dir_path
     if s_debugger_name == "gdb":
         fredutil.fred_debug("Using gdb personality.")
-        from fred.personalityGdb import PersonalityGdb
+        from fred.personality.personalityGdb import PersonalityGdb
         g_debugger = freddebugger.ReversibleDebugger(PersonalityGdb())
         del PersonalityGdb
     elif s_debugger_name == "pdb":
         fredutil.fred_debug("Using python personality.")
-        from fred.personalityPython import PersonalityPython
+        from fred.personality.personalityPython import PersonalityPython
         g_debugger = freddebugger.ReversibleDebugger(PersonalityPython())
         del PersonalityPython
     elif s_debugger_name == "perl":
         fredutil.fred_debug("Using perl personality.")
-        from fred.personalityPerl import PersonalityPerl
+        from fred.personality.personalityPerl import PersonalityPerl
         g_debugger = freddebugger.ReversibleDebugger(PersonalityPerl())
         del PersonalityPerl
     elif s_debugger_name.endswith("MATLAB"):
         fredutil.fred_debug("Using matlab personality.")
-        from fred.personalityMatlab import PersonalityMatlab
+        from fred.personality.personalityMatlab import PersonalityMatlab
         g_debugger = freddebugger.ReversibleDebugger(PersonalityMatlab())
         del PersonalityMatlab
     else:

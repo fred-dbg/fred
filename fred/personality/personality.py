@@ -19,11 +19,13 @@
 # along with FReD.  If not, see <http://www.gnu.org/licenses/>.               #
 ###############################################################################
 
-import fredio
-import freddebugger
-import fredutil
 import pdb
 import re
+
+from .. import fredio
+from .. import freddebugger
+from .. import debugger
+from .. import fredutil
 
 class Personality:
     def __init__(self):
@@ -92,7 +94,7 @@ class Personality:
         """Return a Backtrace instance parsed from output of 'where' cmd."""
         backtrace = re.sub(self.gre_prompt, '', where_str)
         bt_list = self._parse_backtrace_internal(backtrace)
-        bt = freddebugger.Backtrace()
+        bt = debugger.Backtrace()
         for f in bt_list:
             bt.add_frame(self._parse_backtrace_frame(f))
         return bt

@@ -26,9 +26,9 @@ import re
 import sys
 import pdb
 
-import freddebugger
-import fredio
-import fredutil
+from .. import freddebugger
+from .. import fredio
+from .. import fredutil
 
 gn_user_code_min = 0
 gn_user_code_max = 0
@@ -93,7 +93,7 @@ class PersonalityMatlab(personality.Personality):
     def _parse_backtrace_frame(self, match_obj):
         """Return a BacktraceFrame from the given re Match object.
         The Match object should be a tuple (result of gre_backtrace_frame.)"""
-        frame = freddebugger.BacktraceFrame()
+        frame = debugger.BacktraceFrame()
         frame.s_file      = match_obj[0]
         frame.n_line      = int(match_obj[1])
         return frame
@@ -101,7 +101,7 @@ class PersonalityMatlab(personality.Personality):
     def _parse_one_breakpoint(self, match_obj):
         """Return a Breakpoint from the given re Match object.
         The Match object should be a tuple (the result of gre_breakpoint)."""
-        breakpoint = freddebugger.Breakpoint()
+        breakpoint = debugger.Breakpoint()
         breakpoint.s_function     = match_obj[0]
         breakpoint.n_line         = int(match_obj[1])
         return breakpoint
