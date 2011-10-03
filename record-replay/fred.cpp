@@ -168,6 +168,10 @@ static void initialize_thread()
   (*clone_id_to_tid_table)[clone_id] = pthread_id;
   (*tid_to_clone_id_table)[pthread_id] = clone_id;
 
+  if (SYNC_IS_RECORD) {
+    global_log.incrementNumberThreads();
+  }
+
   JTRACE ( "Thread Initialized" ) ( my_clone_id ) ( pthread_id );
 }
 

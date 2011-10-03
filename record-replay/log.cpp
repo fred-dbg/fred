@@ -91,6 +91,7 @@ void dmtcp::SynchronizationLog::init_shm()
   JTRACE ( "Mapped shared memory region." ) ( _sharedInterfaceInfo );
   
   _sharedInterfaceInfo->total_entries = *_numEntries;
+  _sharedInterfaceInfo->total_threads = *_numThreads;
 }
 
 /* Destroy shared memory region. */
@@ -114,6 +115,7 @@ void dmtcp::SynchronizationLog::init_common(size_t size)
   LogMetadata *metadata = (LogMetadata *) _startAddr;
 
   _numEntries = &(metadata->numEntries);
+  _numThreads = &(metadata->numThreads);
   _dataSize = &(metadata->dataSize);
   _size = &(metadata->size);
   _recordedStartAddr = &(metadata->recordedStartAddr);
@@ -122,6 +124,7 @@ void dmtcp::SynchronizationLog::init_common(size_t size)
   _log = _startAddr + LOG_OFFSET_FROM_START;
 
   if (SYNC_IS_RECORD) {
+    *_numThreads = 0;
     JASSERT(_startAddr != NULL && _startAddr != MAP_FAILED);
     JTRACE("RECORD; filling in _recordedStartAddr.") ((long)_startAddr);
     *_recordedStartAddr = _startAddr;
@@ -494,6 +497,13 @@ void dmtcp::SynchronizationLog::setDataSize(log_off_t newVal)
 {
   JASSERT(_dataSize != NULL);
   __sync_val_compare_and_swap(_dataSize, *_dataSize, newVal);
+}
+
+void dmtcp::SynchronizationLog::incrementNumberThreads()
+{
+  if (_numThreads != NULL) {
+    __sync_fetch_and_add(_numThreads, 1);
+  }
 }
 
 inline log_off_t

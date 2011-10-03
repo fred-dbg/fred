@@ -65,6 +65,7 @@ static void print_usage(char *name)
 static void handle_info_command(fred_interface_info_t *info)
 {
   printf("Total number of log entries = %Zu\n", info->total_entries);
+  printf("Total number of threads = %Zu\n", info->total_threads);
 }
 
 static void handle_status_command(fred_interface_info_t *info)

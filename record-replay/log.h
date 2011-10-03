@@ -47,6 +47,7 @@ namespace dmtcp
     size_t size;
     size_t dataSize;
     size_t numEntries;
+    size_t numThreads;
     void * recordedStartAddr;
   } LogMetadata;
 
@@ -69,6 +70,7 @@ namespace dmtcp
         , _size (NULL)
         , _dataSize (NULL)
         , _numEntries (NULL)
+        , _numThreads (NULL)
       {}
 
       ~SynchronizationLog() {}
@@ -92,6 +94,7 @@ namespace dmtcp
       size_t getIndex();
       size_t getDataSize();
       void   setDataSize(log_off_t newVal);
+      void   incrementNumberThreads();
       size_t numEntries() { return _numEntries == NULL ? 0 : *_numEntries; }
       void * getRecordedStartAddr() { return _recordedStartAddr == NULL ? NULL : *_recordedStartAddr; }
       bool   isMappedIn() { return _startAddr != NULL; }
@@ -107,7 +110,7 @@ namespace dmtcp
     private:
       void   resetIndex() { _index = 0; _entryIndex = 0; }
       void   resetMarkers()
-        { resetIndex(); *_dataSize = 0; *_numEntries = 0; }
+      { resetIndex(); *_dataSize = 0; *_numEntries = 0; *_numThreads = 0; }
 
       int    writeEntryAtOffset(const log_entry_t& entry, size_t index);
       void   writeEntryHeaderAtOffset(const log_entry_t& entry, size_t index);
@@ -129,6 +132,7 @@ namespace dmtcp
       size_t _savedSize;   // Only used between checkpoints
       size_t *_dataSize;   // Must be modified atomically.
       size_t *_numEntries; // Must be modified atomically.
+      size_t *_numThreads; // Must be modified atomically.
       void ** _recordedStartAddr;
       fred_interface_info_t *_sharedInterfaceInfo;
   };

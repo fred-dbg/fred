@@ -28,6 +28,7 @@ typedef struct {
   clone_id_t current_clone_id;
   size_t current_log_entry_index;
   size_t total_entries;
+  size_t total_threads;
   unsigned breakpoint_at_index;
 } fred_interface_info_t;
 
