@@ -27,7 +27,7 @@ import re
 
 GS_FREDHIJACK_NAME = "fredhijack.so"
 GS_FREDHIJACK_PATH = os.path.join(os.environ["HOME"],
-                                  "pthread-wrappers/fred/record-replay")
+                                  "pthread-wrappers-git/fred/record-replay")
 
 g_child_subprocess = None
 g_pid = -1
@@ -72,6 +72,7 @@ def _execute_fred_command(s_cmd, s_arg=None):
 def destroy():
     """Perform any cleanup associated with the fred manager."""
     g_child_subprocess = None
+    set_pid(-1)
 
 def set_fred_breakpoint(n_index):
     """Set a FReD internal breakpoint on entry index n_index."""
@@ -121,10 +122,22 @@ def get_total_entries():
     else:
         return None
 
+def get_total_threads():
+    """Return the total number of log threads."""
+    s_total_threads_re = "Total number of threads = (\d+)"
+    s_output = _execute_fred_command("info")
+    m = re.search(s_total_threads_re, s_output)
+    if m != None:
+        fredutil.fred_debug("Total threads are: %d" % int(m.group(1)))
+        return int(m.group(1))
+    else:
+        return None
+
 def current_fred_state():
     """Return a FredState instance representing the current FReD state."""
     state = FredState()
     state.set_total_entries(get_total_entries())
+    state.set_total_threads(get_total_threads())
     state.set_current_entry(get_current_entry_index())
     state.set_current_thread(get_current_thread())
     return state
@@ -132,11 +145,15 @@ def current_fred_state():
 class FredState:
     def __init__(self):
         self.n_total_entries = -1
+        self.n_total_threads = -1
         self.n_current_entry = -1
         self.n_current_thread = -1
 
     def total_entries(self):
         return self.n_total_entries
+
+    def total_threads(self):
+        return self.n_total_threads
 
     def current_entry(self):
         return self.n_current_entry
@@ -146,6 +163,9 @@ class FredState:
 
     def set_total_entries(self, n_entries):
         self.n_total_entries = n_entries
+
+    def set_total_threads(self, n_threads):
+        self.n_total_threads = n_threads
 
     def set_current_entry(self, n_entry):
         self.n_current_entry = n_entry

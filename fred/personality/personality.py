@@ -39,6 +39,7 @@ class Personality:
         self.GS_PRINT = None
         self.GS_FINISH = None
         self.GS_CURRENT_POS = None
+        self.GS_SWITCH_THREAD = None
 
         self.gs_next_re = None
         self.gs_step_re = None
@@ -104,11 +105,11 @@ class Personality:
         The Match object should be a tuple (result of gre_backtrace_frame.)"""
         fredutil.fred_assert(False, "Must be implemented in subclass.")
         
-    def execute_command(self, s_cmd):
+    def execute_command(self, s_cmd, b_prompt=True):
         """Send the given string to debugger and return its output."""
         # Ensure it has strictly one newline:
         s_cmd = s_cmd.strip() + "\n"
-        return fredio.get_child_response(s_cmd, b_wait_for_prompt=True)
+        return fredio.get_child_response(s_cmd, b_wait_for_prompt=b_prompt)
 
     def do_next(self, n):
         """Perform n 'next' commands. Returns output."""
@@ -118,13 +119,17 @@ class Personality:
         """Perform n 'step' commands. Returns output."""
         return self.execute_command(self.GS_STEP + " " + str(n))
         
-    def do_continue(self, n):
-        """Perform n 'continue' commands. Returns output."""
-        return self.execute_command(self.GS_CONTINUE + " " + str(n))
+    def do_continue(self, b_wait_for_prompt):
+        """Perform 'continue' command. Returns output."""
+        return self.execute_command(self.GS_CONTINUE, b_wait_for_prompt)
         
     def do_breakpoint(self, expr):
         """Perform 'break expr' command. Returns output."""
         return self.execute_command(self.GS_BREAKPOINT + " " + str(expr))
+
+    def do_finish(self):
+        """Perform 'finish' command. Returns output."""
+        return self.execute_command(self.GS_FINISH)
 
     def do_where(self):
         """Perform 'where' command. Returns output."""
@@ -142,6 +147,10 @@ class Personality:
         """Return a BacktraceFrame representing current debugger position."""
         fredutil.fred_assert(self.n_top_backtrace_frame != -2)
         return self.get_backtrace().get_frames()[self.n_top_backtrace_frame]
+
+    def switch_to_thread(self, n_tid):
+        """Switch debugger to given thread."""
+        return self.execute_command(self.GS_SWITCH_THREAD + " " + str(n_tid))
 
     def contains_prompt_str(self, string):
         """Return True if given string matches the prompt string."""
@@ -197,6 +206,8 @@ class Personality:
             return self.GS_STEP
         elif fred_cmd.is_continue():
             return self.GS_CONTINUE
+        elif fred_cmd.is_switch_thread():
+            return self.GS_SWITCH_THREAD
         else:
             fredutil.fred_assert(False,
                                  "Don't know native representation of %s" %

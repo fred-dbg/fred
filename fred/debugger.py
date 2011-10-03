@@ -27,13 +27,17 @@ class Debugger():
         """Perform n 'step' commands. Returns output."""
         return self._p.do_step(n)
         
-    def _continue(self, n):
-        """Perform n 'continue' commands. Returns output."""
-        return self._p.do_continue(n)
+    def _continue(self, b_wait_for_prompt):
+        """Perform 'continue' command. Returns output."""
+        return self._p.do_continue(b_wait_for_prompt)
         
     def _breakpoint(self, expr):
         """Perform 'break expr' command. Returns output."""
         return self._p.do_breakpoint(expr)
+
+    def _finish(self):
+        """Perform 'finish' command. Returns output."""
+        return self._p.do_finish()
 
     def _where(self):
         """Perform 'where' command. Returns output."""
@@ -47,6 +51,21 @@ class Debugger():
         """Perform 'print expr' command. Returns output."""
         return self._p.do_print(expr)
 
+    def _switch_to_thread(self, n_tid):
+        """Perform thread switch command to given tid. No output returned."""
+        self._p.switch_to_thread(n_tid)
+
+    def execute_until_thread(self, n_tid):
+        """Execute until the given thread is alive."""
+        # This is an imperfect solution; the newly created thread has a chance
+        # to execute a few instructions before the "finish" returns.
+        import pdb
+        pdb.set_trace()
+        self._breakpoint("pthread_create")
+        self._continue(True)
+        self._finish()
+        self._switch_to_thread(n_tid)
+        
     def current_position(self):
         """Return a BacktraceFrame representing current debugger position."""
         return self._p.current_position()
@@ -99,6 +118,16 @@ class Debugger():
                 self._p.current_position().s_function != "__libc_start_main"
         else:
             return self._p.program_is_running()
+
+    def interrupt_inferior(self):
+        """Sends SIGINT to inferior process."""
+        # XXX: Shouldn't import fredio here... figure out better way.
+        import fredio, signal, os
+        n_pid = fredutil.get_inferior_pid(fredio.get_child_pid())
+        fredutil.fred_assert(n_pid != -1)
+        os.kill(n_pid, signal.SIGINT)
+        fredio.wait_for_prompt()
+        del fredio, signal, os
 
 class DebuggerState():
     """Represents the current state of a debugger.

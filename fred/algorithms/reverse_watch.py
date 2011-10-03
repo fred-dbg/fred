@@ -32,3 +32,14 @@ def reverse_watch(dbg, s_expr):
 		% s_expr )
     dbg.update_state()
     fredutil.fred_debug("Reverse watch finished.")
+
+def reverse_watch_with_log_support(dbg, s_expr):
+    """Perform 'reverse-watch' with support from fred_command."""
+    s_expr_val = dbg.evaluate_expression(s_expr)
+    fredutil.fred_debug("RW: Starting with expr value '%s'" % s_expr_val)
+    # Find starting checkpoint using binary search:
+    binary_search._binary_search_checkpoints(dbg, s_expr, s_expr_val)
+    dbg.checkpoint.l_history =  \
+        binary_search._binary_search_with_log(dbg, s_expr, s_expr_val)
+    dbg.update_state()
+    fredutil.fred_debug("Reverse watch finished.")

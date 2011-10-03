@@ -28,6 +28,7 @@ import pdb
 # here with fredio should in fact be done in personality.py or
 # personalityGdb.py.
 import dmtcpmanager
+import fredmanager
 import fredutil
 import debugger
 
@@ -169,13 +170,19 @@ class ReversibleDebugger(debugger.Debugger):
     
     def execute_fred_command(self, cmd, b_update=True):
         """Execute the given FredCommand."""
-        if cmd.s_native == "":
-            fredutil.fred_fatal("FredCommand instance has null native string.")
-        elif cmd.b_ignore:
+        if cmd.b_ignore:
             fredutil.fred_debug("Skipping ignore command '%s'" % \
                                 (cmd.s_native + " " + cmd.s_args))
             return
-        self._p.execute_command(cmd.s_native + " " + cmd.s_args + "\n")
+        # Special handling for "log-breakpoint X" and "log-continue" cmds.
+        if cmd.is_log_breakpoint():
+            self.set_log_breakpoint(int(cmd.s_args))
+        elif cmd.is_log_continue():
+            self.do_log_continue()
+        else:
+            fredutil.fred_assert(cmd.s_native != "")
+            self._p.execute_command(cmd.s_native + " " + cmd.s_args + "\n",
+                                    cmd.b_wait_for_prompt)
         if b_update:
             self.update_state()
 
@@ -228,14 +235,16 @@ class ReversibleDebugger(debugger.Debugger):
             self.replay_history(l_history)
 	return l_history
         
-    def do_continue(self, n=1):
+    def do_continue(self, b_wait_for_prompt=True):
         """Perform n 'continue' commands. Returns output."""
         cmd = fred_continue_cmd()
         cmd.set_native(self._p.get_native(cmd))
-        cmd.s_args = str(n)
+        cmd.b_wait_for_prompt = b_wait_for_prompt
         self.log_fred_command(cmd)
-        output = self._continue(n)
-        self.update_state()
+        output = self._continue(b_wait_for_prompt)
+        # Don't update state if we are not waiting for the prompt.
+        if b_wait_for_prompt:
+            self.update_state()
         return output
         
     def do_breakpoint(self, expr):
@@ -253,6 +262,37 @@ class ReversibleDebugger(debugger.Debugger):
         # TODO: We should log some print statements, since they can contain
         # side effects. Example: "print var++"
         return self._print(expr)
+
+    def do_switch_to_thread(self, n_tid):
+        """Switch debugger to given thread."""
+        cmd = fred_switch_thread_cmd()
+        cmd.set_native(self._p.get_native(cmd))
+        cmd.s_args = str(n_tid)
+        self.log_fred_command(cmd)
+        self._switch_to_thread(n_tid)
+
+    def set_log_breakpoint(self, n_log_index):
+        """Set a log breakpoint on the given log entry index."""
+        cmd = fred_log_breakpoint_cmd()
+        cmd.s_args = str(n_log_index)
+        self.log_fred_command(cmd)
+        fredmanager.set_fred_breakpoint(n_log_index)
+
+    def do_log_continue(self):
+        """Execute fred_command 'cont' to hit a log breakpoint."""
+        # XXX: Disable all debugger breakpoints before 'continue'
+        # Call _continue() directly here so it does not get logged.
+        # Calling debugger _continue() will let the inferior run, but
+        # we have set a log breakpoint, so it will only replay to that
+        # point.
+        self._continue(b_wait_for_prompt=False)
+        self.log_fred_command(fred_log_continue_cmd())
+        fredmanager.wait_on_fred_breakpoint()
+        # Interrupt inferior to bring back the debugger prompt.
+        self.interrupt_inferior()
+        # Remove the log breakpoint that got us here (only support one
+        # log bkpt right now).
+        fredmanager.send_fred_continue()
 
     def _copy_fred_commands(self, l_cmds):
         """Perform a deep copy on the given list of FredCommands."""
@@ -371,6 +411,9 @@ class FredCommand():
         self.b_ignore = False
         # When True, this command may take a numerical count argument
         self.b_count_cmd = False
+        # When True, executing this command will wait for the debugger prompt.
+        # Defaults to True because that is the usual behavior.
+        self.b_wait_for_prompt = True
 
     def __repr__(self):
         """Return a FReD-abstracted representation of this command."""
@@ -384,10 +427,11 @@ class FredCommand():
     def copy(self):
         """Return a deep copy of this FredCommand."""
         new_cmd = FredCommand(self.s_name)
-        new_cmd.s_args      = self.s_args
-        new_cmd.s_native    = self.s_native
-        new_cmd.b_ignore    = self.b_ignore
-        new_cmd.b_count_cmd = self.b_count_cmd
+        new_cmd.s_args            = self.s_args
+        new_cmd.s_native          = self.s_native
+        new_cmd.b_ignore          = self.b_ignore
+        new_cmd.b_count_cmd       = self.b_count_cmd
+        new_cmd.b_wait_for_prompt = self.b_wait_for_prompt
         return new_cmd
 
     def native_repr(self):
@@ -425,6 +469,15 @@ class FredCommand():
 
     def is_breakpoint(self):
         return self.s_name == fred_breakpoint_cmd().s_name
+
+    def is_log_breakpoint(self):
+        return self.s_name == fred_log_breakpoint_cmd().s_name
+
+    def is_log_continue(self):
+        return self.s_name == fred_log_continue_cmd().s_name
+
+    def is_switch_thread(self):
+        return self.s_name == fred_switch_thread_cmd().s_name
 
     def count(self):
         """Return integer representation of 'count' argument."""
@@ -517,3 +570,9 @@ def fred_print_cmd():
     return FredCommand("print")
 def fred_unknown_cmd():
     return FredCommand("unknown")
+def fred_log_breakpoint_cmd():
+    return FredCommand("log-breakpoint")
+def fred_log_continue_cmd():
+    return FredCommand("log-continue")
+def fred_switch_thread_cmd():
+    return FredCommand("thread")

@@ -1,5 +1,6 @@
 from .. import fredutil
 from .. import freddebugger
+from .. import fredmanager
 
 """
 This file contains all algorithms for performing binary search over a
@@ -13,6 +14,125 @@ which to perform the binary search.
 # This exception happens only for reverse_watch currently.
 class BinarySearchTooFarAtStartError(Exception):
     pass
+
+def _binary_search_regular_next_expansion(dbg, testIfTooFar):
+    """Performs regular next expansion from the current point in time,
+    no questions asked."""
+    fredutil.fred_assert(not testIfTooFar())
+    l_history = dbg._copy_fred_commands(dbg.checkpoint.l_history)
+    repeatNextCmd = dbg._p.get_personality_cmd(freddebugger.fred_next_cmd())
+    (l_history, n_min) = \
+        NEW_binary_search_until(dbg, l_history, repeatNextCmd,
+                                testIfTooFar)
+    l_history = NEW_binary_search_history(dbg, l_history,
+                                          n_min, testIfTooFar)
+    fredutil.fred_assert(not testIfTooFar())
+
+    while l_history[-1].is_next():
+        level = dbg.state().level()
+        testIfTooFar2 = \
+            lambda: dbg.state().level() <= level or testIfTooFar()
+        (l_history, n_min) = \
+            NEW_binary_search_expand_next(dbg, l_history, testIfTooFar2)
+        if len(l_history) - n_min > 1:
+            l_history = NEW_binary_search_history(dbg, l_history, n_min,
+                                                  testIfTooFar2)
+    fredutil.fred_assert(l_history[-1].is_step())
+    del l_history[-1]
+    dbg.do_restart()
+    dbg.replay_history(l_history)
+    return l_history
+
+def _binary_search_round_robin(dbg, s_expr, s_expr_val):
+    """Perform a binary search using the "round robin" algorithm:
+         For each thread Ti ever alive:
+           Bring program to the beginning of Ti lifetime.
+           Perform "next" expansion in Ti.
+           If "next" expansion succeeds:
+           |  Disable other threads from executing
+           |  Execute "step" command in Ti
+           |  If expression "E" changed with the step:
+           |  | Thread Ti is the correct thread; exit.
+           |  Else:
+           |    Some other thread is the correct thread. Goto beginning.
+           Else:
+             Some other thread is the correct thread. Goto beginning.
+    """
+    testIfTooFar = lambda: dbg.test_expression(s_expr, s_expr_val)
+
+    n_total_threads = fredmanager.get_total_threads()
+    if n_total_threads <= 1:
+        # Regular reverse-watch.
+        l_history = dbg._copy_fred_commands(dbg.checkpoint.l_history)
+        return NEW_binary_search_since_last_checkpoint(dbg, l_history,
+                                                       0, s_expr, s_expr_val)
+
+    for n_tid in range(1, n_total_threads+1):
+        dbg.do_restart(b_clear_history=True)
+        dbg.execute_until_thread(n_tid)
+        # XXX: Test if the thread is a user thread. If not, skip it.
+        # Use personalityGdb.within_user_code() for that test.
+        fredutil.fred_assert(not testIfTooFar())
+        # Regular next expansion.
+        l_history = _binary_search_regular_next_expansion(dbg, testIfTooFar)
+        dbg.set_scheduler_locking(True)
+        fredutil.fred_assert(not testIfTooFar())
+        dbg.do_step()
+        if testIfTooFar():
+            # This is the culprit thread.
+            dbg.set_scheduler_locking(False)
+            break
+        dbg.set_scheduler_locking(False)
+
+    fredutil.fred_assert(l_history[-1].is_step())
+    del l_history[-1]
+    dbg.do_restart()
+    dbg.replay_history(l_history)
+    return l_history
+
+
+def _binary_search_with_log(dbg, s_expr, s_expr_val):
+    # XXX: This hasn't been tested except with gdb, so I am
+    # leaving this assertion until we test. -Tyler
+    fredutil.fred_assert(dbg.personality_name() == "gdb")
+
+    testIfTooFar = lambda: dbg.test_expression(s_expr, s_expr_val)
+    # First, perform binary search over log events using fred_command.
+    n_min = 0
+    n_count = n_max = fredmanager.get_total_entries()
+    fredutil.fred_assert(n_max != None)
+
+    while n_max - n_min > 1:
+        n_count = (n_min + n_max) / 2
+        dbg.do_restart(b_clear_history = True)
+        dbg.set_log_breakpoint(n_count)
+        dbg.do_log_continue()
+        if not dbg.program_is_running() or testIfTooFar():
+            fredutil.fred_debug("Setting max bound %d" % n_count)
+            n_max = n_count
+        else:
+            fredutil.fred_debug("Setting min bound %d" % n_count)
+            n_min = n_count
+        # Not strictly necessary (since we restart), but cleaner:
+        fredmanager.send_fred_continue()
+        
+    # Only use log breakpoints if there is more than one log entry to work with
+    if n_max <= 1:
+        return _binary_search_round_robin(dbg, s_expr, s_expr_val)
+
+    n_culprit_tid = fredmanager.get_current_thread()
+    fredutil.fred_debug("Expression changed with log event # %d "
+                        "in thread %d" % (n_count, n_culprit_tid))
+    # At this point, we know the expression changes value at log
+    # event n_count. Restart and replay to the previous log event.
+    dbg.do_restart(b_clear_history = True)
+    dbg.set_log_breakpoint(n_count - 1)
+    dbg.do_log_continue()
+    # Switch to the "culprit" thread.
+    dbg.do_switch_to_thread(n_culprit_tid)
+
+    # Perform regular next expansion.
+    return _binary_search_regular_next_expansion(dbg, testIfTooFar)
 
 def NEW_binary_search_since_last_checkpoint(dbg, l_history, n_min,
                                             s_expr, s_expr_val):

@@ -164,7 +164,8 @@ def handle_fred_command(s_command):
         n_index = fredutil.to_int(s_command_name, 0)
         g_debugger.do_restart(n_index, b_clear_history=True)
     elif s_command_name in ["reverse-watch", "rw"]:
-        reverse_watch.reverse_watch(g_debugger, s_command_args)
+        reverse_watch.reverse_watch_with_log_support(g_debugger, s_command_args)
+        #reverse_watch.reverse_watch(g_debugger, s_command_args)
     elif s_command_name == "source":
         source_from_file(s_command_args)
     elif s_command_name == "list":

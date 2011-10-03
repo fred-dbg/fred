@@ -199,7 +199,10 @@ def get_inferior_pid(n_gdb_pid):
     l_pid_dirs = glob.glob("/proc/[0-9]*")
     for pid_dir in l_pid_dirs:
         n_pid = to_int(re.search("/proc/([0-9]+).*", pid_dir).group(1))
-        f = open(pid_dir + "/stat")
+        try:
+            f = open(pid_dir + "/stat")
+        except IOError:
+            continue
         n_ppid = to_int(f.read().split()[3])
         f.close()
         if n_ppid == n_gdb_pid:

@@ -34,6 +34,7 @@ import traceback
 import fredapp
 import fred.fredutil
 import fred.dmtcpmanager
+import fred.fredmanager
 import fred.fredio
 
 GS_PASSED_STRING = "Passed"
@@ -73,6 +74,7 @@ def end_session():
     """End the current debugger session."""
     global g_debugger
     fred.dmtcpmanager.kill_peers()
+    fred.fredmanager.destroy()
     fred.fredutil.fred_teardown()
     g_debugger.destroy()
     g_debugger = None
@@ -81,23 +83,28 @@ def execute_commands(l_cmds):
     """Execute the given list of commands as if they were a source file."""
     fredapp.source_from_list(l_cmds)
 
+def evaluate_variable(s_name):
+    """Evaluate given variable in debugger and return value."""
+    global g_debugger
+    return g_debugger.evaluate_expression(s_name)
+
 def store_variable(s_name):
     """Evaluate given variable in debugger and store value.
     For example, if the test is for gdb, and the debugged program (a.out)
     defines some variable 'my_var', then store_variable("my_var") will execute
     gdb command "print my_var" and store the value of my_var in the
     gd_stored_variables dictionary under the key "my_var"."""
-    global gd_stored_variables, g_debugger
-    gd_stored_variables[s_name] = g_debugger.evaluate_expression(s_name)
+    global gd_stored_variables
+    gd_stored_variables[s_name] = evaluate_variable(s_name)
 
 def check_stored_variable(s_name):
     """Evaluate given variable in debugger and check against stored value."""
-    global gd_stored_variables, g_debugger
-    return gd_stored_variables[s_name] == g_debugger.evaluate_expression(s_name)
+    global gd_stored_variables
+    return gd_stored_variables[s_name] == evaluate_variable(s_name)
 
 def check_variable(s_name, s_value):
     """Evaluate given variable in debugger and check against given value."""
-    return s_value == str(g_debugger.evaluate_expression(s_name))
+    return s_value == str(evaluate_variable(s_name))
 
 def print_test_name(s_name):
     print "%-40s | " % s_name,
@@ -182,6 +189,67 @@ def gdb_reverse_watch(n_count=1):
             print GS_FAILED_STRING
         end_session()
 
+def gdb_reverse_watch_mt(n_count=1):
+    """Run a multithreaded reverse-watch test on pthread_test example."""
+    global GS_TEST_PROGRAMS_DIRECTORY
+    l_cmd = ["gdb", GS_TEST_PROGRAMS_DIRECTORY + "/pthread-test"]
+    for i in range(0, n_count):
+        print_test_name("gdb reverse watch (MT) %d" % i)
+        start_session(l_cmd)
+        execute_commands(["b main", "r", "fred-ckpt", "b print_solution",
+                          "c", "fred-rw solution < 100"])
+        if int(evaluate_variable("solution")) < 100:
+            execute_commands(["s"])
+            if int(evaluate_variable("solution")) >= 100:
+                print GS_PASSED_STRING
+            else:
+                print GS_FAILED_STRING
+        else:
+            print GS_FAILED_STRING
+        end_session()
+
+def gdb_reverse_watch_mt_priv(n_count=1):
+    """Run a multithreaded reverse-watch test on
+    pthread-test-thread-private, which contains multiple threads, but
+    the expression is on a piece of data modified only by one thread
+    (the main thread).."""
+    global GS_TEST_PROGRAMS_DIRECTORY
+    l_cmd = ["gdb", GS_TEST_PROGRAMS_DIRECTORY + "/pthread-test-thread-private"]
+    for i in range(0, n_count):
+        print_test_name("gdb reverse watch (MT/priv) %d" % i)
+        start_session(l_cmd)
+        execute_commands(["b main", "r", "fred-ckpt", "b print_solution",
+                          "c", "fred-rw main_thread_private_data < 3"])
+        if check_variable("main_thread_private_data", "2"):
+            execute_commands(["s"])
+            if check_variable("main_thread_private_data", "3"):
+                print GS_PASSED_STRING
+            else:
+                print GS_FAILED_STRING
+        else:
+            print GS_FAILED_STRING
+        end_session()
+
+def gdb_reverse_watch_no_log(n_count=1):
+    """Run a single threaded reverse-watch test on test-list-no-malloc
+    which contains 0 threads and 0 log entries.."""
+    global GS_TEST_PROGRAMS_DIRECTORY
+    l_cmd = ["gdb", GS_TEST_PROGRAMS_DIRECTORY + "/test-list-no-malloc"]
+    for i in range(0, n_count):
+        print_test_name("gdb reverse watch (no log) %d" % i)
+        start_session(l_cmd)
+        execute_commands(["b main", "r", "fred-ckpt", "b finished",
+                          "c", "fred-rw list_len() < 10"])
+        if check_variable("list_len()", "9"):
+            execute_commands(["n"])
+            if check_variable("list_len()", "10"):
+                print GS_PASSED_STRING
+            else:
+                print GS_FAILED_STRING
+        else:
+            print GS_FAILED_STRING
+        end_session()
+
 def gdb_reverse_next(n_count=1):
     """Run a reverse-next test on pthread-test."""
     global GS_TEST_PROGRAMS_DIRECTORY
@@ -205,6 +273,9 @@ def run_integration_tests():
     gdb_record_replay_time()
     gdb_syscall_tester()
     gdb_reverse_watch()
+    gdb_reverse_watch_mt()
+    gdb_reverse_watch_mt_priv()
+    gdb_reverse_watch_no_log()
     gdb_reverse_next()
     
 def run_unit_tests():
@@ -282,6 +353,9 @@ def initialize_tests():
                  gdb_record_replay_pthread_cond,
                  "gdb-syscall-tester" : gdb_syscall_tester,
                  "gdb-reverse-watch" : gdb_reverse_watch,
+                 "gdb-reverse-watch-mt" : gdb_reverse_watch_mt,
+                 "gdb-reverse-watch-mt-priv" : gdb_reverse_watch_mt_priv,
+                 "gdb-reverse-watch-no-log" : gdb_reverse_watch_no_log,
                  "gdb-reverse-next"  : gdb_reverse_next }
 
 def main():

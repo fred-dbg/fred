@@ -48,6 +48,7 @@ class PersonalityGdb(personality.Personality):
         self.GS_PRINT = "print"
         self.GS_FINISH = "finish"
         self.GS_CURRENT_POS = "where 1"
+        self.GS_SWITCH_THREAD = "thread"
         
         self.gs_next_re = fredutil.getRE(self.GS_NEXT, 4) + "|^n$|^n\s+.*$"
         self.gs_step_re = fredutil.getRE(self.GS_STEP, 4) + "|^s$|^s\s+.*$"
@@ -119,10 +120,7 @@ class PersonalityGdb(personality.Personality):
         # the user's code, execute a 'finish', and replace the 'step' in
         # history with a 'next', so on replay only the next is executed.
         output = self.execute_command(self.GS_STEP + " " + str(n))
-        bt = self.get_backtrace()
-        cur_func = bt.l_frames[0].s_function
-        n_cur_addr = self.parse_address(self.do_print("&" + cur_func))
-        if not self.within_user_code(n_cur_addr):
+        if not self.within_user_code():
             self.execute_command(self.GS_FINISH)
             # TODO: Think of more portable way to do this:
             return "DO-NOT-STEP"
@@ -180,13 +178,19 @@ class PersonalityGdb(personality.Personality):
             fredutil.fred_assert(self.s_inferior_name != "",
                                  "Empty inferior name.")
             gs_inferior_name = self.s_inferior_name
+        s_cur_func = ""
         if n_addr == -1:
             bt = self.get_backtrace()
-            cur_func = bt.l_frames[0].s_function
-            n_addr = self.parse_address(self.do_print("&" + cur_func))
+            s_cur_func = bt.l_frames[0].s_function
+            n_addr = self.parse_address(self.do_print("&" + s_cur_func))
         if gn_user_code_min == 0:
             self.get_user_code_addresses()
-        return n_addr > gn_user_code_min and n_addr < gn_user_code_max
+        result = n_addr > gn_user_code_min and n_addr < gn_user_code_max
+        if result and s_cur_func == "pthread_mutex_lock":
+            # This is a bug that occurs very rarely, so I'm leaving
+            # this trace in until I can figure it out. -Tyler
+            pdb.set_trace()
+        return result
 
     def set_scheduler_locking(self, b_value):
         """Set gdb scheduler locking to b_value."""
