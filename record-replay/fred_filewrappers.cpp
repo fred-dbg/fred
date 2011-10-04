@@ -1098,9 +1098,9 @@ extern "C" struct dirent * /*__attribute__ ((optimize(0)))*/ readdir(DIR *dirp)
   struct dirent *ptr;
   int res = 0;
 
-  //ok_to_log_readdir = true;
+  ok_to_log_readdir = true;
   res = readdir_r(dirp, &buf, &ptr);
-  //ok_to_log_readdir = false;
+  ok_to_log_readdir = false;
 
   if (res == 0) {
     return ptr;
@@ -1152,9 +1152,8 @@ extern "C" int readdir_r(DIR *dirp, struct dirent *entry,
                          struct dirent **result)
 {
   void *return_addr = GET_RETURN_ADDRESS();
-  if ((!shouldSynchronize(return_addr) ||
-       jalib::Filesystem::GetProgramName() == "gdb") &&
-      !ok_to_log_readdir) {
+  if ((!shouldSynchronize(return_addr) && !ok_to_log_readdir) ||
+       jalib::Filesystem::GetProgramName() == "gdb") {
     return _real_readdir_r(dirp, entry, result);
   }
   int retval;

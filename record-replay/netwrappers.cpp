@@ -172,9 +172,8 @@ extern "C" int getpwnam_r(const char *name, struct passwd *pwd,
                           char *buf, size_t buflen, struct passwd **result)
 {
   void *return_addr = GET_RETURN_ADDRESS();
-  if ((!shouldSynchronize(return_addr) ||
-       jalib::Filesystem::GetProgramName() == "gdb") &&
-      !ok_to_log_getpwnam) {
+  if ((!shouldSynchronize(return_addr) && !ok_to_log_getpwnam) ||
+       jalib::Filesystem::GetProgramName() == "gdb") {
     return _real_getpwnam_r(name, pwd, buf, buflen, result);
   }
   int retval;
@@ -207,9 +206,8 @@ extern "C" int getpwuid_r(uid_t uid, struct passwd *pwd,
                           char *buf, size_t buflen, struct passwd **result)
 {
   void *return_addr = GET_RETURN_ADDRESS();
-  if ((!shouldSynchronize(return_addr) ||
-       jalib::Filesystem::GetProgramName() == "gdb") &&
-      !ok_to_log_getpwuid) {
+  if ((!shouldSynchronize(return_addr) && !ok_to_log_getpwuid) ||
+       jalib::Filesystem::GetProgramName() == "gdb") {
     return _real_getpwuid_r(uid, pwd, buf, buflen, result);
   }
   int retval;
@@ -242,9 +240,8 @@ extern "C" int getgrnam_r(const char *name, struct group *grp,
                           char *buf, size_t buflen, struct group **result)
 {
   void *return_addr = GET_RETURN_ADDRESS();
-  if ((!shouldSynchronize(return_addr) ||
-       jalib::Filesystem::GetProgramName() == "gdb") &&
-      !ok_to_log_getgrnam) {
+  if ((!shouldSynchronize(return_addr) && !ok_to_log_getgrnam) ||
+       jalib::Filesystem::GetProgramName() == "gdb") {
     return _real_getgrnam_r(name, grp, buf, buflen, result);
   }
   int retval;
@@ -277,9 +274,8 @@ extern "C" int getgrgid_r(gid_t gid, struct group *grp,
                           char *buf, size_t buflen, struct group **result)
 {
   void *return_addr = GET_RETURN_ADDRESS();
-  if ((!shouldSynchronize(return_addr) ||
-       jalib::Filesystem::GetProgramName() == "gdb") &&
-      !ok_to_log_getgrgid) {
+  if ((!shouldSynchronize(return_addr) && !ok_to_log_getgrgid) ||
+       jalib::Filesystem::GetProgramName() == "gdb") {
     return _real_getgrgid_r(gid, grp, buf, buflen, result);
   }
   int retval;
