@@ -418,6 +418,7 @@ static pthread_mutex_t read_data_mutex = PTHREAD_MUTEX_INITIALIZER;
 /* Event codes: */
 typedef enum {
   unknown_event = -1,
+  empty_event = 0,
   accept_event = 1,
   accept4_event,
   access_event,
@@ -1606,8 +1607,8 @@ static const int log_event_getnameinfo_size = sizeof(log_event_getnameinfo_t);
 
 typedef struct {
   // FIXME:
-  //event_code_t event;
-  unsigned char event;
+  event_code_t event;
+  //unsigned char event;
   unsigned char isOptional;
   log_off_t log_offset;
   clone_id_t clone_id;
@@ -1749,7 +1750,7 @@ typedef struct {
 } log_entry_t;
 
 #define log_event_common_size                                          \
-  (sizeof(unsigned char) +  /* event */                                \
+  (sizeof(event_code_t)  +  /* event */                                \
    sizeof(unsigned char) +  /* isOptional */                           \
    sizeof(log_off_t)     +  /* log_offset */                           \
    sizeof(clone_id_t)    +  /* clone_id */                             \
@@ -1833,7 +1834,7 @@ typedef struct {
 /* Static constants: */
 // Clone id to indicate anyone may do this event (used for exec):
 static const int         CLONE_ID_ANYONE = -2;
-static const log_entry_t EMPTY_LOG_ENTRY = {{0, 0, 0, 0, 0, 0}};
+static const log_entry_t EMPTY_LOG_ENTRY = {{empty_event, 0, 0, 0, 0, 0}};
 // Number to start clone_ids at:
 static const int         GLOBAL_CLONE_COUNTER_INIT = 1;
 static const int         RECORD_LOG_PATH_MAX = 256;
@@ -1898,7 +1899,7 @@ LIB_PRIVATE ssize_t writeAll(int fd, const void *buf, size_t count);
 #define CREATE_ENTRY_FUNC(name, ...) \
   LIB_PRIVATE TURN_CHECK_P(name##_turn_check); \
   LIB_PRIVATE log_entry_t create_##name##_entry(clone_id_t clone_id, \
-                                                int event, ##__VA_ARGS__)
+                                                event_code_t event, ##__VA_ARGS__)
 /* ##__VA_ARGS__ is a GNU extension -- it means omit the variadic
    arguments if the list is empty. It will also then delete the
    extra comma. */
