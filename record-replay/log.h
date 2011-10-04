@@ -71,6 +71,7 @@ namespace dmtcp
         , _dataSize (NULL)
         , _numEntries (NULL)
         , _numThreads (NULL)
+        , _sharedInterfaceInfo (NULL)
       {}
 
       ~SynchronizationLog() {}
@@ -81,7 +82,7 @@ namespace dmtcp
       void init_common(size_t size);
       void init_shm();
       void destroy_shm();
-  
+
     public:
       void   destroy();
       void   unmap();

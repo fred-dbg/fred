@@ -147,7 +147,7 @@ void fred_post_suspend ()
 
 void fred_post_checkpoint_resume()
 {
-  recordDataStackLocations();
+  initSyncAddresses();
   set_sync_mode(SYNC_RECORD);
   initLogsForRecordReplay();
   log_all_allocs = 1;
@@ -155,7 +155,7 @@ void fred_post_checkpoint_resume()
 
 void fred_post_restart_resume()
 {
-  recordDataStackLocations();
+  initSyncAddresses();
   set_sync_mode(SYNC_REPLAY);
   initLogsForRecordReplay();
   log_all_allocs = 1;
@@ -174,7 +174,7 @@ void fred_reset_on_fork()
   _real_pthread_mutex_unlock(&global_clone_counter_mutex);
 
   // Perform other initialization for sync log/replay specific to this process.
-  recordDataStackLocations();
+  initSyncAddresses();
   initializeLogNames();
 }
 

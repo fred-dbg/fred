@@ -69,7 +69,7 @@ void dmtcp::SynchronizationLog::init_shm()
   char name[PATH_MAX];
   int fd, retval;
   sprintf(name, FRED_INTERFACE_SHM_FILE_FMT, dmtcp_get_tmpdir(), getpid());
-  
+
   fd = open(name, O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
   if (fd == -1 && errno == EEXIST) {
     retval = unlink(name);
@@ -79,17 +79,17 @@ void dmtcp::SynchronizationLog::init_shm()
   } else {
     JASSERT ( fd != -1 ) (name) ( strerror(errno) );
   }
-  
+
   retval = ftruncate(fd, FRED_INTERFACE_SHM_SIZE);
   JASSERT ( retval != -1 ) ( strerror(errno) );
   JTRACE ( "Opened shared memory region." ) ( name );
-  
+
   _sharedInterfaceInfo =
     (fred_interface_info_t *)mmap(NULL, FRED_INTERFACE_SHM_SIZE,
                                   PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
   JASSERT((void *)_sharedInterfaceInfo != MAP_FAILED);
   JTRACE ( "Mapped shared memory region." ) ( _sharedInterfaceInfo );
-  
+
   _sharedInterfaceInfo->total_entries = *_numEntries;
   _sharedInterfaceInfo->total_threads = *_numThreads;
 }
@@ -144,6 +144,7 @@ void dmtcp::SynchronizationLog::destroy()
   _dataSize = NULL;
   _numEntries = NULL;
   destroy_shm();
+  _sharedInterfaceInfo = NULL;
 }
 
 void dmtcp::SynchronizationLog::unmap()
@@ -278,7 +279,7 @@ int dmtcp::SynchronizationLog::advanceToNextEntry()
 int dmtcp::SynchronizationLog::getCurrentEntry(log_entry_t& entry)
 {
   int entrySize = getEntryAtOffset(entry, getIndex());
-  return entrySize;  
+  return entrySize;
 }
 
 // Reads the entry from log and returns the length of entry
@@ -318,7 +319,7 @@ void dmtcp::SynchronizationLog::appendEntry(log_entry_t& entry)
   GET_EVENT_SIZE(GET_COMMON(entry, event), eventSize);
   JASSERT( eventSize > 0 );
   eventSize += log_event_common_size;
-  offset = atomicIncrementOffset(eventSize);  
+  offset = atomicIncrementOffset(eventSize);
   __sync_fetch_and_add(_numEntries, 1);
   SET_COMMON2(entry, log_offset, offset);
 
@@ -434,7 +435,7 @@ size_t dmtcp::SynchronizationLog::getEntryHeaderAtOffset(log_entry_t& entry,
 void dmtcp::SynchronizationLog::writeEntryHeaderAtOffset(const log_entry_t& entry,
                                                         size_t index)
 {
-  
+
   JASSERT(GET_COMMON(entry, clone_id) > 0);
 
 #ifdef NO_LOG_ENTRY_TO_BUFFER
@@ -462,7 +463,7 @@ void dmtcp::SynchronizationLog::writeEntryHeaderAtOffset(const log_entry_t& entr
 
 size_t dmtcp::SynchronizationLog::getIndex()
 {
-  return __sync_fetch_and_add(&_index, 0);  
+  return __sync_fetch_and_add(&_index, 0);
 }
 
 size_t dmtcp::SynchronizationLog::atomicIncrementIndex(size_t delta)

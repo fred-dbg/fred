@@ -43,6 +43,7 @@
 #include "dmtcpalloc.h"
 #include "util.h"
 #include "dmtcpmodule.h"
+#include "jfilesystem.h"
 
 #undef WRAPPER_EXECUTION_ENABLE_CKPT
 #undef WRAPPER_EXECUTION_DISABLE_CKPT
@@ -54,6 +55,11 @@ typedef unsigned long int log_off_t;
 namespace dmtcp { class SynchronizationLog; }
 
 static pthread_mutex_t read_data_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+static inline bool isProcessGDB() {
+  static bool isGDB = jalib::Filesystem::GetProgramName() == "gdb";
+  return isGDB;
+}
 
 #define LIB_PRIVATE __attribute__ ((visibility ("hidden")))
 
@@ -1848,7 +1854,6 @@ LIB_PRIVATE extern char RECORD_READ_DATA_LOG_PATH[RECORD_LOG_PATH_MAX];
 LIB_PRIVATE extern int             read_data_fd;
 LIB_PRIVATE extern int             sync_logging_branch;
 LIB_PRIVATE extern int             log_all_allocs;
-LIB_PRIVATE extern size_t          default_stack_size;
 
 LIB_PRIVATE extern dmtcp::SynchronizationLog global_log;
 
@@ -1881,6 +1886,7 @@ LIB_PRIVATE void   logReadData(void *buf, int count);
 LIB_PRIVATE void   reapThisThread();
 LIB_PRIVATE void   recordDataStackLocations();
 LIB_PRIVATE int    shouldSynchronize(void *return_addr);
+LIB_PRIVATE void   initSyncAddresses();
 LIB_PRIVATE void   userSynchronizedEvent();
 LIB_PRIVATE void   userSynchronizedEventBegin();
 LIB_PRIVATE void   userSynchronizedEventEnd();
@@ -1973,7 +1979,7 @@ CREATE_ENTRY_FUNC(mmap, void *addr,
 CREATE_ENTRY_FUNC(mmap64, void *addr,
                   size_t length, int prot, int flags, int fd, off64_t offset);
 CREATE_ENTRY_FUNC(munmap, void *addr, size_t length);
-CREATE_ENTRY_FUNC(mremap, 
+CREATE_ENTRY_FUNC(mremap,
                   void *old_address, size_t old_size, size_t new_size,
                   int flags, void *new_addr);
 CREATE_ENTRY_FUNC(open, const char *path, int flags, mode_t mode);
@@ -1985,15 +1991,15 @@ CREATE_ENTRY_FUNC(putc, int c, FILE *stream);
 CREATE_ENTRY_FUNC(pwrite, int fd, const void* buf, size_t count, off_t offset);
 CREATE_ENTRY_FUNC(pthread_cond_broadcast, pthread_cond_t *cond_var);
 CREATE_ENTRY_FUNC(pthread_cond_signal, pthread_cond_t *cond_var);
-CREATE_ENTRY_FUNC(pthread_cond_wait, 
+CREATE_ENTRY_FUNC(pthread_cond_wait,
                   pthread_cond_t *cond_var, pthread_mutex_t *mutex);
-CREATE_ENTRY_FUNC(pthread_cond_timedwait, 
+CREATE_ENTRY_FUNC(pthread_cond_timedwait,
                   pthread_cond_t *cond_var, pthread_mutex_t *mutex,
                   const struct timespec *abstime);
 CREATE_ENTRY_FUNC(pthread_rwlock_unlock, pthread_rwlock_t *rwlock);
 CREATE_ENTRY_FUNC(pthread_rwlock_rdlock, pthread_rwlock_t *rwlock);
 CREATE_ENTRY_FUNC(pthread_rwlock_wrlock, pthread_rwlock_t *rwlock);
-CREATE_ENTRY_FUNC(pthread_create, 
+CREATE_ENTRY_FUNC(pthread_create,
                   pthread_t *thread, const pthread_attr_t *attr,
                   void *(*start_routine)(void*), void *arg);
 CREATE_ENTRY_FUNC(pthread_detach, pthread_t thread);
@@ -2006,7 +2012,7 @@ CREATE_ENTRY_FUNC(pthread_mutex_unlock, pthread_mutex_t *mutex);
 CREATE_ENTRY_FUNC(rand);
 CREATE_ENTRY_FUNC(read, int readfd, void* buf_addr, size_t count);
 CREATE_ENTRY_FUNC(readdir, DIR *dirp);
-CREATE_ENTRY_FUNC(readdir_r, 
+CREATE_ENTRY_FUNC(readdir_r,
                   DIR *dirp, struct dirent *entry, struct dirent **result);
 CREATE_ENTRY_FUNC(readlink, const char *path, char *buf, size_t bufsiz);
 CREATE_ENTRY_FUNC(realloc, void *ptr, size_t size);
@@ -2016,10 +2022,10 @@ CREATE_ENTRY_FUNC(rmdir, const char *pathname);
 CREATE_ENTRY_FUNC(select, int nfds,
                   fd_set *readfds, fd_set *writefds, fd_set *exceptfds,
                   struct timeval *timeout);
-CREATE_ENTRY_FUNC(setsockopt, 
+CREATE_ENTRY_FUNC(setsockopt,
                   int sockfd, int level, int optname,
                   const void* optval, socklen_t optlen);
-CREATE_ENTRY_FUNC(getsockopt, 
+CREATE_ENTRY_FUNC(getsockopt,
                   int sockfd, int level, int optname,
                   void* optval, socklen_t* optlen);
 CREATE_ENTRY_FUNC(ioctl, int d, int request, void* arg);
@@ -2033,11 +2039,11 @@ CREATE_ENTRY_FUNC(time, time_t *tloc);
 CREATE_ENTRY_FUNC(tmpfile);
 CREATE_ENTRY_FUNC(truncate, const char *path, off_t length);
 CREATE_ENTRY_FUNC(unlink, const char *pathname);
-CREATE_ENTRY_FUNC(write, 
+CREATE_ENTRY_FUNC(write,
                   int writefd, const void* buf_addr, size_t count);
 CREATE_ENTRY_FUNC(epoll_create, int size);
 CREATE_ENTRY_FUNC(epoll_create1, int flags);
-CREATE_ENTRY_FUNC(epoll_ctl, 
+CREATE_ENTRY_FUNC(epoll_ctl,
                   int epfd, int op, int fd, struct epoll_event *_event);
 CREATE_ENTRY_FUNC(epoll_wait, int epfd,
                   struct epoll_event *events, int maxevents, int timeout);

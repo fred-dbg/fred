@@ -49,6 +49,9 @@ int  dmtcp_get_ckpt_signal()
 
 const char* dmtcp_get_tmpdir()
 {
+  // FIXME: Once the issue with fred_read_log and log.cpp:shm gets resolved, we
+  // won't need the following return statement.
+  return "/tmp/";
   JASSERT(false) .Text("NOT REACHED");
   return NULL;
 }

@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include <fcntl.h>
 #include <time.h>
+#include <algorithm>
 #include "fred_wrappers.h"
 #include "dmtcpmodule.h"
 #include "util.h"
@@ -52,11 +53,12 @@ LIB_PRIVATE int             sync_logging_branch = 0;
 /* Setting this will log/replay *ALL* malloc family
    functions (i.e. including ones from DMTCP, std C++ lib, etc.). */
 LIB_PRIVATE int             log_all_allocs = 0;
-LIB_PRIVATE size_t          default_stack_size = 0;
 LIB_PRIVATE pthread_cond_t  reap_cv = PTHREAD_COND_INITIALIZER;
 LIB_PRIVATE pthread_mutex_t global_clone_counter_mutex = PTHREAD_MUTEX_INITIALIZER;
 LIB_PRIVATE pthread_mutex_t reap_mutex = PTHREAD_MUTEX_INITIALIZER;
 LIB_PRIVATE pthread_t       thread_to_reap;
+
+LIB_PRIVATE void           *stack_base_addr = NULL;
 
 
 LIB_PRIVATE dmtcp::SynchronizationLog global_log;
@@ -70,11 +72,6 @@ LIB_PRIVATE __thread unsigned char isOptionalEvent = 0;
 /* Volatiles: */
 LIB_PRIVATE volatile clone_id_t global_clone_counter = 0;
 LIB_PRIVATE volatile off_t         read_log_pos = 0;
-
-static char *code_lower  = 0;
-static char *data_break  = 0;
-static char *stack_lower = 0;
-static char *stack_upper = 0;
 
 static inline void memfence() {  asm volatile ("mfence" ::: "memory"); }
 
@@ -141,6 +138,9 @@ int shouldSynchronize(void *return_addr)
   if (SYNC_IS_NOOP) {
     return 0;
   }
+  if (isProcessGDB()) {
+    return 0;
+  }
   if (!validAddress(return_addr)) {
     return 0;
   }
@@ -185,163 +185,182 @@ void initLogsForRecordReplay()
 }
 
 
-// TODO: Since this is C++, couldn't we use some C++ string processing methods
-// to simplify the logic? MAKE SURE TO AVOID MALLOC()
-//
-// FIXME: On some systems, stack might not be labelled as "[stack]"
-//   Instead, use environ[NN] to find an address in the stack and then use
-//   /proc/self/maps to find the mmap() location within which this address
-//   falls.
-LIB_PRIVATE void recordDataStackLocations()
-{
-  int maps_file = -1;
-  char line[200], stack_line[200], code_line[200];
-  dmtcp::string progname = jalib::Filesystem::GetProgramName();
-  if ((maps_file = _real_open("/proc/self/maps", O_RDONLY, S_IRUSR)) == -1) {
-    perror("open");
-    exit(1);
-  }
-  while (dmtcp::Util::readLine(maps_file, line, 199) != 0) {
-    if (strstr(line, "r-xp") != NULL && strstr(line, progname.c_str()) != NULL) {
-      // beginning of .text segment
-      strncpy(code_line, line, 199);
-    }
-    if (strstr(line, "[stack]") != NULL) {
-      strncpy(stack_line, line, 199);
-    }
-  }
-  _real_close(maps_file);
-  char addrs[32];
-  char addr_lower[16];
-  char addr_upper[16];
-  addr_lower[0] = '0';
-  addr_lower[1] = 'x';
-  addr_upper[0] = '0';
-  addr_upper[1] = 'x';
-  // TODO: there must be a better way to do this.
-#ifdef __x86_64__
-  strncpy(addrs, stack_line, 25);
-  strncpy(addr_lower+2, addrs, 12);
-  strncpy(addr_upper+2, addrs+13, 12);
-  addr_lower[14] = '\0';
-  addr_upper[14] = '\0';
-  //printf("s_stack_lower=%s, s_stack_upper=%s\n", addr_lower, addr_upper);
-  stack_lower = (char*) strtoul(addr_lower, NULL, 16);
-  stack_upper = (char*) strtoul(addr_upper, NULL, 16);
-  addr_lower[0] = '0';
-  addr_lower[1] = 'x';
-  strncpy(addrs, code_line, 25);
-  strncpy(addr_lower+2, addrs, 12);
-  addr_lower[14] = '\0';
-  code_lower = (char*) strtoul(addr_lower, NULL, 16);
-#else
-  strncpy(addrs, stack_line, 17);
-  strncpy(addr_lower+2, addrs, 8);
-  strncpy(addr_upper+2, addrs+9, 8);
-  addr_lower[10] = '\0';
-  addr_upper[10] = '\0';
-  //printf("s_stack_lower=%s, s_stack_upper=%s\n", addr_lower, addr_upper);
-  stack_lower = (char*) strtoul(addr_lower, NULL, 16);
-  stack_upper = (char*) strtoul(addr_upper, NULL, 16);
-  addr_lower[0] = '0';
-  addr_lower[1] = 'x';
-  strncpy(addrs, code_line, 17);
-  strncpy(addr_lower+2, addrs, 8);
-  addr_lower[10] = '\0';
-  code_lower = (char*) strtoul(addr_lower, NULL, 16);
-#endif
-  // Returns the next address after the end of the heap.
-  data_break = (char*) sbrk(0);
-  // Also figure out the default stack size for NPTL threads using the
-  // architecture-specific limits defined in nptl/sysdeps/ARCH/pthreaddef.h
-  struct rlimit rl;
-  JASSERT(0 == getrlimit(RLIMIT_STACK, &rl));
-#ifdef __x86_64__
-  size_t arch_default_stack_size = 32*1024*1024;
-#else
-  size_t arch_default_stack_size = 2*1024*1024;
-#endif
-  default_stack_size =
-    (rl.rlim_cur == RLIM_INFINITY) ? arch_default_stack_size : rl.rlim_cur;
-}
-
-#define MAX_PROC_MAPS_AREAS 512
-dmtcp::Util::ProcMapsArea procMapsAreasToLog[MAX_PROC_MAPS_AREAS];
-dmtcp::Util::ProcMapsArea procMapsAreasToNotLog[MAX_PROC_MAPS_AREAS];
-static size_t procMapsAreasToLogLen = 0;
-static size_t procMapsAreasToNotLogLen = 0;
-
+#define MAX_PROC_MAPS_AREAS 1024
 LIB_PRIVATE pthread_mutex_t procMapsAreasMutex = PTHREAD_MUTEX_INITIALIZER;
 
-const char *logLibraryPattern = "/home/kapil/usr/";
-
-void initSyncAddresses()
-{
-  int mapsFd = -1;
+typedef struct ProcMapsAreaInfo {
   dmtcp::Util::ProcMapsArea area;
+  bool                      shouldLog;
+} ProcMapsAreaInfo;
 
-  _real_pthread_mutex_lock(&procMapsAreasMutex);
+static ProcMapsAreaInfo procMapsAreaInfo[MAX_PROC_MAPS_AREAS];
+static size_t procMapsAreaInfoLen = 0;
 
-  procMapsAreasToLogLen = 0;
-  procMapsAreasToNotLogLen = 0;
+/* Specify the patterns that you wish to log. The current logic uses
+ * strStartsWith() and so add accordingly.
+ * The current Approach is _WHITE-LIST_ based, we might want to switch to
+ * _BLACK-LIST_ based approach here."
+ */
+static const char *logLibraryPattern[] = {
+  "/usr/lib64/firefox",
+  "/usr/lib64/libxcb",
+  "/usr/lib64/libX11",
+  "/usr/lib64/libg",
+  "/usr/lib64/libgnome",
+  "/usr/lib64/libgconf",
+  "/usr/lib64/libICE",
+  "/usr/lib64/libSM",
+  "/lib64/libglib",
+  "/lib64/libgio",
+  "/lib64/libgthread",
+  "/lib64/libgobject",
+  "/lib64/libgmodule",
+  "[stack]"
+};
 
-  if ((mapsFd = _real_open("/proc/self/maps", O_RDONLY, S_IRUSR)) == -1) {
-    perror("open");
-    exit(1);
-  }
-
-  while (dmtcp::Util::readProcMapsLine(mapsFd, &area)) {
-    if ((area.prot & PROT_EXEC) != 0 && strlen(area.name) != 0) {
-      if (dmtcp::Util::strStartsWith(area.name, logLibraryPattern)) {
-        JASSERT(procMapsAreasToLogLen < MAX_PROC_MAPS_AREAS);
-        procMapsAreasToLog[procMapsAreasToLogLen++] = area;
-      } else {
-        JASSERT(procMapsAreasToNotLogLen < MAX_PROC_MAPS_AREAS);
-        procMapsAreasToNotLog[procMapsAreasToNotLogLen++] = area;
-      }
-    }
-  }
-  _real_close(mapsFd);
-  _real_pthread_mutex_unlock(&procMapsAreasMutex);
-}
-
-bool searchAddrInRange(char *addr, dmtcp::Util::ProcMapsArea areas[],
-                       size_t len)
+static bool shouldLogArea(char *area_name)
 {
-  for (int i = 0; i < len; i++) {
-    if (addr >= areas[i].addr && addr < areas[i].endAddr) {
+  dmtcp::string progpath = jalib::Filesystem::GetProgramPath();
+  int n = sizeof(logLibraryPattern) / sizeof(char*);
+
+  if (dmtcp::Util::strStartsWith(area_name, progpath.c_str())) {
+    return true;
+  }
+  for (int i = 0; i < n; i++) {
+    if (dmtcp::Util::strStartsWith(area_name, logLibraryPattern[i])) {
       return true;
     }
   }
   return false;
 }
 
+static bool compareProcMemAreaInfo(ProcMapsAreaInfo info1,
+                                   ProcMapsAreaInfo info2) {
+  return info1.area.addr < info2.area.addr;
+}
+
+static void sortProcMapsAreaInfo() {
+  std::sort(procMapsAreaInfo, procMapsAreaInfo + procMapsAreaInfoLen,
+       compareProcMemAreaInfo);
+}
+
+static ProcMapsAreaInfo *searchAddrInProcMapsAreaInfo(void *addr) {
+  int min = 0;
+  int max = procMapsAreaInfoLen - 1;
+  if (procMapsAreaInfo[max].area.endAddr <= addr) {
+    return NULL;
+  }
+
+  while (max >= min) {
+    int mid = (min + max) / 2;
+    if (procMapsAreaInfo[mid].area.endAddr <= addr) {
+      min = mid + 1;
+    } else {
+      if (addr >= procMapsAreaInfo[mid].area.addr) {
+        return &procMapsAreaInfo[mid];
+      }
+      max = mid - 1;
+    }
+  }
+
+  return NULL;
+}
+
+static void recordMemArea(dmtcp::Util::ProcMapsArea& area)
+{
+  JASSERT(procMapsAreaInfoLen < MAX_PROC_MAPS_AREAS);
+  procMapsAreaInfo[procMapsAreaInfoLen].area = area;
+  procMapsAreaInfo[procMapsAreaInfoLen].shouldLog = shouldLogArea(area.name);
+  procMapsAreaInfoLen++;
+}
+
+static void analyzeAndRecordAddress(void *addr)
+{
+  int mapsFd = -1;
+  dmtcp::Util::ProcMapsArea area;
+
+  if ((mapsFd = _real_open("/proc/self/maps", O_RDONLY, S_IRUSR)) == -1) {
+    perror("open");
+    exit(1);
+  }
+
+  // There is a potential race in calling analyzeAndRecordAddress(). Although
+  // the data structures are protected by a mutex, the acquisition order is
+  // not guaranteed at REPLAY.
+  _real_pthread_mutex_lock(&procMapsAreasMutex);
+  while (dmtcp::Util::readProcMapsLine(mapsFd, &area)) {
+    if (addr >= area.addr && addr < area.endAddr) {
+      JASSERT((area.prot & PROT_EXEC) != 0) // && strlen(area.name) != 0)
+        (area.name) (area.addr) (area.prot);
+      recordMemArea(area);
+      break;
+    }
+  }
+  sortProcMapsAreaInfo();
+  _real_pthread_mutex_unlock(&procMapsAreasMutex);
+  _real_close(mapsFd);
+}
+
+LIB_PRIVATE
+void initSyncAddresses()
+{
+  int mapsFd = -1;
+  dmtcp::Util::ProcMapsArea area;
+
+  if (isProcessGDB()) {
+    return;
+  }
+  if ((mapsFd = _real_open("/proc/self/maps", O_RDONLY, S_IRUSR)) == -1) {
+    perror("open");
+    exit(1);
+  }
+
+  _real_pthread_mutex_lock(&procMapsAreasMutex);
+  procMapsAreaInfoLen = 0;
+
+  while (dmtcp::Util::readProcMapsLine(mapsFd, &area)) {
+    /* Initialize the stack_base addr. The label '[stack]' might be missing
+     * after restart and so we can't rely on /proc/self/maps to provide us with
+     * the correct stack bounds.
+     * Good news is that the stack_base_addr will not change in _most_ sane programs.
+     *
+     * FIXME: On some systems, stack might not be labelled as "[stack]".
+     * Instead, use environ[NN] to find an address in the stack and then use
+     * /proc/self/maps to find the mmap() location within which this address
+     * falls.
+     */
+    if (stack_base_addr == NULL) {
+      if (area.name == "[stack]") {
+        stack_base_addr == area.endAddr;
+      }
+    }
+
+    if (area.endAddr == stack_base_addr) {
+      strcpy(area.name, "[stack]");
+    }
+
+    if ((area.prot & PROT_EXEC) != 0  && strlen(area.name) != 0) {
+      recordMemArea(area);
+    }
+  }
+  _real_pthread_mutex_unlock(&procMapsAreasMutex);
+  _real_close(mapsFd);
+}
+
 int validAddress(void *addr)
 {
-  // This code assumes the user's segments .text through .data are contiguous.
-  if ((addr >= code_lower && addr < data_break) ||
-      (addr >= stack_lower && addr < stack_upper)) {
-    return 1;
+  ProcMapsAreaInfo *info;
+  _real_pthread_mutex_unlock(&procMapsAreasMutex);
+  info = searchAddrInProcMapsAreaInfo(addr);
+  if (info == NULL) {
+    analyzeAndRecordAddress(addr);
+    info = searchAddrInProcMapsAreaInfo(addr);
   }
+  JASSERT(info != NULL);
+  int result = info->shouldLog;
+  _real_pthread_mutex_unlock(&procMapsAreasMutex);
 
-  if (searchAddrInRange((char*) addr,
-                        procMapsAreasToLog, procMapsAreasToLogLen)) {
-    return 1;
-  }
-
-  if (searchAddrInRange((char*) addr,
-                        procMapsAreasToNotLog, procMapsAreasToNotLogLen)) {
-    return 0;
-  }
-
-  initSyncAddresses();
-
-  if (searchAddrInRange((char*) addr,
-                        procMapsAreasToLog, procMapsAreasToLogLen)) {
-    return 1;
-  }
-
-  return 0;
+  return result;
 }
 
 void copyFdSet(fd_set *src, fd_set *dest)

@@ -138,9 +138,22 @@ static void setupThreadStack(pthread_attr_t *attr_out,
   size_t mmap_size;
   if (userStack) {
     mmap_size = stack_size;
+  } else if (size == 0) {
+    JASSERT(!SYNC_IS_REPLAY);
+    // Also figure out the default stack size for NPTL threads using the
+    // architecture-specific limits defined in nptl/sysdeps/ARCH/pthreaddef.h
+    struct rlimit rl;
+    JASSERT(0 == getrlimit(RLIMIT_STACK, &rl));
+#ifdef __x86_64__
+    size_t arch_default_stack_size = 32*1024*1024;
+#else
+    size_t arch_default_stack_size = 2*1024*1024;
+#endif
+    mmap_size = (rl.rlim_cur == RLIM_INFINITY) ? arch_default_stack_size : rl.rlim_cur;
   } else {
-    mmap_size = size == 0 ? default_stack_size : size;
+    mmap_size = size;
   }
+
   // mmap() wrapper handles forcing it to the same place on replay.
   void *s = mmap(NULL, mmap_size, PROT_READ | PROT_WRITE, mmap_flags, -1, 0);
   if (s == MAP_FAILED)  {
@@ -558,8 +571,8 @@ static void reapThread()
   join_retval.value_ptr = value_ptr;
   pthread_join_retvals[thread_to_reap] = join_retval;
   teardownThreadStack(stack_addr, stack_size);
-  
-  if (tid_to_clone_id_table->find(thread_to_reap) != 
+
+  if (tid_to_clone_id_table->find(thread_to_reap) !=
       tid_to_clone_id_table->end()) {
     cid_to_reap = tid_to_clone_id_table->find(thread_to_reap)->second;
     clone_id_to_tid_table->erase(cid_to_reap);
