@@ -105,6 +105,16 @@ static void recordReplayInit()
    * within the child process.
    */
   pthread_atfork(NULL, NULL, pthread_atfork_child);
+
+  /* setlocale(LC_ALL, "") will cause the process to mmap all locale related
+   * files at once into the process memory. We need to do this because any call
+   * to setlocale(LC_XXX, ...) tries to open() the corresponding locale file
+   * followed by mmap()'ing it into process memory if not already present. This
+   * causes problems when we are in the REPLAY mode. We won't perform the
+   * _real_open and thus the mmap() would fail due to bad fd.
+   * By calling setlocale(LC_ALL, ...) we avoid all this.
+   */
+  setlocale(LC_ALL, "");
   JTRACE ( "Record/replay finished initializing." );
 }
 
