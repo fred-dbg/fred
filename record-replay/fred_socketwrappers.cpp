@@ -45,6 +45,8 @@
 
 extern "C"
 {
+static __thread bool ok_to_log_sendrecv = false;
+
 int socket ( int domain, int type, int protocol )
 {
   BASIC_SYNC_WRAPPER(int, socket, _real_socket, domain, type, protocol);
@@ -111,6 +113,34 @@ int accept4 ( int sockfd, struct sockaddr *addr, socklen_t *addrlen, int flags )
 }
 //#endif
 
+extern "C" int socketpair ( int domain, int type, int protocol, int sv[2] )
+{
+  void *return_addr = GET_RETURN_ADDRESS();
+  if ((!shouldSynchronize(return_addr) && !log_all_socketpair) ||
+      jalib::Filesystem::GetProgramName() == "gdb") {
+    return _real_socketpair(domain, type, protocol, sv);
+  };
+
+  int retval;
+  log_entry_t my_entry = create_socketpair_entry(my_clone_id, socketpair_event,
+                                                 domain, type, protocol, sv);
+
+  if (SYNC_IS_REPLAY) {
+    WRAPPER_REPLAY_START(socketpair);
+    if (retval != -1) {
+      memcpy(sv, GET_FIELD(my_entry, socketpair, ret_sv), sizeof(sv));
+    }
+    WRAPPER_REPLAY_END(socketpair);
+  } else if (SYNC_IS_RECORD) {
+    retval = _real_socketpair(domain, type, protocol, sv);
+    if (retval != -1) {
+      memcpy(GET_FIELD(my_entry, socketpair, ret_sv), sv, sizeof(sv));
+    }
+    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+  }
+  return retval;
+}
+
 int setsockopt ( int sockfd, int  level,  int  optname,  const  void  *optval,
                  socklen_t optlen )
 {
@@ -146,6 +176,103 @@ int getsockopt ( int sockfd, int  level,  int  optname,  void  *optval,
     if (retval == 0 && optval != NULL) {
       WRAPPER_LOG_WRITE_INTO_READ_LOG(getsockopt, optval, *optlen);
       SET_FIELD2(my_entry, getsockopt, ret_optlen, *optlen);
+    }
+    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+  }
+  return retval;
+}
+
+extern "C" ssize_t send(int sockfd, const void *buf, size_t len, int flags)
+{
+  ok_to_log_sendrecv = true;
+  ssize_t retval = sendto(sockfd, buf, len, flags, NULL, 0);
+  ok_to_log_sendrecv = false;
+  return retval;
+}
+
+extern "C" ssize_t sendto(int sockfd, const void *buf, size_t len, int flags,
+                          const struct sockaddr *dest_addr, socklen_t addrlen)
+{
+  void *return_addr = GET_RETURN_ADDRESS();
+  if ((!shouldSynchronize(return_addr) ||
+       jalib::Filesystem::GetProgramName() == "gdb") &&
+      !ok_to_log_sendrecv) {
+    return _real_sendto(sockfd, buf, len, flags, dest_addr, addrlen);
+  }
+  int retval;
+  log_entry_t my_entry = create_sendto_entry(my_clone_id,
+      sendto_event, sockfd, buf, len, flags, dest_addr, addrlen);
+
+  if (SYNC_IS_REPLAY) {
+    WRAPPER_REPLAY_TYPED(ssize_t, sendto);
+  } else if (SYNC_IS_RECORD) {
+    WRAPPER_LOG(_real_sendto, sockfd, buf, len, flags, dest_addr, addrlen);
+  }
+  return retval;
+}
+
+extern "C" ssize_t sendmsg(int sockfd, const struct msghdr *msg, int flags)
+{
+  BASIC_SYNC_WRAPPER(ssize_t, sendmsg, _real_sendmsg, sockfd, msg, flags);
+}
+
+extern "C" ssize_t recv(int sockfd, void *buf, size_t len, int flags)
+{
+  ok_to_log_sendrecv = true;
+  ssize_t retval = recvfrom(sockfd, buf, len, flags, NULL, NULL);
+  ok_to_log_sendrecv = false;
+  return retval;
+}
+
+extern "C" ssize_t recvfrom(int sockfd, void *buf, size_t len, int flags,
+                            struct sockaddr *src_addr, socklen_t *addrlen)
+{
+  void *return_addr = GET_RETURN_ADDRESS();
+  if ((!shouldSynchronize(return_addr) ||
+       jalib::Filesystem::GetProgramName() == "gdb") &&
+      !ok_to_log_sendrecv) {
+    return _real_recvfrom(sockfd, buf, len, flags, src_addr, addrlen);
+  }
+  int retval;
+  log_entry_t my_entry = create_recvfrom_entry(my_clone_id,
+      recvfrom_event, sockfd, buf, len, flags, src_addr, addrlen);
+
+  if (SYNC_IS_REPLAY) {
+    WRAPPER_REPLAY_START(recvfrom);
+    if (retval != -1) {
+      WRAPPER_REPLAY_READ_FROM_READ_LOG(recvfrom, buf, retval);
+      if (addrlen != NULL) {
+        *addrlen = GET_FIELD(my_entry, recvfrom, ret_addrlen);
+      }
+    }
+    WRAPPER_REPLAY_END(recvfrom);
+  } else if (SYNC_IS_RECORD) {
+    retval = _real_recvfrom(sockfd, buf, len, flags, src_addr, addrlen);
+    if (retval != -1) {
+      WRAPPER_LOG_WRITE_INTO_READ_LOG(recvfrom, buf, retval);
+      if (addrlen != NULL) {
+        SET_FIELD2(my_entry, recvfrom, ret_addrlen, *addrlen);
+      }
+    }
+    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+  }
+  return retval;
+}
+
+
+extern "C" ssize_t recvmsg(int sockfd, struct msghdr *msg, int flags)
+{
+  WRAPPER_HEADER(ssize_t, recvmsg, _real_recvmsg, sockfd, msg, flags);
+  if (SYNC_IS_REPLAY) {
+    WRAPPER_REPLAY_START(recvmsg);
+    if (retval != -1) {
+      WRAPPER_REPLAY_READ_FROM_READ_LOG(recvmsg, msg, retval);
+    }
+    WRAPPER_REPLAY_END(recvmsg);
+  } else if (SYNC_IS_RECORD) {
+    retval = _real_recvmsg(sockfd, msg, flags);
+    if (retval != -1) {
+      WRAPPER_LOG_WRITE_INTO_READ_LOG(recvmsg, msg, retval);
     }
     WRAPPER_LOG_WRITE_ENTRY(my_entry);
   }

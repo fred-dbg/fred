@@ -58,6 +58,7 @@
 #undef read
 
 static __thread bool ok_to_log_readdir = false;
+static __thread bool ok_to_log_setvbuf = false;
 
 extern "C" int close ( int fd )
 {
@@ -964,6 +965,65 @@ extern "C" int select(int nfds, fd_set *readfds, fd_set *writefds,
   return retval;
 }
 
+extern "C" int ppoll(struct pollfd *fds, nfds_t nfds,
+                 const struct timespec *timeout_ts, const sigset_t *sigmask)
+{
+  WRAPPER_HEADER(int, ppoll, _real_ppoll, fds, nfds, timeout_ts, sigmask)
+  if (SYNC_IS_REPLAY) {
+    WRAPPER_REPLAY_START(ppoll);
+    if (retval != -1) {
+      WRAPPER_REPLAY_READ_FROM_READ_LOG(ppoll, (void*)fds,
+                                        retval * sizeof(struct pollfd));
+    }
+    WRAPPER_REPLAY_END(ppoll);
+  } else if (SYNC_IS_RECORD) {
+    retval = _real_ppoll(fds, nfds, timeout_ts, sigmask);
+    int saved_errno = errno;
+    if (retval != -1) {
+      WRAPPER_LOG_WRITE_INTO_READ_LOG(ppoll, (void*)fds,
+                                      retval * sizeof(struct pollfd));
+    }
+    errno = saved_errno;
+    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+  }
+  return retval;
+}
+
+extern "C" int poll(struct pollfd *fds, nfds_t nfds, int time)
+{
+  struct timespec time_ts;
+  struct timespec *timeout_ts;
+  const sigset_t *sigmask = NULL;
+
+  if (time <= -1) {
+    timeout_ts = NULL;
+  } else {
+    timeout_ts = &time_ts;
+    timeout_ts->tv_sec = time/1000;
+    timeout_ts->tv_nsec = (time % 1000) * 1000000;
+  }
+
+  WRAPPER_HEADER(int, ppoll, _real_ppoll, fds, nfds, timeout_ts, sigmask)
+  if (SYNC_IS_REPLAY) {
+    WRAPPER_REPLAY_START(ppoll);
+    if (retval != -1) {
+      WRAPPER_REPLAY_READ_FROM_READ_LOG(ppoll, (void*)fds,
+                                        retval * sizeof(struct pollfd));
+    }
+    WRAPPER_REPLAY_END(ppoll);
+  } else if (SYNC_IS_RECORD) {
+    retval = _real_ppoll(fds, nfds, timeout_ts, sigmask);
+    int saved_errno = errno;
+    if (retval != -1) {
+      WRAPPER_LOG_WRITE_INTO_READ_LOG(ppoll, (void*)fds,
+                                      retval * sizeof(struct pollfd));
+    }
+    errno = saved_errno;
+    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+  }
+  return retval;
+}
+
 extern "C" ssize_t read(int fd, void *buf, size_t count)
 {
   if (dmtcp_is_protected_fd(fd)) {
@@ -1030,6 +1090,68 @@ extern "C" ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset)
     return _real_pwrite(fd, buf, count, offset);
   }
   BASIC_SYNC_WRAPPER(ssize_t, pwrite, _real_pwrite, fd, buf, count, offset);
+}
+
+extern "C" ssize_t readv(int fd, const struct iovec *iov, int iovcnt)
+{
+  if (dmtcp_is_protected_fd(fd)) {
+    return _real_readv(fd, iov, iovcnt);
+  }
+
+  WRAPPER_HEADER(ssize_t, readv, _real_readv, fd, iov, iovcnt);
+
+  if (SYNC_IS_REPLAY) {
+    WRAPPER_REPLAY_START_TYPED(ssize_t, readv);
+    if (retval > 0) {
+      WRAPPER_REPLAY_READ_VECTOR_FROM_READ_LOG(readv, iov, iovcnt);
+    }
+    WRAPPER_REPLAY_END(readv);
+  } else if (SYNC_IS_RECORD) {
+    retval = _real_readv(fd, iov, iovcnt);
+    if (retval > 0) {
+      WRAPPER_LOG_WRITE_VECTOR_INTO_READ_LOG(readv, iov, iovcnt, retval);
+    }
+    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+  }
+  return retval;
+}
+
+extern "C" ssize_t writev(int fd, const struct iovec *iov, int iovcnt)
+{
+  BASIC_SYNC_WRAPPER(ssize_t, writev, _real_writev, fd, iov, iovcnt);
+}
+
+extern "C" ssize_t preadv(int fd, const struct iovec *iov, int iovcnt,
+                          off_t offset)
+{
+  if (dmtcp_is_protected_fd(fd)) {
+    return _real_preadv(fd, iov, iovcnt, offset);
+  }
+
+  WRAPPER_HEADER_RAW(ssize_t, preadv, _real_preadv, fd, iov, iovcnt, offset);
+  ssize_t retval;
+  log_entry_t my_entry = create_preadv_entry(my_clone_id, preadv_event, fd, iov, iovcnt, offset);
+
+  if (SYNC_IS_REPLAY) {
+    WRAPPER_REPLAY_START_TYPED(ssize_t, preadv);
+    if (retval > 0) {
+      WRAPPER_REPLAY_READ_VECTOR_FROM_READ_LOG(preadv, iov, iovcnt);
+    }
+    WRAPPER_REPLAY_END(preadv);
+  } else if (SYNC_IS_RECORD) {
+    retval = _real_preadv(fd, iov, iovcnt, offset);
+    if (retval > 0) {
+      WRAPPER_LOG_WRITE_VECTOR_INTO_READ_LOG(preadv, iov, iovcnt, retval);
+    }
+    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+  }
+  return retval;
+}
+
+extern "C" ssize_t pwritev(int fd, const struct iovec *iov, int iovcnt,
+                           off_t offset)
+{
+  BASIC_SYNC_WRAPPER(ssize_t, pwritev, _real_pwritev, fd, iov, iovcnt, offset);
 }
 
 extern "C" int access(const char *pathname, int mode)
@@ -1205,6 +1327,47 @@ extern "C" int fflush(FILE *stream)
   } else if (SYNC_IS_RECORD) {
     retval = _real_fflush(stream);
     WRAPPER_LOG_WRITE_ENTRY(my_entry);
+  }
+  return retval;
+}
+
+extern "C" void setbuf(FILE *stream, char *buf)
+{
+  ok_to_log_setvbuf = true;
+  setvbuf(stream, buf, buf ? _IOFBF : _IONBF, BUFSIZ);
+  ok_to_log_setvbuf = false;
+}
+
+extern "C" void setbuffer(FILE *stream, char *buf, size_t size)
+{
+  ok_to_log_setvbuf = true;
+  setvbuf(stream, buf, buf ? _IOFBF : _IONBF, size);
+  ok_to_log_setvbuf = false;
+}
+
+extern "C" void setlinebuf(FILE *stream)
+{
+  ok_to_log_setvbuf = true;
+  setvbuf(stream, (char*) NULL, _IOLBF, 0);
+  ok_to_log_setvbuf = false;
+}
+
+extern "C" int setvbuf(FILE *stream, char *buf, int mode, size_t size)
+{
+  void *return_addr = GET_RETURN_ADDRESS();
+  if ((!shouldSynchronize(return_addr) ||
+       jalib::Filesystem::GetProgramName() == "gdb") &&
+      !ok_to_log_setvbuf) {
+    return _real_setvbuf(stream, buf, mode, size);
+  }
+  int retval;
+  log_entry_t my_entry = create_setvbuf_entry(my_clone_id,
+      setvbuf_event, stream, buf, mode, size);
+
+  if (SYNC_IS_REPLAY) {
+    WRAPPER_REPLAY_TYPED(int, setvbuf);
+  } else if (SYNC_IS_RECORD) {
+    WRAPPER_LOG(_real_setvbuf, stream, buf, mode, size);
   }
   return retval;
 }

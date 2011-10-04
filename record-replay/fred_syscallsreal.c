@@ -201,6 +201,12 @@ int _real_select(int nfds, fd_set *readfds, fd_set *writefds,
 }
 
 LIB_PRIVATE
+int _real_ppoll(struct pollfd *fds, nfds_t nfds,
+               const struct timespec *timeout_ts, const sigset_t *sigmask) {
+  REAL_FUNC_PASSTHROUGH(ppoll) (fds, nfds, timeout_ts, sigmask);
+}
+
+LIB_PRIVATE
 int _real_socket ( int domain, int type, int protocol )
 {
   REAL_FUNC_PASSTHROUGH ( socket ) ( domain,type,protocol );
@@ -871,6 +877,11 @@ int _real_fflush(FILE *stream) {
 }
 
 LIB_PRIVATE
+int _real_setvbuf(FILE *stream, char *buf, int mode, size_t size) {
+  REAL_FUNC_PASSTHROUGH_TYPED(int, setvbuf) (stream, buf, mode, size);
+}
+
+LIB_PRIVATE
 int _real_fdatasync(int fd) {
   REAL_FUNC_PASSTHROUGH_TYPED ( int, fdatasync ) ( fd );
 }
@@ -1120,6 +1131,26 @@ ssize_t _real_pread(int fd, void *buf, size_t count, off_t offset) {
 }
 
 LIB_PRIVATE
+ssize_t _real_readv(int fd, const struct iovec *iov, int iovcnt) {
+  REAL_FUNC_PASSTHROUGH_TYPED (ssize_t, readv) (fd, iov, iovcnt);
+}
+
+LIB_PRIVATE
+ssize_t _real_writev(int fd, const struct iovec *iov, int iovcnt) {
+  REAL_FUNC_PASSTHROUGH_TYPED (ssize_t, writev) (fd, iov, iovcnt);
+}
+
+LIB_PRIVATE
+ssize_t _real_preadv(int fd, const struct iovec *iov, int iovcnt, off_t offset) {
+  REAL_FUNC_PASSTHROUGH_TYPED (ssize_t, preadv) (fd, iov, iovcnt, offset);
+}
+
+LIB_PRIVATE
+ssize_t _real_pwritev(int fd, const struct iovec *iov, int iovcnt, off_t offset) {
+  REAL_FUNC_PASSTHROUGH_TYPED (ssize_t, pwritev) (fd, iov, iovcnt, offset);
+}
+
+LIB_PRIVATE
 ssize_t _real_pwrite(int fd, const void *buf, size_t count, off_t offset) {
   REAL_FUNC_PASSTHROUGH_TYPED ( ssize_t,pwrite ) ( fd, buf, count, offset );
 }
@@ -1164,4 +1195,28 @@ int _real_getnameinfo(const struct sockaddr *sa, socklen_t salen,
                       char *serv, socklen_t servlen, unsigned int flags) {
   REAL_FUNC_PASSTHROUGH (getnameinfo) (sa, salen, host, hostlen, serv, servlen,
                                        flags);
+}
+
+LIB_PRIVATE
+ssize_t _real_sendto(int sockfd, const void *buf, size_t len, int flags,
+                     const struct sockaddr *dest_addr, socklen_t addrlen) {
+  REAL_FUNC_PASSTHROUGH_TYPED (ssize_t, sendto) (sockfd, buf, len, flags,
+                                                 dest_addr, addrlen);
+}
+
+LIB_PRIVATE
+ssize_t _real_sendmsg(int sockfd, const struct msghdr *msg, int flags) {
+  REAL_FUNC_PASSTHROUGH_TYPED (ssize_t, sendmsg) (sockfd, msg, flags);
+}
+
+LIB_PRIVATE
+ssize_t _real_recvfrom(int sockfd, void *buf, size_t len, int flags,
+                       struct sockaddr *src_addr, socklen_t *addrlen) {
+  REAL_FUNC_PASSTHROUGH_TYPED (ssize_t, recvfrom) (sockfd, buf, len, flags,
+                                                   src_addr, addrlen);
+}
+
+LIB_PRIVATE
+ssize_t _real_recvmsg(int sockfd, struct msghdr *msg, int flags) {
+  REAL_FUNC_PASSTHROUGH_TYPED (ssize_t, recvmsg) (sockfd, msg, flags);
 }

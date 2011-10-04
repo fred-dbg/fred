@@ -136,6 +136,7 @@ void fred_post_suspend ()
   }
   set_sync_mode(SYNC_NOOP);
   log_all_allocs = 0;
+  log_all_socketpair = 0;
   // Write the logs to disk, if any are in memory, and unmap them.
   close_all_logs();
   // Remove the threads which aren't alive anymore.
@@ -161,6 +162,7 @@ void fred_post_checkpoint_resume()
   set_sync_mode(SYNC_RECORD);
   initLogsForRecordReplay();
   log_all_allocs = 1;
+  log_all_socketpair = 1;
 }
 
 void fred_post_restart_resume()
@@ -169,6 +171,7 @@ void fred_post_restart_resume()
   set_sync_mode(SYNC_REPLAY);
   initLogsForRecordReplay();
   log_all_allocs = 1;
+  log_all_socketpair = 1;
 }
 
 void fred_reset_on_fork()

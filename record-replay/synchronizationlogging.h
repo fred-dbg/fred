@@ -32,12 +32,15 @@
 #include <stdio.h>
 #include <sys/time.h>
 #include <sys/select.h>
+#include <poll.h>
 #include <pwd.h>
 #include <grp.h>
 // Needed for ioctl:
 #include <sys/ioctl.h>
+#include <sys/uio.h>
 #include <net/if.h>
 #include <netdb.h>
+#include <signal.h>
 
 #include "constants.h"
 #include "dmtcpalloc.h"
@@ -224,6 +227,44 @@ static inline bool isProcessGDB() {
     errno = saved_errno;                                            \
   } while (0)
 
+#define WRAPPER_REPLAY_READ_VECTOR_FROM_READ_LOG(name, iov, iovcnt)           \
+  do {                                                              \
+    if (__builtin_expect(read_data_fd == -1, 0)) {                  \
+      int fd = _real_open(RECORD_READ_DATA_LOG_PATH, O_RDONLY, 0);  \
+      read_data_fd = _real_dup2(fd, dmtcp_get_readlog_fd());        \
+      _real_close(fd);                                              \
+    }                                                               \
+    JASSERT ( read_data_fd != -1 );                                 \
+    lseek(read_data_fd,                                             \
+          GET_FIELD(my_entry, name, data_offset), SEEK_SET);        \
+    JASSERT(_real_readv(read_data_fd, iov, iovcnt) != -1);          \
+  } while (0)
+
+#define WRAPPER_LOG_WRITE_VECTOR_INTO_READ_LOG(name, iov, iovcnt, retval) \
+  do {                                                              \
+    int saved_errno = errno;                                        \
+    if (SYNC_IS_REPLAY) {                                           \
+      JASSERT (false).Text("Asked to log read data while in replay."\
+                           "\nThis is probably not intended.");     \
+    }                                                               \
+    if (read_data_fd == -1) {                                       \
+      int fd = _real_open(RECORD_READ_DATA_LOG_PATH,                \
+                          O_WRONLY | O_CREAT | O_APPEND,            \
+                          S_IRUSR | S_IWUSR);                       \
+      read_data_fd = _real_dup2(fd, dmtcp_get_readlog_fd());        \
+      _real_close(fd);                                              \
+    }                                                               \
+    JASSERT ( read_data_fd != -1 );                                 \
+    _real_pthread_mutex_lock(&read_data_mutex);                     \
+    SET_FIELD2(my_entry, name, data_offset, read_log_pos);          \
+    int written = _real_writev(read_data_fd, iov, iovcnt);          \
+    JASSERT ( written >= retval );                                  \
+    read_log_pos += written;                                        \
+    _real_pthread_mutex_unlock(&read_data_mutex);                   \
+    errno = saved_errno;                                            \
+  } while (0)
+
+
 #define WRAPPER_LOG_WRITE_ENTRY_VOID(my_entry)                      \
   do {                                                              \
     SET_COMMON2(my_entry, my_errno, errno);                         \
@@ -324,6 +365,8 @@ static inline bool isProcessGDB() {
     MACRO(feof, __VA_ARGS__);                                                  \
     MACRO(fileno, __VA_ARGS__);                                                \
     MACRO(fflush, __VA_ARGS__);                                                \
+    MACRO(setvbuf, __VA_ARGS__);                                               \
+    MACRO(setvbuf, __VA_ARGS__);                                               \
     MACRO(fopen, __VA_ARGS__);                                                 \
     MACRO(fopen64, __VA_ARGS__);                                               \
     MACRO(freopen, __VA_ARGS__);                                               \
@@ -368,8 +411,10 @@ static inline bool isProcessGDB() {
     MACRO(openat, __VA_ARGS__);                                                \
     MACRO(opendir, __VA_ARGS__);                                               \
     MACRO(pread, __VA_ARGS__);                                                 \
+    MACRO(preadv, __VA_ARGS__);                                                \
     MACRO(putc, __VA_ARGS__);                                                  \
     MACRO(pwrite, __VA_ARGS__);                                                \
+    MACRO(pwritev, __VA_ARGS__);                                               \
     MACRO(pthread_detach, __VA_ARGS__);                                        \
     MACRO(pthread_create, __VA_ARGS__);                                        \
     MACRO(pthread_cond_broadcast, __VA_ARGS__);                                \
@@ -387,6 +432,7 @@ static inline bool isProcessGDB() {
     MACRO(pthread_rwlock_wrlock, __VA_ARGS__);                                 \
     MACRO(rand, __VA_ARGS__);                                                  \
     MACRO(read, __VA_ARGS__);                                                  \
+    MACRO(readv, __VA_ARGS__);                                                 \
     MACRO(readdir, __VA_ARGS__);                                               \
     MACRO(readdir_r, __VA_ARGS__);                                             \
     MACRO(readlink, __VA_ARGS__);                                              \
@@ -395,16 +441,19 @@ static inline bool isProcessGDB() {
     MACRO(rewind, __VA_ARGS__);                                                \
     MACRO(rmdir, __VA_ARGS__);                                                 \
     MACRO(select, __VA_ARGS__);                                                \
+    MACRO(ppoll, __VA_ARGS__);                                                \
     MACRO(signal_handler, __VA_ARGS__);                                        \
     MACRO(sigwait, __VA_ARGS__);                                               \
     MACRO(setsockopt, __VA_ARGS__);                                            \
     MACRO(srand, __VA_ARGS__);                                                 \
     MACRO(socket, __VA_ARGS__);                                                \
+    MACRO(socketpair, __VA_ARGS__);                                            \
     MACRO(time, __VA_ARGS__);                                                  \
     MACRO(tmpfile, __VA_ARGS__);                                               \
     MACRO(truncate, __VA_ARGS__);                                              \
     MACRO(unlink, __VA_ARGS__);                                                \
     MACRO(write, __VA_ARGS__);                                                 \
+    MACRO(writev, __VA_ARGS__);                                                \
     MACRO(xstat, __VA_ARGS__);                                                 \
     MACRO(xstat64, __VA_ARGS__);                                               \
     MACRO(user, __VA_ARGS__);                                                  \
@@ -419,6 +468,11 @@ static inline bool isProcessGDB() {
     MACRO(getaddrinfo, __VA_ARGS__);                                           \
     MACRO(freeaddrinfo, __VA_ARGS__);                                          \
     MACRO(getnameinfo, __VA_ARGS__);                                           \
+                                                                               \
+    MACRO(sendto, __VA_ARGS__);                                                \
+    MACRO(sendmsg, __VA_ARGS__);                                               \
+    MACRO(recvfrom, __VA_ARGS__);                                              \
+    MACRO(recvmsg, __VA_ARGS__);                                               \
   } while(0)
 
 /* Event codes: */
@@ -450,6 +504,7 @@ typedef enum {
   feof_event,
   fileno_event,
   fflush_event,
+  setvbuf_event,
   fopen_event,
   fopen64_event,
   freopen_event,
@@ -494,8 +549,10 @@ typedef enum {
   openat_event,
   opendir_event,
   pread_event,
+  preadv_event,
   putc_event,
   pwrite_event,
+  pwritev_event,
   pthread_detach_event,
   pthread_create_event,
   pthread_cond_broadcast_event,
@@ -513,6 +570,7 @@ typedef enum {
   pthread_rwlock_wrlock_event,
   rand_event,
   read_event,
+  readv_event,
   readdir_event,
   readdir_r_event,
   readlink_event,
@@ -521,10 +579,12 @@ typedef enum {
   rewind_event,
   rmdir_event,
   select_event,
+  ppoll_event,
   signal_handler_event,
   sigwait_event,
   setsockopt_event,
   socket_event,
+  socketpair_event,
   srand_event,
   time_event,
   tmpfile_event,
@@ -532,6 +592,7 @@ typedef enum {
   unlink_event,
   user_event,
   write_event,
+  writev_event,
   xstat_event,
   xstat64_event,
   epoll_create_event,
@@ -544,7 +605,11 @@ typedef enum {
   getgrgid_r_event,
   getaddrinfo_event,
   freeaddrinfo_event,
-  getnameinfo_event
+  getnameinfo_event,
+  sendto_event,
+  sendmsg_event,
+  recvfrom_event,
+  recvmsg_event
 } event_code_t;
 /* end event codes */
 
@@ -681,6 +746,17 @@ typedef struct {
 static const int log_event_select_size = sizeof(log_event_select_t);
 
 typedef struct {
+  // For ppoll():
+  struct pollfd *fds;
+  nfds_t nfds;
+  const struct timespec *timeout_ts;
+  const sigset_t *sigmask;
+  off_t data_offset; // offset into read saved data file
+} log_event_ppoll_t;
+
+static const int log_event_ppoll_size = sizeof(log_event_ppoll_t);
+
+typedef struct {
   // For signal handlers:
   int sig;
 } log_event_signal_handler_t;
@@ -698,13 +774,23 @@ static const int log_event_sigwait_size = sizeof(log_event_sigwait_t);
 
 typedef struct {
   // For read():
-  int readfd;
+  int fd;
   void* buf_addr;
   size_t count;
   off_t data_offset; // offset into read saved data file
 } log_event_read_t;
 
 static const int log_event_read_size = sizeof(log_event_read_t);
+
+typedef struct {
+  // For readv():
+  int fd;
+  const struct iovec *iov;
+  int iovcnt;
+  off_t data_offset; // offset into read saved data file
+} log_event_readv_t;
+
+static const int log_event_readv_size = sizeof(log_event_readv_t);
 
 typedef struct {
   // For readdir():
@@ -751,12 +837,21 @@ static const int log_event_user_size = sizeof(log_event_user_t);
 
 typedef struct {
   // For write():
-  int writefd;
+  int fd;
   void* buf_addr;
   size_t count;
 } log_event_write_t;
 
 static const int log_event_write_size = sizeof(log_event_write_t);
+
+typedef struct {
+  // For writev():
+  int fd;
+  const struct iovec *iov;
+  int iovcnt;
+} log_event_writev_t;
+
+static const int log_event_writev_size = sizeof(log_event_writev_t);
 
 typedef struct {
   // For accept():
@@ -969,6 +1064,16 @@ typedef struct {
 } log_event_fflush_t;
 
 static const int log_event_fflush_size = sizeof(log_event_fflush_t);
+
+typedef struct {
+  // For setvbuf():
+  FILE *stream;
+  char *buf;
+  int mode;
+  size_t size;
+} log_event_setvbuf_t;
+
+static const int log_event_setvbuf_size = sizeof(log_event_setvbuf_t);
 
 typedef struct {
   // For fopen():
@@ -1262,6 +1367,17 @@ typedef struct {
 static const int log_event_pread_size = sizeof(log_event_pread_t);
 
 typedef struct {
+  // For preadv():
+  int fd;
+  const struct iovec *iov;
+  int iovcnt;
+  off_t offset;
+  off_t data_offset; // offset into read saved data file
+} log_event_preadv_t;
+
+static const int log_event_preadv_size = sizeof(log_event_preadv_t);
+
+typedef struct {
   // For putc():
   int c;
   FILE *stream;
@@ -1278,6 +1394,16 @@ typedef struct {
 } log_event_pwrite_t;
 
 static const int log_event_pwrite_size = sizeof(log_event_pwrite_t);
+
+typedef struct {
+  // For pwritev():
+  int fd;
+  const struct iovec *iov;
+  int iovcnt;
+  off_t offset;
+} log_event_pwritev_t;
+
+static const int log_event_pwritev_size = sizeof(log_event_pwritev_t);
 
 typedef struct {
   // For calloc():
@@ -1465,6 +1591,17 @@ typedef struct {
 static const int log_event_socket_size = sizeof(log_event_socket_t);
 
 typedef struct {
+  // For socketpair():
+  int domain;
+  int type;
+  int protocol;
+  int *sv;
+  int ret_sv[2];
+} log_event_socketpair_t;
+
+static const int log_event_socketpair_size = sizeof(log_event_socketpair_t);
+
+typedef struct {
   // For xstat():
   int vers;
   char *path;
@@ -1609,6 +1746,51 @@ typedef struct {
 
 static const int log_event_getnameinfo_size = sizeof(log_event_getnameinfo_t);
 
+typedef struct {
+  // For sendto();
+  int sockfd;
+  const void *buf;
+  size_t len;
+  int flags;
+  const struct sockaddr *dest_addr;
+  socklen_t addrlen;
+} log_event_sendto_t;
+
+static const int log_event_sendto_size = sizeof(log_event_sendto_t);
+
+typedef struct {
+    // For sendmsg();
+  int sockfd;
+  const struct msghdr *msg;
+  int flags;
+} log_event_sendmsg_t;
+
+static const int log_event_sendmsg_size = sizeof(log_event_sendmsg_t);
+
+typedef struct {
+  // For recvfrom();
+  int sockfd;
+  void *buf;
+  size_t len;
+  int flags;
+  struct sockaddr *src_addr;
+  socklen_t *addrlen;
+  void* return_addr;
+  socklen_t ret_addrlen;
+  off_t data_offset;
+} log_event_recvfrom_t;
+
+static const int log_event_recvfrom_size = sizeof(log_event_recvfrom_t);
+
+typedef struct {
+  // For recvmsf();
+  int sockfd;
+  struct msghdr *msg;
+  int flags;
+  off_t data_offset;
+} log_event_recvmsg_t;
+
+static const int log_event_recvmsg_size = sizeof(log_event_recvmsg_t);
 
 
 typedef struct {
@@ -1645,11 +1827,14 @@ typedef struct {
     log_event_pthread_cond_wait_t                log_event_pthread_cond_wait;
     log_event_pthread_cond_timedwait_t           log_event_pthread_cond_timedwait;
     log_event_select_t                           log_event_select;
+    log_event_ppoll_t                           log_event_ppoll;
     log_event_read_t                             log_event_read;
+    log_event_readv_t                            log_event_readv;
     log_event_readdir_t                          log_event_readdir;
     log_event_readdir_r_t                        log_event_readdir_r;
     log_event_readlink_t                         log_event_readlink;
     log_event_write_t                            log_event_write;
+    log_event_writev_t                           log_event_writev;
     log_event_close_t                            log_event_close;
     log_event_closedir_t                         log_event_closedir;
     log_event_connect_t                          log_event_connect;
@@ -1677,6 +1862,7 @@ typedef struct {
     log_event_feof_t                             log_event_feof;
     log_event_fileno_t                           log_event_fileno;
     log_event_fflush_t                           log_event_fflush;
+    log_event_setvbuf_t                          log_event_setvbuf;
     log_event_fopen_t                            log_event_fopen;
     log_event_fopen64_t                          log_event_fopen64;
     log_event_freopen_t                          log_event_freopen;
@@ -1696,8 +1882,10 @@ typedef struct {
     log_event_openat_t                           log_event_openat;
     log_event_opendir_t                          log_event_opendir;
     log_event_pread_t                            log_event_pread;
+    log_event_preadv_t                           log_event_preadv;
     log_event_putc_t                             log_event_putc;
     log_event_pwrite_t                           log_event_pwrite;
+    log_event_pwritev_t                          log_event_pwritev;
     log_event_pthread_kill_t                     log_event_pthread_kill;
     log_event_pthread_join_t                     log_event_pthread_join;
     log_event_pthread_exit_t                     log_event_pthread_exit;
@@ -1733,6 +1921,7 @@ typedef struct {
     log_event_user_t                             log_event_user;
     log_event_srand_t                            log_event_srand;
     log_event_socket_t                           log_event_socket;
+    log_event_socketpair_t                       log_event_socketpair;
     log_event_rand_t                             log_event_rand;
     log_event_rename_t                           log_event_rename;
     log_event_rewind_t                           log_event_rewind;
@@ -1751,7 +1940,11 @@ typedef struct {
     log_event_getgrgid_r_t                       log_event_getgrgid_r;
     log_event_getaddrinfo_t                      log_event_getaddrinfo;
     log_event_freeaddrinfo_t                     log_event_freeaddrinfo;
-    log_event_getnameinfo_t                     log_event_getnameinfo;
+    log_event_getnameinfo_t                      log_event_getnameinfo;
+    log_event_sendto_t                           log_event_sendto;
+    log_event_sendmsg_t                          log_event_sendmsg;
+    log_event_recvfrom_t                         log_event_recvfrom;
+    log_event_recvmsg_t                          log_event_recvmsg;
   } event_data;
 } log_entry_t;
 
@@ -1766,6 +1959,8 @@ typedef struct {
 
 #define GET_FIELD(entry, event, field)     entry.event_data.log_event_##event.field
 #define GET_FIELD_PTR(entry, event, field) entry->event_data.log_event_##event.field
+#define ARE_FIELDS_EQUAL_PTR(e1, e2, event, field) (GET_FIELD_PTR(e1, event, field) == \
+                                                      GET_FIELD_PTR(e2, event, field))
 
 #define SET_FIELD2(entry,event,field,field2) GET_FIELD(entry, event, field) = field2
 
@@ -1854,6 +2049,7 @@ LIB_PRIVATE extern char RECORD_READ_DATA_LOG_PATH[RECORD_LOG_PATH_MAX];
 LIB_PRIVATE extern int             read_data_fd;
 LIB_PRIVATE extern int             sync_logging_branch;
 LIB_PRIVATE extern int             log_all_allocs;
+LIB_PRIVATE extern int             log_all_socketpair;
 
 LIB_PRIVATE extern dmtcp::SynchronizationLog global_log;
 
@@ -1938,6 +2134,7 @@ CREATE_ENTRY_FUNC(ferror, FILE *stream);
 CREATE_ENTRY_FUNC(feof, FILE *stream);
 CREATE_ENTRY_FUNC(fileno, FILE *stream);
 CREATE_ENTRY_FUNC(fflush, FILE *stream);
+CREATE_ENTRY_FUNC(setvbuf, FILE *stream, char *buf, int mode, size_t size);
 CREATE_ENTRY_FUNC(fopen, const char *name, const char *mode);
 CREATE_ENTRY_FUNC(fopen64, const char *name, const char *mode);
 CREATE_ENTRY_FUNC(freopen, const char *path, const char *mode, FILE *stream);
@@ -1987,8 +2184,10 @@ CREATE_ENTRY_FUNC(open64, const char *path, int flags, mode_t mode);
 CREATE_ENTRY_FUNC(openat, int dirfd, const char *pathname, int flags);
 CREATE_ENTRY_FUNC(opendir, const char *name);
 CREATE_ENTRY_FUNC(pread, int fd, void* buf, size_t count, off_t offset);
+CREATE_ENTRY_FUNC(preadv, int fd, const struct iovec *iov, int iovcnt, off_t offset);
 CREATE_ENTRY_FUNC(putc, int c, FILE *stream);
 CREATE_ENTRY_FUNC(pwrite, int fd, const void* buf, size_t count, off_t offset);
+CREATE_ENTRY_FUNC(pwritev, int fd, const struct iovec *iov, int iovcnt, off_t offset);
 CREATE_ENTRY_FUNC(pthread_cond_broadcast, pthread_cond_t *cond_var);
 CREATE_ENTRY_FUNC(pthread_cond_signal, pthread_cond_t *cond_var);
 CREATE_ENTRY_FUNC(pthread_cond_wait,
@@ -2010,7 +2209,8 @@ CREATE_ENTRY_FUNC(pthread_mutex_lock, pthread_mutex_t *mutex);
 CREATE_ENTRY_FUNC(pthread_mutex_trylock, pthread_mutex_t *mutex);
 CREATE_ENTRY_FUNC(pthread_mutex_unlock, pthread_mutex_t *mutex);
 CREATE_ENTRY_FUNC(rand);
-CREATE_ENTRY_FUNC(read, int readfd, void* buf_addr, size_t count);
+CREATE_ENTRY_FUNC(read, int fd, void* buf_addr, size_t count);
+CREATE_ENTRY_FUNC(readv, int fd, const struct iovec *iov, int iovcnt);
 CREATE_ENTRY_FUNC(readdir, DIR *dirp);
 CREATE_ENTRY_FUNC(readdir_r,
                   DIR *dirp, struct dirent *entry, struct dirent **result);
@@ -2022,6 +2222,8 @@ CREATE_ENTRY_FUNC(rmdir, const char *pathname);
 CREATE_ENTRY_FUNC(select, int nfds,
                   fd_set *readfds, fd_set *writefds, fd_set *exceptfds,
                   struct timeval *timeout);
+CREATE_ENTRY_FUNC(ppoll, struct pollfd *fds, nfds_t nfds,
+                  const struct timespec *timeout_ts, const sigset_t *sigmask);
 CREATE_ENTRY_FUNC(setsockopt,
                   int sockfd, int level, int optname,
                   const void* optval, socklen_t optlen);
@@ -2033,14 +2235,15 @@ CREATE_ENTRY_FUNC(signal_handler, int sig);
 CREATE_ENTRY_FUNC(sigwait, const sigset_t *set, int *sig);
 CREATE_ENTRY_FUNC(srand, unsigned int seed);
 CREATE_ENTRY_FUNC(socket, int domain, int type, int protocol);
+CREATE_ENTRY_FUNC(socketpair, int domain, int type, int protocol, int sv[2]);
 CREATE_ENTRY_FUNC(xstat, int vers, const char *path, struct stat *buf);
 CREATE_ENTRY_FUNC(xstat64, int vers, const char *path, struct stat64 *buf);
 CREATE_ENTRY_FUNC(time, time_t *tloc);
 CREATE_ENTRY_FUNC(tmpfile);
 CREATE_ENTRY_FUNC(truncate, const char *path, off_t length);
 CREATE_ENTRY_FUNC(unlink, const char *pathname);
-CREATE_ENTRY_FUNC(write,
-                  int writefd, const void* buf_addr, size_t count);
+CREATE_ENTRY_FUNC(write, int fd, const void* buf_addr, size_t count);
+CREATE_ENTRY_FUNC(writev, int fd, const struct iovec *iov, int iovcnt);
 CREATE_ENTRY_FUNC(epoll_create, int size);
 CREATE_ENTRY_FUNC(epoll_create1, int flags);
 CREATE_ENTRY_FUNC(epoll_ctl,
@@ -2061,6 +2264,14 @@ CREATE_ENTRY_FUNC(freeaddrinfo, struct addrinfo *res);
 CREATE_ENTRY_FUNC(getnameinfo, const struct sockaddr *sa, socklen_t salen,
                   char *host, socklen_t hostlen, char *serv, socklen_t servlen,
                   unsigned int flags);
+
+CREATE_ENTRY_FUNC(sendto, int sockfd, const void *buf, size_t len, int flags,
+                  const struct sockaddr *dest_addr, socklen_t addrlen);
+CREATE_ENTRY_FUNC(sendmsg, int sockfd, const struct msghdr *msg, int flags);
+CREATE_ENTRY_FUNC(recvfrom, int sockfd, void *buf, size_t len, int flags,
+                  struct sockaddr *src_addr, socklen_t *addrlen);
+CREATE_ENTRY_FUNC(recvmsg, int sockfd, struct msghdr *msg, int flags);
+
 /* Special case: user synchronized events. */
 CREATE_ENTRY_FUNC(user);
 /* Special case: exec barrier (notice no clone id or event). */

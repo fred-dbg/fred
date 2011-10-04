@@ -53,6 +53,7 @@ LIB_PRIVATE int             sync_logging_branch = 0;
 /* Setting this will log/replay *ALL* malloc family
    functions (i.e. including ones from DMTCP, std C++ lib, etc.). */
 LIB_PRIVATE int             log_all_allocs = 0;
+LIB_PRIVATE int             log_all_socketpair = 0;
 LIB_PRIVATE pthread_cond_t  reap_cv = PTHREAD_COND_INITIALIZER;
 LIB_PRIVATE pthread_mutex_t global_clone_counter_mutex = PTHREAD_MUTEX_INITIALIZER;
 LIB_PRIVATE pthread_mutex_t reap_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -663,6 +664,18 @@ log_entry_t create_fflush_entry(clone_id_t clone_id, event_code_t event, FILE *s
   return e;
 }
 
+log_entry_t create_setvbuf_entry(clone_id_t clone_id, event_code_t event,
+                                 FILE *stream, char *buf, int mode, size_t size)
+{
+  log_entry_t e = EMPTY_LOG_ENTRY;
+  setupCommonFields(&e, clone_id, event);
+  SET_FIELD(e, setvbuf, stream);
+  SET_FIELD(e, setvbuf, buf);
+  SET_FIELD(e, setvbuf, mode);
+  SET_FIELD(e, setvbuf, size);
+  return e;
+}
+
 log_entry_t create_fopen_entry(clone_id_t clone_id, event_code_t event,
     const char *name, const char *mode)
 {
@@ -1092,6 +1105,18 @@ log_entry_t create_pread_entry(clone_id_t clone_id, event_code_t event, int fd,
   return e;
 }
 
+log_entry_t create_preadv_entry(clone_id_t clone_id, event_code_t event, int fd,
+                                const struct iovec *iov, int iovcnt, off_t offset)
+{
+  log_entry_t e = EMPTY_LOG_ENTRY;
+  setupCommonFields(&e, clone_id, event);
+  SET_FIELD(e, preadv, fd);
+  SET_FIELD(e, preadv, iov);
+  SET_FIELD(e, preadv, iovcnt);
+  SET_FIELD(e, preadv, offset);
+  return e;
+}
+
 log_entry_t create_putc_entry(clone_id_t clone_id, event_code_t event, int c,
     FILE *stream)
 {
@@ -1111,6 +1136,18 @@ log_entry_t create_pwrite_entry(clone_id_t clone_id, event_code_t event, int fd,
   SET_FIELD2(e, pwrite, buf, (void*)buf);
   SET_FIELD(e, pwrite, count);
   SET_FIELD(e, pwrite, offset);
+  return e;
+}
+
+log_entry_t create_pwritev_entry(clone_id_t clone_id, event_code_t event, int fd,
+                                 const struct iovec *iov, int iovcnt, off_t offset)
+{
+  log_entry_t e = EMPTY_LOG_ENTRY;
+  setupCommonFields(&e, clone_id, event);
+  SET_FIELD(e, pwritev, fd);
+  SET_FIELD(e, pwritev, iov);
+  SET_FIELD(e, pwritev, iovcnt);
+  SET_FIELD(e, pwritev, offset);
   return e;
 }
 
@@ -1260,14 +1297,25 @@ log_entry_t create_rand_entry(clone_id_t clone_id, event_code_t event)
   return e;
 }
 
-log_entry_t create_read_entry(clone_id_t clone_id, event_code_t event, int readfd,
-    void* buf_addr, size_t count)
+log_entry_t create_read_entry(clone_id_t clone_id, event_code_t event,
+                              int fd, void* buf_addr, size_t count)
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, read, readfd);
+  SET_FIELD(e, read, fd);
   SET_FIELD(e, read, buf_addr);
   SET_FIELD(e, read, count);
+  return e;
+}
+
+log_entry_t create_readv_entry(clone_id_t clone_id, event_code_t event,
+                               int fd, const struct iovec *iov, int iovcnt)
+{
+  log_entry_t e = EMPTY_LOG_ENTRY;
+  setupCommonFields(&e, clone_id, event);
+  SET_FIELD(e, readv, fd);
+  SET_FIELD2(e, readv, iov, (const struct iovec*) iov);
+  SET_FIELD(e, readv, iovcnt);
   return e;
 }
 
@@ -1353,6 +1401,20 @@ log_entry_t create_select_entry(clone_id_t clone_id, event_code_t event, int nfd
   return e;
 }
 
+log_entry_t create_ppoll_entry(clone_id_t clone_id, event_code_t event,
+                               struct pollfd *fds, nfds_t nfds,
+                               const struct timespec *timeout_ts,
+                               const sigset_t *sigmask)
+{
+  log_entry_t e = EMPTY_LOG_ENTRY;
+  setupCommonFields(&e, clone_id, event);
+  SET_FIELD(e, ppoll, fds);
+  SET_FIELD(e, ppoll, nfds);
+  SET_FIELD(e, ppoll, timeout_ts);
+  SET_FIELD(e, ppoll, sigmask);
+  return e;
+}
+
 log_entry_t create_setsockopt_entry(clone_id_t clone_id, event_code_t event, int sockfd,
     int level, int optname, const void *optval, socklen_t optlen) {
   log_entry_t e = EMPTY_LOG_ENTRY;
@@ -1365,8 +1427,9 @@ log_entry_t create_setsockopt_entry(clone_id_t clone_id, event_code_t event, int
   return e;
 }
 
-log_entry_t create_getsockopt_entry(clone_id_t clone_id, event_code_t event, int sockfd,
-    int level, int optname, void *optval, socklen_t* optlen) {
+log_entry_t create_getsockopt_entry(clone_id_t clone_id, event_code_t event,
+                                    int sockfd, int level, int optname,
+                                    void *optval, socklen_t* optlen) {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
   SET_FIELD(e, getsockopt, sockfd);
@@ -1421,6 +1484,19 @@ log_entry_t create_socket_entry(clone_id_t clone_id, event_code_t event, int dom
   SET_FIELD(e, socket, domain);
   SET_FIELD(e, socket, type);
   SET_FIELD(e, socket, protocol);
+  return e;
+}
+
+log_entry_t create_socketpair_entry(clone_id_t clone_id, event_code_t event,
+                                    int domain, int type, int protocol,
+                                    int sv[2])
+{
+  log_entry_t e = EMPTY_LOG_ENTRY;
+  setupCommonFields(&e, clone_id, event);
+  SET_FIELD(e, socketpair, domain);
+  SET_FIELD(e, socketpair, type);
+  SET_FIELD(e, socketpair, protocol);
+  SET_FIELD(e, socketpair, sv);
   return e;
 }
 
@@ -1487,14 +1563,25 @@ log_entry_t create_user_entry(clone_id_t clone_id, event_code_t event)
   return e;
 }
 
-log_entry_t create_write_entry(clone_id_t clone_id, event_code_t event, int writefd,
-    const void* buf_addr, size_t count)
+log_entry_t create_write_entry(clone_id_t clone_id, event_code_t event,
+                               int fd, const void* buf_addr, size_t count)
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, write, writefd);
+  SET_FIELD(e, write, fd);
   SET_FIELD2(e, write, buf_addr, (void*)buf_addr);
   SET_FIELD(e, write, count);
+  return e;
+}
+
+log_entry_t create_writev_entry(clone_id_t clone_id, event_code_t event, int fd,
+                                const struct iovec *iov, int iovcnt)
+{
+  log_entry_t e = EMPTY_LOG_ENTRY;
+  setupCommonFields(&e, clone_id, event);
+  SET_FIELD(e, writev, fd);
+  SET_FIELD(e, writev, iov);
+  SET_FIELD(e, writev, iovcnt);
   return e;
 }
 
@@ -1642,6 +1729,59 @@ log_entry_t create_getnameinfo_entry(clone_id_t clone_id, event_code_t event,
   return e;
 }
 
+log_entry_t create_sendto_entry(clone_id_t clone_id, event_code_t event,
+                                int sockfd, const void *buf, size_t len, int flags,
+                                const struct sockaddr *dest_addr, socklen_t addrlen)
+{
+  log_entry_t e = EMPTY_LOG_ENTRY;
+  setupCommonFields(&e, clone_id, event);
+  SET_FIELD(e, sendto, sockfd);
+  SET_FIELD(e, sendto, buf);
+  SET_FIELD(e, sendto, len);
+  SET_FIELD(e, sendto, flags);
+  SET_FIELD(e, sendto, dest_addr);
+  SET_FIELD(e, sendto, addrlen);
+  return e;
+}
+
+log_entry_t create_sendmsg_entry(clone_id_t clone_id, event_code_t event,
+                                 int sockfd, const struct msghdr *msg, int flags)
+{
+  log_entry_t e = EMPTY_LOG_ENTRY;
+  setupCommonFields(&e, clone_id, event);
+  SET_FIELD(e, sendmsg, sockfd);
+  SET_FIELD(e, sendmsg, msg);
+  SET_FIELD(e, sendmsg, flags);
+  return e;
+}
+
+log_entry_t create_recvfrom_entry(clone_id_t clone_id, event_code_t event,
+                                  int sockfd, void *buf, size_t len, int flags,
+                                  struct sockaddr *src_addr, socklen_t *addrlen)
+{
+  log_entry_t e = EMPTY_LOG_ENTRY;
+  setupCommonFields(&e, clone_id, event);
+  SET_FIELD(e, recvfrom, sockfd);
+  SET_FIELD(e, recvfrom, buf);
+  SET_FIELD(e, recvfrom, len);
+  SET_FIELD(e, recvfrom, flags);
+  SET_FIELD(e, recvfrom, src_addr);
+  SET_FIELD(e, recvfrom, addrlen);
+  return e;
+}
+
+log_entry_t create_recvmsg_entry(clone_id_t clone_id, event_code_t event,
+                                 int sockfd, struct msghdr *msg, int flags)
+{
+  log_entry_t e = EMPTY_LOG_ENTRY;
+  setupCommonFields(&e, clone_id, event);
+  SET_FIELD(e, recvmsg, sockfd);
+  SET_FIELD(e, recvmsg, msg);
+  SET_FIELD(e, recvmsg, flags);
+  return e;
+}
+
+
 static TURN_CHECK_P(base_turn_check)
 {
   // Predicate function for a basic check -- event # and clone id.
@@ -1780,6 +1920,14 @@ TURN_CHECK_P(read_turn_check)
       GET_FIELD_PTR(e2, read, count);
 }
 
+TURN_CHECK_P(readv_turn_check)
+{
+  return base_turn_check(e1, e2) &&
+    /*ARE_FIELDS_EQUAL_PTR(e1, e2, readv, fd) &&*/
+    ARE_FIELDS_EQUAL_PTR(e1, e2, readv, iov) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, readv, iovcnt);
+}
+
 TURN_CHECK_P(readdir_turn_check)
 {
   return base_turn_check(e1, e2) &&
@@ -1824,6 +1972,14 @@ TURN_CHECK_P(write_turn_check)
       GET_FIELD_PTR(e2, write, count);
 }
 
+TURN_CHECK_P(writev_turn_check)
+{
+  return base_turn_check(e1, e2) &&
+    /*ARE_FIELDS_EQUAL_PTR(e1, e2, writev, fd) &&*/
+    ARE_FIELDS_EQUAL_PTR(e1, e2, writev, iov) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, writev, iovcnt);
+}
+
 TURN_CHECK_P(close_turn_check)
 {
   return base_turn_check(e1, e2);// && e1->fd == e2->fd;
@@ -1848,22 +2004,22 @@ TURN_CHECK_P(connect_turn_check)
 TURN_CHECK_P(dup_turn_check)
 {
   return base_turn_check(e1, e2) &&
-    IS_EQUAL_FIELD_PTR(e1, e2, dup, oldfd);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, dup, oldfd);
 }
 
 TURN_CHECK_P(dup2_turn_check)
 {
   return base_turn_check(e1, e2) &&
-    IS_EQUAL_FIELD_PTR(e1, e2, dup2, oldfd) &&
-    IS_EQUAL_FIELD_PTR(e1, e2, dup2, newfd);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, dup2, oldfd) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, dup2, newfd);
 }
 
 TURN_CHECK_P(dup3_turn_check)
 {
   return base_turn_check(e1, e2) &&
-    IS_EQUAL_FIELD_PTR(e1, e2, dup3, oldfd) &&
-    IS_EQUAL_FIELD_PTR(e1, e2, dup3, newfd) &&
-    IS_EQUAL_FIELD_PTR(e1, e2, dup3, flags);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, dup3, oldfd) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, dup3, newfd) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, dup3, flags);
 }
 
 TURN_CHECK_P(rand_turn_check)
@@ -1887,6 +2043,19 @@ TURN_CHECK_P(socket_turn_check)
       GET_FIELD_PTR(e2, socket, type) &&
     GET_FIELD_PTR(e1, socket, protocol) ==
       GET_FIELD_PTR(e2, socket, protocol);
+}
+
+TURN_CHECK_P(socketpair_turn_check)
+{
+  return base_turn_check(e1, e2) &&
+    GET_FIELD_PTR(e1, socketpair, domain) ==
+      GET_FIELD_PTR(e2, socketpair, domain) &&
+    GET_FIELD_PTR(e1, socketpair, type) ==
+      GET_FIELD_PTR(e2, socketpair, type) &&
+    GET_FIELD_PTR(e1, socketpair, protocol) ==
+      GET_FIELD_PTR(e2, socketpair, protocol) &&
+    GET_FIELD_PTR(e1, socketpair, sv) ==
+      GET_FIELD_PTR(e2, socketpair, sv);
 }
 
 TURN_CHECK_P(xstat_turn_check)
@@ -2129,6 +2298,15 @@ TURN_CHECK_P(fflush_turn_check)
   return base_turn_check(e1,e2) &&
     GET_FIELD_PTR(e1, fflush, stream) ==
       GET_FIELD_PTR(e2, fflush, stream);
+}
+
+TURN_CHECK_P(setvbuf_turn_check)
+{
+  return base_turn_check(e1,e2) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, setvbuf, stream) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, setvbuf, buf) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, setvbuf, mode) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, setvbuf, size);
 }
 
 TURN_CHECK_P(getc_turn_check)
@@ -2479,6 +2657,15 @@ TURN_CHECK_P(pread_turn_check)
       GET_FIELD_PTR(e2, pread, offset);
 }
 
+TURN_CHECK_P(preadv_turn_check)
+{
+  return base_turn_check(e1, e2) &&
+    /*ARE_FIELDS_EQUAL_PTR(e1, e2, preadv, fd) &&*/
+    ARE_FIELDS_EQUAL_PTR(e1, e2, preadv, iov) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, preadv, iovcnt) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, preadv, offset);
+}
+
 TURN_CHECK_P(putc_turn_check)
 {
   return base_turn_check(e1, e2) &&
@@ -2499,6 +2686,15 @@ TURN_CHECK_P(pwrite_turn_check)
       GET_FIELD_PTR(e2, pwrite, count) &&
     GET_FIELD_PTR(e1, pwrite, offset) ==
       GET_FIELD_PTR(e2, pwrite, offset);
+}
+
+TURN_CHECK_P(pwritev_turn_check)
+{
+  return base_turn_check(e1, e2) &&
+    /*ARE_FIELDS_EQUAL_PTR(e1, e2, pwritev, fd) &&*/
+    ARE_FIELDS_EQUAL_PTR(e1, e2, pwritev, iov) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, pwritev, iovcnt) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, pwritev, offset);
 }
 
 TURN_CHECK_P(libc_memalign_turn_check)
@@ -2622,101 +2818,149 @@ TURN_CHECK_P(select_turn_check)
       GET_FIELD_PTR(e2, select, timeout);
 }
 
+TURN_CHECK_P(ppoll_turn_check)
+{
+  return base_turn_check(e1,e2) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, ppoll, fds) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, ppoll, nfds) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, ppoll, timeout_ts) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, ppoll, sigmask);
+}
+
 TURN_CHECK_P(epoll_create_turn_check)
 {
   return base_turn_check(e1,e2) &&
-    IS_EQUAL_FIELD_PTR(e1, e2, epoll_create, size);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, epoll_create, size);
 }
 
 TURN_CHECK_P(epoll_create1_turn_check)
 {
   return base_turn_check(e1,e2) &&
-    IS_EQUAL_FIELD_PTR(e1, e2, epoll_create1, flags);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, epoll_create1, flags);
 }
 
 TURN_CHECK_P(epoll_ctl_turn_check)
 {
   return base_turn_check(e1,e2) &&
-    IS_EQUAL_FIELD_PTR(e1, e2, epoll_ctl, epfd) &&
-    IS_EQUAL_FIELD_PTR(e1, e2, epoll_ctl, op) &&
-    IS_EQUAL_FIELD_PTR(e1, e2, epoll_ctl, fd) &&
-    IS_EQUAL_FIELD_PTR(e1, e2, epoll_ctl, _event);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, epoll_ctl, epfd) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, epoll_ctl, op) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, epoll_ctl, fd) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, epoll_ctl, _event);
 }
 
 TURN_CHECK_P(epoll_wait_turn_check)
 {
   return base_turn_check(e1,e2) &&
-    IS_EQUAL_FIELD_PTR(e1, e2, epoll_wait, epfd) &&
-    IS_EQUAL_FIELD_PTR(e1, e2, epoll_wait, events) &&
-    IS_EQUAL_FIELD_PTR(e1, e2, epoll_wait, maxevents) &&
-    IS_EQUAL_FIELD_PTR(e1, e2, epoll_wait, timeout);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, epoll_wait, epfd) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, epoll_wait, events) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, epoll_wait, maxevents) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, epoll_wait, timeout);
 }
 
 TURN_CHECK_P(getpwnam_r_turn_check)
 {
   return base_turn_check(e1,e2) &&
-    IS_EQUAL_FIELD_PTR(e1, e2, getpwnam_r, name) &&
-    IS_EQUAL_FIELD_PTR(e1, e2, getpwnam_r, pwd) &&
-    IS_EQUAL_FIELD_PTR(e1, e2, getpwnam_r, buf) &&
-    IS_EQUAL_FIELD_PTR(e1, e2, getpwnam_r, buflen) &&
-    IS_EQUAL_FIELD_PTR(e1, e2, getpwnam_r, result);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, getpwnam_r, name) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, getpwnam_r, pwd) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, getpwnam_r, buf) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, getpwnam_r, buflen) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, getpwnam_r, result);
 }
 
 TURN_CHECK_P(getpwuid_r_turn_check)
 {
   return base_turn_check(e1,e2) &&
-    IS_EQUAL_FIELD_PTR(e1, e2, getpwuid_r, uid) &&
-    IS_EQUAL_FIELD_PTR(e1, e2, getpwuid_r, pwd) &&
-    IS_EQUAL_FIELD_PTR(e1, e2, getpwuid_r, buf) &&
-    IS_EQUAL_FIELD_PTR(e1, e2, getpwuid_r, buflen) &&
-    IS_EQUAL_FIELD_PTR(e1, e2, getpwuid_r, result);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, getpwuid_r, uid) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, getpwuid_r, pwd) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, getpwuid_r, buf) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, getpwuid_r, buflen) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, getpwuid_r, result);
 }
 
 TURN_CHECK_P(getgrnam_r_turn_check)
 {
   return base_turn_check(e1,e2) &&
-    IS_EQUAL_FIELD_PTR(e1, e2, getgrnam_r, name) &&
-    IS_EQUAL_FIELD_PTR(e1, e2, getgrnam_r, grp) &&
-    IS_EQUAL_FIELD_PTR(e1, e2, getgrnam_r, buf) &&
-    IS_EQUAL_FIELD_PTR(e1, e2, getgrnam_r, buflen) &&
-    IS_EQUAL_FIELD_PTR(e1, e2, getgrnam_r, result);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, getgrnam_r, name) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, getgrnam_r, grp) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, getgrnam_r, buf) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, getgrnam_r, buflen) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, getgrnam_r, result);
 }
 TURN_CHECK_P(getgrgid_r_turn_check)
 {
   return base_turn_check(e1,e2) &&
-    IS_EQUAL_FIELD_PTR(e1, e2, getgrgid_r, gid) &&
-    IS_EQUAL_FIELD_PTR(e1, e2, getgrgid_r, grp) &&
-    IS_EQUAL_FIELD_PTR(e1, e2, getgrgid_r, buf) &&
-    IS_EQUAL_FIELD_PTR(e1, e2, getgrgid_r, buflen) &&
-    IS_EQUAL_FIELD_PTR(e1, e2, getgrgid_r, result);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, getgrgid_r, gid) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, getgrgid_r, grp) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, getgrgid_r, buf) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, getgrgid_r, buflen) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, getgrgid_r, result);
 }
 
 TURN_CHECK_P(getaddrinfo_turn_check)
 {
   return base_turn_check(e1,e2) &&
-    IS_EQUAL_FIELD_PTR(e1, e2, getaddrinfo, node) &&
-    IS_EQUAL_FIELD_PTR(e1, e2, getaddrinfo, service) &&
-    IS_EQUAL_FIELD_PTR(e1, e2, getaddrinfo, hints) &&
-    IS_EQUAL_FIELD_PTR(e1, e2, getaddrinfo, res);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, getaddrinfo, node) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, getaddrinfo, service) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, getaddrinfo, hints) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, getaddrinfo, res);
 }
 
 TURN_CHECK_P(freeaddrinfo_turn_check)
 {
   return base_turn_check(e1,e2) &&
-    IS_EQUAL_FIELD_PTR(e1, e2, freeaddrinfo, res);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, freeaddrinfo, res);
 }
 
 TURN_CHECK_P(getnameinfo_turn_check)
 {
   return base_turn_check(e1,e2) &&
-    IS_EQUAL_FIELD_PTR(e1, e2, getnameinfo, sa) &&
-    IS_EQUAL_FIELD_PTR(e1, e2, getnameinfo, salen) &&
-    IS_EQUAL_FIELD_PTR(e1, e2, getnameinfo, host) &&
-    IS_EQUAL_FIELD_PTR(e1, e2, getnameinfo, hostlen) &&
-    IS_EQUAL_FIELD_PTR(e1, e2, getnameinfo, serv) &&
-    IS_EQUAL_FIELD_PTR(e1, e2, getnameinfo, servlen) &&
-    IS_EQUAL_FIELD_PTR(e1, e2, getnameinfo, flags);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, getnameinfo, sa) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, getnameinfo, salen) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, getnameinfo, host) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, getnameinfo, hostlen) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, getnameinfo, serv) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, getnameinfo, servlen) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, getnameinfo, flags);
 }
+
+TURN_CHECK_P(sendto_turn_check)
+{
+  return base_turn_check(e1,e2) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, sendto, sockfd) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, sendto, buf) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, sendto, len) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, sendto, flags) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, sendto, dest_addr) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, sendto, addrlen);
+}
+
+TURN_CHECK_P(sendmsg_turn_check)
+{
+  return base_turn_check(e1,e2) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, sendmsg, sockfd) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, sendmsg, msg) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, sendmsg, flags);
+}
+
+TURN_CHECK_P(recvfrom_turn_check)
+{
+  return base_turn_check(e1,e2) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, recvfrom, sockfd) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, recvfrom, buf) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, recvfrom, len) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, recvfrom, flags) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, recvfrom, src_addr) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, recvfrom, addrlen);
+}
+
+TURN_CHECK_P(recvmsg_turn_check)
+{
+  return base_turn_check(e1,e2) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, recvmsg, sockfd) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, recvmsg, msg) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, recvmsg, flags);
+}
+
 
 /* Returns true if 'opt_event' is a registered optional event for 'event'.
  * If 'query' is true, 'opt_event' is ignored, and returns true if 'event' has

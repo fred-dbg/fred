@@ -49,6 +49,7 @@
 #include <sys/epoll.h>
 #include <dirent.h>
 #include <unistd.h>
+#include <poll.h>
 #include <pwd.h>
 #include <grp.h>
 #include <netdb.h>
@@ -200,6 +201,7 @@ LIB_PRIVATE extern __thread int thread_performing_dlopen_dlsym;
   MACRO(shmctl)                             \
                                             \
   MACRO(select)                             \
+  MACRO(ppoll)                               \
   MACRO(read)                               \
   MACRO(write)                              \
                                             \
@@ -249,12 +251,17 @@ LIB_PRIVATE extern __thread int thread_performing_dlopen_dlsym;
   MACRO(unlink)                               \
   MACRO(pread)                                \
   MACRO(pwrite)                               \
+  MACRO(preadv)                               \
+  MACRO(pwritev)                              \
+  MACRO(readv)                                \
+  MACRO(writev)                               \
   MACRO(fdopen)                               \
   MACRO(fgets)                                \
   MACRO(ferror)                               \
   MACRO(feof)                                 \
   MACRO(fileno)                               \
   MACRO(fflush)                               \
+  MACRO(setvbuf)                              \
   MACRO(putc)                                 \
   MACRO(fputc)                                \
   MACRO(fputs)                                \
@@ -291,7 +298,13 @@ LIB_PRIVATE extern __thread int thread_performing_dlopen_dlsym;
   MACRO(pthread_cond_broadcast)               \
   MACRO(pthread_detach)                       \
   MACRO(pthread_exit)                         \
-  MACRO(pthread_kill)
+  MACRO(pthread_kill)                         \
+                                              \
+  MACRO(sendto)                               \
+  MACRO(sendmsg)                              \
+  MACRO(recvfrom)                             \
+  MACRO(recvmsg)
+
 #else
 # define FOREACH_RECORD_REPLAY_WRAPPERS(MACRO)
 #endif
@@ -448,6 +461,8 @@ LIB_PRIVATE extern __thread int thread_performing_dlopen_dlsym;
   ssize_t _real_write(int fd, const void *buf, size_t count);
   int _real_select(int nfds, fd_set *readfds, fd_set *writefds,
                    fd_set *exceptfds, struct timeval *timeout);
+  int _real_ppoll(struct pollfd *fds, nfds_t nfds,
+                  const struct timespec *timeout_ts, const sigset_t *sigmask);
   int _real_dup(int oldfd);
   int _real_dup2(int oldfd, int newfd);
   int _real_dup3(int oldfd, int newfd, int flags);
@@ -522,6 +537,7 @@ LIB_PRIVATE extern __thread int thread_performing_dlopen_dlsym;
   int _real_feof(FILE *stream);
   int _real_fileno(FILE *stream);
   int _real_fflush(FILE *stream);
+  int _real_setvbuf(FILE *stream, char *buf, int mode, size_t size);
   ssize_t _real_getline(char **lineptr, size_t *n, FILE *stream);
   int _real_getc(FILE *stream);
   char * _real_getcwd(char *buf, size_t size);
@@ -569,6 +585,11 @@ LIB_PRIVATE extern __thread int thread_performing_dlopen_dlsym;
   ssize_t _real_pread(int fd, void *buf, size_t count, off_t offset);
   ssize_t _real_pwrite(int fd, const void *buf, size_t count, off_t offset);
 
+  ssize_t _real_readv(int fd, const struct iovec *iov, int iovcnt);
+  ssize_t _real_writev(int fd, const struct iovec *iov, int iovcnt);
+  ssize_t _real_preadv(int fd, const struct iovec *iov, int iovcnt, off_t offset);
+  ssize_t _real_pwritev(int fd, const struct iovec *iov, int iovcnt, off_t offset);
+
   struct passwd *_real_getpwnam(const char *name);
  // struct passwd *_real_getpwuid(uid_t uid);
   int _real_getpwnam_r(const char *name, struct passwd *pwd,
@@ -586,6 +607,13 @@ LIB_PRIVATE extern __thread int thread_performing_dlopen_dlsym;
   int _real_getnameinfo(const struct sockaddr *sa, socklen_t salen,
                         char *host, socklen_t hostlen,
                         char *serv, socklen_t servlen, unsigned int flags);
+
+  ssize_t _real_sendto(int sockfd, const void *buf, size_t len, int flags,
+                       const struct sockaddr *dest_addr, socklen_t addrlen);
+  ssize_t _real_sendmsg(int sockfd, const struct msghdr *msg, int flags);
+  ssize_t _real_recvfrom(int sockfd, void *buf, size_t len, int flags,
+                         struct sockaddr *src_addr, socklen_t *addrlen);
+  ssize_t _real_recvmsg(int sockfd, struct msghdr *msg, int flags);
 #endif
 
 #ifdef __cplusplus
