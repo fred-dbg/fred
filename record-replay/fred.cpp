@@ -42,6 +42,15 @@ static inline void memfence() {  asm volatile ("mfence" ::: "memory"); }
 void fred_setup_trampolines();
 static void initialize_thread();
 
+static void pthread_atfork_child()
+{
+  set_sync_mode(SYNC_NOOP);
+  log_all_allocs = 0;
+  // Write the logs to disk, if any are in memory, and unmap them.
+  close_all_logs();
+}
+
+
 static void recordReplayInit()
 {
   // As of rev. 816, this line caused DMTCP with standard ./configure
@@ -83,6 +92,19 @@ static void recordReplayInit()
   } else if (SYNC_IS_RECORD) {
     addNextLogEntry(my_entry);
   }
+
+  /* Currently, the processes, under record/replay, mmap the
+   * synchronization-log file with shared mapping. During record/replay, any
+   * child process created through fork() has access to this log and will
+   * modify it while executing some system call that is being logged. We do
+   * handle the fork() process by dmtcp_process_event() but that is too late.
+   * glibc:fork() will call the functions registered with pthread_atfork() even
+   * before the glibc:fork() returns. Thus it is necessary to register our own
+   * handle which would disable logging for the child process.
+   * This whole scheme works fine when we do not wish to record/replay events
+   * within the child process.
+   */
+  pthread_atfork(NULL, NULL, pthread_atfork_child);
   JTRACE ( "Record/replay finished initializing." );
 }
 
