@@ -550,7 +550,16 @@ extern "C" int _IO_getc(FILE *stream)
 
 extern "C" int fgetc(FILE *stream)
 {
-  BASIC_SYNC_WRAPPER(int, fgetc, _real_fgetc, stream);
+  WRAPPER_HEADER(int, fgetc, _real_fgetc, stream);
+  if (SYNC_IS_REPLAY) {
+    WRAPPER_REPLAY_TYPED(int, fgetc);
+  } else if (SYNC_IS_RECORD) {
+    isOptionalEvent = true;
+    retval = _real_fgetc(stream);
+    isOptionalEvent = false;
+    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+  }
+  return retval;
 }
 
 extern "C" int ungetc(int c, FILE *stream)

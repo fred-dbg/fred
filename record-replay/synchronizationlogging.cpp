@@ -2743,6 +2743,7 @@ static inline bool is_optional_event_for(event_code_t event,
   case accept4_event:
   case accept_event:
   case fgets_event:
+  case fgetc_event:
   case ferror_event:
   case feof_event:
   case fileno_event:
