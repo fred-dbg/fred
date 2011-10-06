@@ -1274,8 +1274,9 @@ extern "C" int readdir_r(DIR *dirp, struct dirent *entry,
                          struct dirent **result)
 {
   void *return_addr = GET_RETURN_ADDRESS();
-  if ((!shouldSynchronize(return_addr) && !ok_to_log_readdir) ||
-       jalib::Filesystem::GetProgramName() == "gdb") {
+  if ((!shouldSynchronize(return_addr) &&
+       (SYNC_IS_NOOP || !ok_to_log_readdir)) ||
+      jalib::Filesystem::GetProgramName() == "gdb") {
     return _real_readdir_r(dirp, entry, result);
   }
   int retval;

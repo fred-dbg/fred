@@ -194,9 +194,9 @@ extern "C" ssize_t sendto(int sockfd, const void *buf, size_t len, int flags,
                           const struct sockaddr *dest_addr, socklen_t addrlen)
 {
   void *return_addr = GET_RETURN_ADDRESS();
-  if ((!shouldSynchronize(return_addr) ||
-       jalib::Filesystem::GetProgramName() == "gdb") &&
-      !ok_to_log_sendrecv) {
+  if ((!shouldSynchronize(return_addr) &&
+       (SYNC_IS_NOOP || !ok_to_log_sendrecv)) ||
+      jalib::Filesystem::GetProgramName() == "gdb") {
     return _real_sendto(sockfd, buf, len, flags, dest_addr, addrlen);
   }
   int retval;
@@ -228,9 +228,9 @@ extern "C" ssize_t recvfrom(int sockfd, void *buf, size_t len, int flags,
                             struct sockaddr *src_addr, socklen_t *addrlen)
 {
   void *return_addr = GET_RETURN_ADDRESS();
-  if ((!shouldSynchronize(return_addr) ||
-       jalib::Filesystem::GetProgramName() == "gdb") &&
-      !ok_to_log_sendrecv) {
+  if ((!shouldSynchronize(return_addr) &&
+       (SYNC_IS_NOOP || !ok_to_log_sendrecv)) ||
+      jalib::Filesystem::GetProgramName() == "gdb") {
     return _real_recvfrom(sockfd, buf, len, flags, src_addr, addrlen);
   }
   int retval;
