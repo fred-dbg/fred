@@ -58,6 +58,12 @@ def kill_coordinator(n_port):
     except:
         raise
 
+def get_num_checkpoints():
+    """Return the number of checkpoints DMTCP manager has made."""
+    global gn_index_suffix
+    # Indexing starts from zero, so add one.
+    return gn_index_suffix + 1
+
 def get_num_peers():
     """Return NUM_PEERS from 'dmtcp_command s' as an integer."""
     cmd = [ 'dmtcp_command', 's' ]
@@ -182,7 +188,7 @@ def resume(s_fred_tmpdir, s_resume_dir):
                        "few minutes if the checkpoint images are large.")
     shutil.copytree(s_resume_dir,
                     os.environ["DMTCP_TMPDIR"] + "." + str(gn_index_suffix))
-    os.symlink(os.environ["DMTCP_TMPDIR"] + "." + str(n_index),
+    os.symlink(os.environ["DMTCP_TMPDIR"] + "." + str(gn_index_suffix),
                os.environ["DMTCP_TMPDIR"])
     fredutil.fred_info("Resuming session.")
     restart(gn_index_suffix)

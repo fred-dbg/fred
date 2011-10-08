@@ -320,16 +320,18 @@ def interactive_debugger_setup():
 def fred_setup():
     """Perform any setup needed by FReD before entering an I/O loop."""
     global g_debugger, gs_resume_dir_path, GS_FRED_TMPDIR
-    cleanup_fred_files()
     # Parse command line args and set up environment.
     l_cmd = parse_program_args()
     # Set up the FReD global debugger
     setup_debugger(l_cmd[0])
     # Set up I/O handling
     # (only spawn if we are not resuming:)
-    b_spawn_child = gs_resume_dir_path == None
-    setup_fredio(l_cmd, b_spawn_child)
-    if gs_resume_dir_path != None:
+    b_resume = gs_resume_dir_path != None
+    if not b_resume:
+        cleanup_fred_files()
+        setup_fredio(l_cmd, True)
+    else:
+        setup_fredio(l_cmd, False)
         dmtcpmanager.resume(GS_FRED_TMPDIR, gs_resume_dir_path)
         g_debugger.setup_from_resume()
 

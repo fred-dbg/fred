@@ -90,7 +90,7 @@ class ReversibleDebugger(debugger.Debugger):
 
     def setup_from_resume(self):
         """Set up data structures from a resume."""
-        for i in range(0, dmtcpmanager.numCheckpoints):
+        for i in range(0, dmtcpmanager.get_num_checkpoints()):
             self.l_checkpoints.append(Checkpoint())
         self.checkpoint = self.l_checkpoints[-1]
         self.update_state()
