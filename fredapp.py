@@ -294,9 +294,6 @@ def setup_environment_variables(s_dmtcp_port="7779", b_debug=False):
     fredutil.set_env_var_if_unset("DMTCP_CHECKPOINT_DIR", GS_DMTCP_TMPDIR)
     fredutil.set_env_var_if_unset("DMTCP_GZIP", '0')
     fredutil.set_env_var_if_unset("DMTCP_QUIET", '2')
-    # Create the DMTCP tmpdir if it doesn't exist:
-    if not os.path.exists(GS_DMTCP_TMPDIR):
-       os.makedirs(GS_DMTCP_TMPDIR, 0755)
 
 def setup_fredio(l_cmd, b_spawn_child=True):
     """Set up I/O handling."""
@@ -357,14 +354,17 @@ def fred_setup_as_module(l_cmd, s_dmtcp_port, b_debug):
     return g_debugger
 
 def cleanup_fred_files():
-    """Remove FReD temporary directory and contents."""
+    """Remove FReD temporary directory and recreate a clean tree."""
     global GS_FRED_TMPDIR
+    # Create a new DMTCP tmpdir if it doesn't exist:
     if not os.path.exists(GS_FRED_TMPDIR):
+       os.makedirs(GS_DMTCP_TMPDIR, 0755)
        return
     fredutil.fred_info("Removing previous temporary directory '%s'" % \
                        GS_FRED_TMPDIR)
     fredutil.fred_assert(GS_FRED_TMPDIR.find("/tmp") != -1)
     shutil.rmtree(GS_FRED_TMPDIR, ignore_errors=True)
+    os.makedirs(GS_DMTCP_TMPDIR, 0755)
 
 def verify_critical_files_present():
     """Check for DMTCP binaries, fredhijack.so, and other required files.
