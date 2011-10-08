@@ -106,6 +106,10 @@ def _binary_search_with_log(dbg, s_expr, s_expr_val):
         n_count = (n_min + n_max) / 2
         dbg.do_restart(b_clear_history = True)
         dbg.set_log_breakpoint(n_count)
+        # XXX: This sends a SIGSTOP to the inferior. If this algorithm is ever
+        # modified to need to *continue* execution after hitting a log
+        # breakpoint, we must use gdb "signal 0" to continue instead of
+        # "continue" so the SIGSTOP is not actually delivered to the inferior.
         dbg.do_log_continue()
         if not dbg.program_is_running() or testIfTooFar():
             fredutil.fred_debug("Setting max bound %d" % n_count)

@@ -125,7 +125,7 @@ class Debugger():
         import fredio, signal, os
         n_pid = fredutil.get_inferior_pid(fredio.get_child_pid())
         fredutil.fred_assert(n_pid != -1)
-        os.kill(n_pid, signal.SIGINT)
+        os.kill(n_pid, signal.SIGSTOP)
         fredio.wait_for_prompt()
         del fredio, signal, os
 
