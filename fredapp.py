@@ -334,6 +334,13 @@ def fred_setup():
         setup_fredio(l_cmd, False)
         dmtcpmanager.resume(GS_FRED_TMPDIR, gs_resume_dir_path)
         g_debugger.setup_from_resume()
+        # XXX: Right now this is a hack to get the virtualized pid of the
+        # inferior. We should make this more robust. Ideally we could have
+        # support from DMTCP (via dmtcp_command) to tell us the inferior
+        # virtualized pid.
+        fredutil.fred_assert(g_debugger.personality_name() == "gdb")
+        n_inf_pid = int(g_debugger.evaluate_expression("getpid()"))
+        fredmanager.set_pid(n_inf_pid)
 
 def fred_setup_as_module(l_cmd, s_dmtcp_port, b_debug):
     """Perform setup for FReD when being used as a module, return g_debugger.
