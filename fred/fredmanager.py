@@ -27,7 +27,7 @@ import re
 
 GS_FREDHIJACK_NAME = "fredhijack.so"
 GS_FREDHIJACK_PATH = os.path.join(os.environ["HOME"],
-                                  "pthread-wrappers-git/fred/record-replay")
+                                  "pthread-wrappers/fred/record-replay")
 
 g_child_subprocess = None
 g_pid = -1

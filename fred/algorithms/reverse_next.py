@@ -11,14 +11,14 @@ import reverse_finish
 # .* 'n' -> reverse_finish(.*)   if 'n' returns to shallower stack level
 def NEW_reverse_next(dbg, n=1):
     """Perform n 'reverse-next' commands."""
-    if len(dbg.l_checkpoints) == 0:
+    if dbg.branch.get_num_checkpoints() == 0:
         fredutil.fred_error("No checkpoints found for reverse-next.")
         return
     while n > 0:
         n -= 1
         dbg.update_state()
         orig_state = dbg.state().copy()
-        l_history = dbg._copy_fred_commands(dbg.checkpoint.l_history)
+        l_history = dbg.copy_current_checkpoint_history()
         while True:
             # Trimming ignore commands. TODO: This could delete commands
             # with side effects like "p var++".
@@ -43,7 +43,7 @@ def NEW_reverse_next(dbg, n=1):
                     break
                 elif dbg.state().level() == level+1:
                     # The last 'n' returned from fnc; go to before fnc call
-                    dbg.checkpoint.l_history = l_history
+                    dbg.current_checkpoint().set_history(l_history)
                     reverse_finish.NEW_reverse_finish(dbg)
                     break
                 else:
@@ -72,7 +72,7 @@ def NEW_reverse_next(dbg, n=1):
                         [dbg._p.get_personality_cmd(freddebugger.fred_next_cmd())]
                     dbg.replay_history([l_history[-1]])
     # Gene - Am I using the next four lines correctly?
-    dbg.checkpoint.l_history = l_history
+    dbg.current_checkpoint().set_history(l_history)
     dbg.do_restart()
     dbg.replay_history(l_history)
     dbg.update_state()
@@ -99,8 +99,8 @@ def reverse_next(dbg, n=1):
                 fredutil.fred_debug("RN: SAME")
                 if dbg.state() == orig_state:
                     fredutil.fred_debug("RN: AT ORIG STATE")
-                    if dbg.checkpoint.last_command_non_ignore().is_next() or \
-                            dbg.checkpoint.last_command_non_ignore().is_step():
+                    if dbg.current_checkpoint().last_command_non_ignore().is_next() or \
+                            dbg.current_checkpoint().last_command_non_ignore().is_step():
                         fredutil.fred_debug("RN: AFTER NEXT OR STEP")
                         # Gene - n_lvl is apparently never used.
                         n_lvl = dbg.state().level()

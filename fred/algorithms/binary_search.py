@@ -19,7 +19,7 @@ def _binary_search_regular_next_expansion(dbg, testIfTooFar):
     """Performs regular next expansion from the current point in time,
     no questions asked."""
     fredutil.fred_assert(not testIfTooFar())
-    l_history = dbg._copy_fred_commands(dbg.checkpoint.l_history)
+    l_history = dbg.copy_current_checkpoint_history()
     repeatNextCmd = dbg._p.get_personality_cmd(freddebugger.fred_next_cmd())
     (l_history, n_min) = \
         NEW_binary_search_until(dbg, l_history, repeatNextCmd,
@@ -63,7 +63,7 @@ def _binary_search_round_robin(dbg, s_expr, s_expr_val):
     n_total_threads = fredmanager.get_total_threads()
     if n_total_threads <= 1:
         # Regular reverse-watch.
-        l_history = dbg._copy_fred_commands(dbg.checkpoint.l_history)
+        l_history = dbg.copy_current_checkpoint_history()
         return NEW_binary_search_since_last_checkpoint(dbg, l_history,
                                                        0, s_expr, s_expr_val)
 
@@ -319,9 +319,9 @@ def _binary_search_checkpoints(dbg, s_expr, s_expr_val):
     """Perform binary search over checkpoints to identify interval where
     expression changes value."""
     fredutil.fred_debug("Starting binary search for checkpoint interval.")
-    fredutil.fred_assert(dbg.checkpoint,
+    fredutil.fred_assert(dbg.current_checkpoint(),
         "No initial checkpoint taken.  Please start new debugging session.")
-    n_right_ckpt = dbg.checkpoint.n_index
+    n_right_ckpt = dbg.current_checkpoint().get_index()
     if n_right_ckpt == 0:
         fredutil.fred_debug("Only one checkpoint.")
         dbg.do_restart(n_right_ckpt)
@@ -408,7 +408,7 @@ def _binary_search_expand_history(dbg, l_history, s_expr, s_expr_val):
             del l_history[-1]
             # FIX ME:  This can step inside libc
             l_history[-1] = dbg._p.get_personality_cmd(freddebugger.fred_step_cmd())
-            dbg.checkpoint.l_history = l_history
+            dbg.current_checkpoint().set_history(l_history)
             dbg.do_restart()
             dbg.replay_history()
             break

@@ -67,41 +67,48 @@ import debugger
 #   to create backup breakpoints in case we go too far.  Then inspecting which
 #   breakpoint we landed at tells us where we went too far.
 
+# ------------------------------------------------------- Global variables
+GS_FRED_MASTER_BRANCH_NAME = "MASTER"
+# ------------------------------------------------------- End global variables
+
 class ReversibleDebugger(debugger.Debugger):
     """Represents control and management of a reversible Debugger.
 
-    This class knows about checkpoints, command histories, and reversible
-    debugger commands.
+    This class knows about branches, checkpoints, command histories,
+    and reversible debugger commands.
 
     It contains an instance of Checkpoint which should always represent the
     current checkpoint.  It also contains a list of all Checkpoint objects
     such that Checkpoint.n_index refers to the index into that list.
     """
     def __init__(self, personality):
+        global GS_FRED_MASTER_BRANCH_NAME
         debugger.Debugger.__init__(self, personality)
-        self.checkpoint = None
-        self.l_checkpoints = []
+        self.branch = Branch(GS_FRED_MASTER_BRANCH_NAME) # The current branch
+        self.l_branches = []  # List of all branches
+        self.l_branches.append(self.branch)
 
     def destroy(self):
         """Perform any cleanup associated with a ReversibleDebugger inst."""
-        # XXX: Should get rid of this Checkpoint variable.
-        Checkpoint.n_next_index = 0
+        global GS_FRED_MASTER_BRANCH_NAME
+        self.l_branches = []
+        self.branch = Branch(GS_FRED_MASTER_BRANCH_NAME)
+        self.l_branches.append(self.branch)
         self._p.destroy()
 
     def setup_from_resume(self):
         """Set up data structures from a resume."""
+        global GS_FRED_MASTER_BRANCH_NAME
+        fredutil.fred_assert(False, "Resume not yet implemented with branches.")
+        self.branch = Branch(GS_FRED_MASTER_BRANCH_NAME)
         for i in range(0, dmtcpmanager.get_num_checkpoints()):
-            self.l_checkpoints.append(Checkpoint())
-        self.checkpoint = self.l_checkpoints[-1]
+            self.branch.add_checkpoint(Checkpoint(i))
+        self.branch.set_current_checkpoint(self.branch.get_last_checkpoint())
         self.update_state()
 
     def do_checkpoint(self):
         """Perform a new checkpoint."""
-        new_ckpt = Checkpoint()
-        self.checkpoint = new_ckpt
-        self.l_checkpoints.append(new_ckpt)
-        dmtcpmanager.checkpoint()
-        fredutil.fred_info("Created checkpoint #%d." % new_ckpt.n_index)
+        self.branch.do_checkpoint()
 
     def reset_on_restart(self):
         """Perform any reset functions that should happen on restart."""
@@ -112,61 +119,34 @@ class ReversibleDebugger(debugger.Debugger):
     def do_restart(self, n_index=-1, b_clear_history=False):
         """Restart from the current or specified checkpoint.
         n_index defaults to -1, which means restart from current checkpoint."""
-        if len(self.l_checkpoints) == 0:
-            fredutil.fred_error("No checkpoints found for restart.")
-            return
-        self.reset_on_restart()
-        if n_index == -1:
-            fredutil.fred_debug("Restarting from checkpoint index %d." % \
-                                self.checkpoint.n_index)
-            dmtcpmanager.restart(self.checkpoint.n_index)
-        else:
-            if n_index > len(self.l_checkpoints) - 1:
-                fredutil.fred_error("No such checkpoint index %d." % n_index)
-                return
-            fredutil.fred_debug("Restarting from checkpoint index %d." % \
-                                n_index)
-            dmtcpmanager.restart(n_index)
-            self.checkpoint = self.l_checkpoints[n_index]
-        if b_clear_history:
-            self.clear_history()
+        self.branch.do_restart(n_index, b_clear_history, self.reset_on_restart)
         self.update_state()
 
     def do_restart_previous(self):
         """Restart from the previous checkpoint."""
-        self.do_restart(self.checkpoint.n_index - 1)
+        self.do_restart(self.current_checkpoint().get_index() - 1)
         
     def list_checkpoints(self):
         """Return the list of available Checkpoint files."""
-        return self.l_checkpoints
+        return self.branch.get_all_checkpoints()
     
     # Gene - bad name?  Maybe checkpoint_history() or ckpt_history() ?
     def history(self):
         """Return the history of all Checkpoints."""
-        l_history = []
-        if self.checkpoint != None:
-            for ckpt in self.l_checkpoints:
-                l_history.append("*ckpt*")
-                l_history.extend(ckpt.l_history)
-        return l_history
-
-    # Gene - see above.  clear_ckpt_history() might be a better name.
-    def clear_history(self):
-        """Clear the current checkpoint's history."""
-        del self.checkpoint.l_history[:]            
+        return self.branch.all_history()
     
     def log_command(self, s_command):
         """Convert given command to FredCommand instance and add to current
         history."""
-        if self.checkpoint != None:
+        if self.current_checkpoint() != None:
             # identify_command() sets native representation
             cmd = self._p.identify_command(s_command)
-            self.checkpoint.log_command(cmd)
+            self.current_checkpoint().log_command(cmd)
 
     def log_fred_command(self, cmd):
         """Directly log the given FredCommand instance."""
-        if self.checkpoint != None:
-            self.checkpoint.log_command(cmd)
+        if self.current_checkpoint() != None:
+            self.current_checkpoint().log_command(cmd)
     
     def execute_fred_command(self, cmd, b_update=True):
         """Execute the given FredCommand."""
@@ -301,6 +281,14 @@ class ReversibleDebugger(debugger.Debugger):
             l_result.append(cmd.copy())
         return l_result
 
+    def current_checkpoint(self):
+        """Return the current Checkpoint."""
+        return self.branch.get_current_checkpoint()
+    
+    def copy_current_checkpoint_history(self):
+        """Return a copy of the current checkpoint's history."""
+        return self._copy_fred_commands(self.current_checkpoint().get_history())
+        
     def _coalesce_history(self, l_history):
         """Return a modified version of l_history with as much condensing done
         as possible. Example: [n,n,n,n,n] => [n 5]."""
@@ -330,7 +318,7 @@ class ReversibleDebugger(debugger.Debugger):
         """Issue the commands in given or current checkpoint's history to
         debugger."""
         if len(l_history) == 0:
-            l_history = self._copy_fred_commands(self.checkpoint.l_history)
+            l_history = self.copy_current_checkpoint_history()
         if n == -1:
             l_temp = self._coalesce_history(l_history)
         else:
@@ -491,25 +479,127 @@ class FredCommand():
                              "Tried to set count of non-count cmd.")
         self.s_args = str(n)
 
+
+class Branch():
+    """This class represents a branch in program history. A Branch is
+    simply a collection of checkpoint images, all of which refer to
+    one shared timeline (and log file)."""
+
+    def __init__(self, s_name):
+        self.s_name = s_name
+        self.n_next_checkpoint = 0
+        self.checkpoint = None
+        self.l_checkpoints = []
+
+    def do_checkpoint(self):
+        """Add a new Checkpoint to this branch."""
+        new_ckpt = Checkpoint()
+        self.add_checkpoint(new_ckpt)
+        self.set_current_checkpoint(new_ckpt)
+        dmtcpmanager.checkpoint()
+        fredutil.fred_info("Created checkpoint #%d." %
+                           self.get_last_checkpoint().get_index())
+
+    def do_restart(self, n_index, b_clear_history, reset_fnc):
+        """Restart from the specified checkpoint, calling the provided
+        reset_fnc before restarting, if provided."""
+        if self.get_num_checkpoints() == 0:
+            fredutil.fred_error("No checkpoints found.")
+            return
+        if reset_fnc != None:
+            reset_fnc()
+        if n_index == -1:
+            fredutil.fred_debug("Restarting from checkpoint index %d." % \
+                                self.get_last_checkpoint().get_index())
+            dmtcpmanager.restart(self.get_last_checkpoint().get_index())
+        else:
+            if n_index > self.get_num_checkpoints() - 1:
+                fredutil.fred_error("No such checkpoint index %d." % n_index)
+                return
+            fredutil.fred_debug("Restarting from checkpoint index %d "
+                                "in branch %s" % \
+                                (n_index, self.get_name()))
+            dmtcpmanager.restart(n_index)
+            self.set_current_checkpoint(self.get_checkpoint(n_index))
+        if b_clear_history:
+            self.get_current_checkpoint().clear_history()
+        
+    def add_checkpoint(self, ckpt):
+        """Append the given Checkpoint object to list of checkpoints."""
+        if ckpt.get_index() == -1:
+            ckpt.set_index(self.n_next_checkpoint)
+        self.n_next_checkpoint += 1
+        self.l_checkpoints.append(ckpt)
+
+    def get_checkpoint(self, n_index):
+        """Return the Checkpoint object at the given index."""
+        return self.l_checkpoints[n_index]
+    
+    def get_last_checkpoint(self):
+        """Return the latest available Checkpoint object."""
+        return self.get_checkpoint(-1)
+
+    def get_all_checkpoints(self):
+        """Return the list of available Checkpoints."""
+        return self.l_checkpoints
+
+    def get_current_checkpoint(self):
+        """Return the current Checkpoint object."""
+        return self.checkpoint
+    
+    def set_current_checkpoint(self, ckpt):
+        """Set the current checkpoint to the given Checkpoint object."""
+        self.checkpoint = ckpt
+
+    def get_num_checkpoints(self):
+        """Return the number of checkpoints associated with this Branch."""
+        return self.n_next_checkpoint
+    
+    def get_name(self):
+        """Return the name of this Branch."""
+        return self.s_name
+
+    def all_history(self):
+        """Return the history of all Checkpoints."""
+        l_history = []
+        if self.checkpoint != None:
+            for ckpt in self.l_checkpoints:
+                l_history.append("*ckpt*")
+                l_history.extend(ckpt.l_history)
+        return l_history
+
 class Checkpoint():
     """ This class will represent a checkpoint.  A checkpoint has an
     index number and a command history."""
-
-    # Class-private "static" variable:
-    # (make sure you don't access it as a member of a specifc instance)
-    n_next_index = 0
     
-    def __init__(self):
+    def __init__(self, n_index=-1):
         # Index number:
-        self.n_index = Checkpoint.n_next_index
-        Checkpoint.n_next_index += 1
+        self.n_index = n_index
         # The history is a list of FredCommands sent to the debugger
         # from the beginning of this checkpoint.
         self.l_history  = []
 
     def __repr__(self):
         return str(self.n_index)
-    
+
+    def clear_history(self):
+        """Clears the history for this Checkpoint."""
+        del self.l_history[:]
+
+    def get_history(self):
+        """Return the history for this Checkpoint."""
+        return self.l_history
+
+    def set_history(self, l_history):
+        """Set the history for this Checkpoint."""
+        self.l_history = l_history
+
+    def get_index(self):
+        return self.n_index
+
+    def set_index(self, n_index):
+        self.n_index = n_index
+
     def log_command(self, cmd):
         """Adds the given FredCommand to the history."""
         self.l_history.append(cmd)

@@ -4,7 +4,7 @@ def reverse_continue(dbg):
     """Perform 'reverse-continue' command. """
     dbg.update_state()
     orig_state = dbg.state().copy()
-    n_to_restart = dbg.checkpoint.n_index
+    n_to_restart = dbg.current_checkpoint().get_index()
     n_breakpoints_found = 0
     b_finished = False
     while True:
@@ -12,7 +12,7 @@ def reverse_continue(dbg):
             break
         dbg.do_restart(n_to_restart)
         # Count the number of breakpoints encountered
-        for cmd in dbg.checkpoint.l_history:
+        for cmd in dbg.current_checkpoint().get_history():
             dbg.execute_fred_command(cmd)
             if dbg.at_breakpoint():
                 n_breakpoints_found += 1
@@ -24,13 +24,14 @@ def reverse_continue(dbg):
                 n_breakpoints_found -= 1
             n_recount = 0
             dbg.do_restart(n_to_restart)
-            for i in range(0,len(dbg.checkpoint.l_history)):
-                cmd = dbg.checkpoint.l_history[i]
+            for i in range(0,len(dbg.current_checkpoint().get_history())):
+                cmd = dbg.current_checkpoint().get_history()[i]
                 dbg.execute_fred_command(cmd)
                 if dbg.at_breakpoint():
                     n_recount += 1
                 if n_recount == n_breakpoints_found:
-                    del dbg.checkpoint.l_history[i+1:]
+                    dbg.current_checkpoint().set_history(
+                        dbg.current_checkpoint().get_history()[:i+1])
                     b_finished = True
                     break
         else:

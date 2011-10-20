@@ -21,10 +21,10 @@ def NEW_reverse_step(dbg, n=1):
         n -= 1
         dbg.update_state()
         orig_state = dbg.state().copy()
-        if len(dbg.l_checkpoints) == 0:
+        if dbg.branch.get_num_checkpoints() == 0:
             fredutil.fred_error("No checkpoints found for reverse-step.")
             return
-        l_history = dbg._copy_fred_commands(dbg.checkpoint.l_history)
+        l_history = dbg.copy_current_checkpoint_history()
         while len(l_history)>0 and \
                 not l_history[-1].is_step() and \
                 not l_history[-1].is_next() and \
@@ -66,7 +66,7 @@ def NEW_reverse_step(dbg, n=1):
         fredutil.fred_assert(l_history[-1].is_step())
         del l_history[-1]
     # Gene - Am I using the next four lines correctly?
-    dbg.checkpoint.l_history = l_history
+    dbg.current_checkpoint().set_history(l_history)
     dbg.do_restart()
     dbg.replay_history()
     dbg.update_state()
@@ -95,7 +95,7 @@ def reverse_step(dbg, n=1):
                 fredutil.fred_debug("RS: SAME")
                 if dbg.state() == orig_state:
                     fredutil.fred_debug("RS: AT ORIG STATE")
-                    if dbg.checkpoint.last_command_non_ignore().is_step():
+                    if dbg.current_checkpoint().last_command_non_ignore().is_step():
                         fredutil.fred_debug("RS: AFTER STEP")
                         undo.undo(dbg)
                         break

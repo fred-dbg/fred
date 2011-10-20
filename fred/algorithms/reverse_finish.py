@@ -13,14 +13,14 @@ def reverse_finish(dbg, n=1):
 
 def NEW_reverse_finish(dbg, n=1):
     """Perform n 'reverse-finish' commands."""
-    if len(dbg.l_checkpoints) == 0:
+    if dbg.branch.get_num_checkpoints() == 0:
         fredutil.fred_error("No checkpoints found for reverse-finish.")
         return
     while n > 0:
         n -= 1
         dbg.update_state()
         orig_state = dbg.state().copy()
-        l_history = dbg._copy_fred_commands(dbg.checkpoint.l_history)
+        l_history = dbg.copy_current_checkpoint_history()
         level = dbg.state().level()
         while dbg.state().level() >= level:
             # Trimming ignore commands. TODO: This could delete commands
@@ -75,7 +75,7 @@ def NEW_reverse_finish(dbg, n=1):
     fredutil.fred_assert(dbg.state().level() == level-1 or
                          len(l_history) == 0)
     # Gene - Am I using the next four lines correctly?
-    dbg.checkpoint.l_history = l_history
+    dbg.current_checkpoint().set_history(l_history)
     dbg.do_restart()
     dbg.replay_history()
     dbg.update_state()
