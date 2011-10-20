@@ -128,7 +128,11 @@ class ReversibleDebugger(debugger.Debugger):
         
     def list_checkpoints(self):
         """Return the list of available Checkpoint files."""
-        return self.branch.get_all_checkpoints()
+        for branch in self.l_branches:
+            if branch.get_name() == self.branch.get_name():
+                print "*",
+            print "%s: %s" % (branch.get_name(), 
+                              self.branch.get_all_checkpoints())
     
     # Gene - bad name?  Maybe checkpoint_history() or ckpt_history() ?
     def history(self):
