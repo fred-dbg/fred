@@ -265,7 +265,55 @@ def gdb_reverse_next(n_count=1):
         else:
             print GS_FAILED_STRING
         end_session()
-        
+
+def gdb_reverse_step(n_count=1):
+    """Run a reverse-step test on pthread-test."""
+    global GS_TEST_PROGRAMS_DIRECTORY
+    l_cmd = ["gdb", GS_TEST_PROGRAMS_DIRECTORY + "/pthread-test"]
+    for i in range(0, n_count):
+        print_test_name("gdb reverse step %d" % i)
+        start_session(l_cmd)
+        execute_commands(["b main", "r", "fred-ckpt", "b print_solution",
+                          "c", "n", "n", "fred-reverse-step"])
+        current_backtrace_frame = g_debugger.current_position()
+        if current_backtrace_frame.line() == 63:
+            print GS_PASSED_STRING
+        else:
+            print GS_FAILED_STRING
+        end_session()
+
+def gdb_reverse_continue(n_count=1):
+    """Run a reverse-continue test on pthread-test."""
+    global GS_TEST_PROGRAMS_DIRECTORY
+    l_cmd = ["gdb", GS_TEST_PROGRAMS_DIRECTORY + "/pthread-test"]
+    for i in range(0, n_count):
+        print_test_name("gdb reverse continue %d" % i)
+        start_session(l_cmd)
+        execute_commands(["b main", "r", "fred-ckpt", "b print_solution",
+                          "b 84", "c", "c", "c", "fred-rc"])
+        current_backtrace_frame = g_debugger.current_position()
+        if g_debugger.at_breakpoint() and current_backtrace_frame.line() == 84:
+            print GS_PASSED_STRING
+        else:
+            print GS_FAILED_STRING
+        end_session()
+
+def gdb_reverse_finish(n_count=1):
+    """Run a reverse-finish test on test-list."""
+    global GS_TEST_PROGRAMS_DIRECTORY
+    l_cmd = ["gdb", GS_TEST_PROGRAMS_DIRECTORY + "/test-list"]
+    for i in range(0, n_count):
+        print_test_name("gdb reverse finish %d" % i)
+        start_session(l_cmd)
+        execute_commands(["b main", "r", "fred-ckpt", "step",
+                          "fred-reverse-finish"])
+        current_backtrace_frame = g_debugger.current_position()
+        if current_backtrace_frame.line() == 21:
+            print GS_PASSED_STRING
+        else:
+            print GS_FAILED_STRING
+        end_session()
+
 def run_integration_tests():
     """Run all available integration tests."""
     gdb_record_replay()
@@ -273,10 +321,13 @@ def run_integration_tests():
     gdb_record_replay_time()
     gdb_syscall_tester()
     gdb_reverse_watch()
+    gdb_reverse_next()
+    gdb_reverse_step()
+    gdb_reverse_continue()
+    gdb_reverse_finish()
     gdb_reverse_watch_mt()
     gdb_reverse_watch_mt_priv()
     gdb_reverse_watch_no_log()
-    gdb_reverse_next()
     
 def run_unit_tests():
     """Run all available unit tests."""
@@ -340,7 +391,8 @@ def list_tests():
     """Displays a list of all available tests."""
     global gd_tests
     print "Available tests:"
-    print gd_tests.keys()
+    for k in sorted(gd_tests.keys()):
+        print k
 
 def initialize_tests():
     """Initializes the list of known tests.
@@ -356,7 +408,10 @@ def initialize_tests():
                  "gdb-reverse-watch-mt" : gdb_reverse_watch_mt,
                  "gdb-reverse-watch-mt-priv" : gdb_reverse_watch_mt_priv,
                  "gdb-reverse-watch-no-log" : gdb_reverse_watch_no_log,
-                 "gdb-reverse-next"  : gdb_reverse_next }
+                 "gdb-reverse-next"  : gdb_reverse_next,
+                 "gdb-reverse-step"  : gdb_reverse_step,
+                 "gdb-reverse-continue"  : gdb_reverse_continue,
+                 "gdb-reverse-finish"  : gdb_reverse_finish }
 
 def main():
     """Program execution starts here."""
