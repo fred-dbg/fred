@@ -471,7 +471,7 @@ size_t dmtcp::SynchronizationLog::getIndex()
   return __sync_fetch_and_add(&_index, 0);
 }
 
-size_t dmtcp::SynchronizationLog::atomicIncrementIndex(size_t delta)
+size_t dmtcp::SynchronizationLog::atomicIncrementIndex(log_off_t delta)
 {
   return __sync_fetch_and_add(&_index, delta);
 }

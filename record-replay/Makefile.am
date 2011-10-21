@@ -44,3 +44,9 @@ AM_CFLAGS = $(PICFLAGS)
 AM_CXXFLAGS = $(PICFLAGS)
 AM_LDFLAGS = $(PICFLAGS)
 
+# PUT THIS DIRECTLY IN Makefile.in WHEN WE CAN REMOVE AUTOMAKE.
+# AUTOMAKE IS OVERKILL, AND HARDER TO MAINTAIN THAN Makefile.  - Gene
+if HAS_I486
+# This -march=i486 is needed to compile synchronizationlogging.cpp
+CXXFLAGS += -march=i486
+endif
