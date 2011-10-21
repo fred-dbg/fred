@@ -55,11 +55,16 @@ void *worker(void *arg) {
   }
 }
 
-/* Make this its own function so fredtest.py doesn't have to depend on
+/* Make these their own functions so fredtest.py doesn't have to depend on
    line numbers. */
 void print_solution()
 {
   printf("Solution is: %lld\n", solution);
+}
+
+void print_checkpoint_now()
+{
+  printf("Please checkpoint now.\n");
 }
 
 int main() {
@@ -89,7 +94,7 @@ int main() {
     }
   }
 
-  printf("Please checkpoint now.\n");
+  print_checkpoint_now();
   start = 1;
   for (i = 1; i < NUM_THREADS+1; i++) {
     pthread_join(threads[i], NULL);

@@ -112,6 +112,19 @@ def kill_peers():
     else:
         os.waitpid(pid, 0)
 
+def remove_stale_ptrace_files():
+    """Until DMTCP/ptrace cleans up its own files, we must clean up
+    stale files explicitly."""
+    ls_ptrace_files_to_remove = [ "ptrace_shared.txt",
+                                  "ptrace_setoptions.txt",
+                                  "ptrace_ckpthreads.txt",
+                                  "new_ptrace_shared.txt",
+                                  "ckpt_leader_file.txt" ]
+    for f in ls_ptrace_files_to_remove:
+        s_path = os.path.join(os.environ["DMTCP_TMPDIR"], f)
+        if os.path.exists(s_path):
+            os.remove(s_path)
+
 def create_master_branch(s_name):
     """Create the master branch."""
     fredutil.fred_assert(not branch_exists(s_name))
@@ -171,21 +184,31 @@ def branch_exists(s_name):
 def checkpoint():
     """Perform a blocking checkpoint request and rename the checkpoint files."""
     global gn_index_suffix
+
+    remove_stale_ptrace_files()
+    
     s_checkpoint_re = "ckpt_.+\.dmtcp\..*"
     l_ckpts_before = [os.path.join(os.environ["DMTCP_TMPDIR"], x) \
                       for x in os.listdir(os.environ["DMTCP_TMPDIR"]) \
                       if re.search(s_checkpoint_re, x) != None]
     fredutil.fred_debug("List ckpts before: %s" % str(l_ckpts_before))
     # Request the checkpoint.
+    n_peers = get_num_peers()
     cmdstr = ["dmtcp_command", "--quiet", "bc"]
     fredutil.execute_shell_command_and_wait(cmdstr)
     fredutil.fred_debug("After blocking checkpoint command.")
 
-    l_ckpts_after = [os.path.join(os.environ["DMTCP_TMPDIR"], x) \
-                     for x in os.listdir(os.environ["DMTCP_TMPDIR"]) \
-                     if x.startswith("ckpt_")]
-    fredutil.fred_debug("List ckpts after: %s" % str(l_ckpts_after))
-    l_new_ckpts = [x for x in l_ckpts_after if x not in l_ckpts_before]
+    l_new_ckpts = []
+    # There is what seems to be a DMTCP bug: the blocking checkpoint
+    # can actually return before the checkpoints are written. It is
+    # rare.
+    while len(l_new_ckpts) < n_peers:
+        l_ckpts_after = [os.path.join(os.environ["DMTCP_TMPDIR"], x) \
+                         for x in os.listdir(os.environ["DMTCP_TMPDIR"]) \
+                         if x.startswith("ckpt_")]
+        fredutil.fred_debug("List ckpts after: %s" % str(l_ckpts_after))
+        l_new_ckpts = [x for x in l_ckpts_after if x not in l_ckpts_before]
+        time.sleep(0.001)
     for f in l_new_ckpts:
         fredutil.fred_debug("Renaming ckpt file from '%s' to '%s.%d'" %
                             (f, f, gn_index_suffix))
@@ -199,6 +222,9 @@ def restart(n_index):
     # Wait until the peers are really gone
     while get_num_peers() != 0:
         time.sleep(0.01)
+
+    remove_stale_ptrace_files()
+    
     l_ckpt_files = [os.path.join(os.environ["DMTCP_TMPDIR"], x) \
                     for x in os.listdir(os.environ["DMTCP_TMPDIR"]) \
                     if x.endswith(".dmtcp.%d" % n_index)]
