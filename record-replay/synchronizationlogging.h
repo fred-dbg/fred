@@ -2072,8 +2072,7 @@ LIB_PRIVATE extern volatile off_t         read_log_pos;
 /* Functions */
 LIB_PRIVATE void   addNextLogEntry(log_entry_t&);
 LIB_PRIVATE void   set_sync_mode(int mode);
-LIB_PRIVATE void   truncate_all_logs();
-LIB_PRIVATE bool   close_all_logs();
+LIB_PRIVATE int    get_sync_mode();
 LIB_PRIVATE void   copyFdSet(fd_set *src, fd_set *dest);
 LIB_PRIVATE void   getNextLogEntry();
 LIB_PRIVATE void   initializeLogNames();

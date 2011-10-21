@@ -42,12 +42,14 @@ static inline void memfence() {  asm volatile ("mfence" ::: "memory"); }
 void fred_setup_trampolines();
 static void initialize_thread();
 
+static int sync_mode_pre_ckpt = SYNC_NOOP;
+
 static void pthread_atfork_child()
 {
   set_sync_mode(SYNC_NOOP);
   log_all_allocs = 0;
-  // Write the logs to disk, if any are in memory, and unmap them.
-  close_all_logs();
+
+  global_log.destroy(SYNC_RECORD);
 }
 
 
@@ -129,16 +131,18 @@ static void recordReplayInit()
  */
 void fred_post_suspend ()
 {
-  if (SYNC_IS_REPLAY) {
-    /* Checkpointing during replay -- we will truncate the log to the current
-       position, and begin recording again. */
-    truncate_all_logs();
+  JASSERT(sync_mode_pre_ckpt == SYNC_NOOP);
+  sync_mode_pre_ckpt = get_sync_mode();
+  if (sync_mode_pre_ckpt == SYNC_NOOP) {
+    sync_mode_pre_ckpt = SYNC_RECORD;
   }
+
   set_sync_mode(SYNC_NOOP);
   log_all_allocs = 0;
   log_all_socketpair = 0;
-  // Write the logs to disk, if any are in memory, and unmap them.
-  close_all_logs();
+
+  global_log.destroy(sync_mode_pre_ckpt);
+
   // Remove the threads which aren't alive anymore.
   {
     dmtcp::map<clone_id_t, pthread_t>::iterator it;
@@ -159,7 +163,8 @@ void fred_post_suspend ()
 void fred_post_checkpoint_resume()
 {
   initSyncAddresses();
-  set_sync_mode(SYNC_RECORD);
+  set_sync_mode(sync_mode_pre_ckpt);
+  sync_mode_pre_ckpt = SYNC_NOOP;
   initLogsForRecordReplay();
   log_all_allocs = 1;
   log_all_socketpair = 1;
@@ -169,6 +174,7 @@ void fred_post_restart_resume()
 {
   initSyncAddresses();
   set_sync_mode(SYNC_REPLAY);
+  sync_mode_pre_ckpt = SYNC_NOOP;
   initLogsForRecordReplay();
   log_all_allocs = 1;
   log_all_socketpair = 1;

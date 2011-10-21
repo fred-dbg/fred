@@ -124,6 +124,11 @@ inline void set_sync_mode(int mode)
   sync_logging_branch = mode;
 }
 
+int get_sync_mode()
+{
+  return sync_logging_branch;
+}
+
 static inline clone_id_t get_next_clone_id()
 {
   return __sync_fetch_and_add (&global_clone_counter, 1);
@@ -158,26 +163,6 @@ void initializeLogNames()
       "%s/synchronization-log-%d", tmpdir.c_str(), pid);
   snprintf(RECORD_READ_DATA_LOG_PATH, RECORD_LOG_PATH_MAX,
       "%s/synchronization-read-log-%d", tmpdir.c_str(), pid);
-}
-
-/* Truncate all logs to their current positions. */
-void truncate_all_logs()
-{
-  JASSERT ( SYNC_IS_REPLAY );
-  if (global_log.isMappedIn()) {
-    global_log.truncate();
-  }
-}
-
-/* Unmap all open logs, if any are in memory. Return whether any were
-   unmapped. */
-bool close_all_logs()
-{
-  if (global_log.isMappedIn()) {
-    global_log.destroy();
-    return true;
-  }
-  return false;
 }
 
 void initLogsForRecordReplay()

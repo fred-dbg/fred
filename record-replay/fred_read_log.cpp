@@ -1056,7 +1056,7 @@ void rewriteLog(char *log_path)
   /* Only need enough room for the metadata. */
   log.initialize(log_path, LOG_OFFSET_FROM_START);
   size_t logSize = log.getDataSize();
-  log.destroy();
+  log.destroy(SYNC_IS_RECORD);
   log.initialize(log_path, logSize + LOG_OFFSET_FROM_START + 1);
   printf("Metadata: dataSize=%Zu, numEntries=%Zu\n",
          log.getDataSize(), log.numEntries());

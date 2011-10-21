@@ -61,6 +61,30 @@ void dmtcp::SynchronizationLog::initialize(const char *path, size_t size)
 
   JTRACE ("Initialized global synchronization log path to" )
     (_path) ((long)_startAddr) (*_size) (mapWithNoReserveFlag);
+
+  if (_entryOffsetMarker > 0) {
+    /* This means we checkpointed during record/replay. Restore the
+       log to that point. */
+    JASSERT(_entryIndexMarker > 0);
+    log_entry_t temp_entry = EMPTY_LOG_ENTRY;
+    int entrySize = getEntryAtOffset(temp_entry, _entryOffsetMarker);
+
+    if (entrySize > 0) {
+      /* True if we checkpointed during replay. Keep interface info up
+         to date. */
+      _index = _entryOffsetMarker;
+      _entryIndex = _entryIndexMarker;
+      _sharedInterfaceInfo->current_clone_id = GET_COMMON(temp_entry, clone_id);
+      _sharedInterfaceInfo->current_log_entry_index = _entryIndex;
+    }
+
+    JTRACE ("Restored log to index and offset from intermediate checkpoint.")
+      ( _entryIndexMarker ) ( _entryOffsetMarker );
+    
+    // Reset for the next checkpoint.
+    _entryOffsetMarker = 0;
+    _entryIndexMarker = 0;
+  }
 }
 
 /* Initialize shared memory region to be used by fred_command. */
@@ -123,7 +147,8 @@ void dmtcp::SynchronizationLog::init_common(size_t size)
   *_size = size;
   _log = _startAddr + LOG_OFFSET_FROM_START;
 
-  if (SYNC_IS_RECORD) {
+  if (*_recordedStartAddr == NULL) {
+    JASSERT(SYNC_IS_RECORD);
     *_numThreads = 0;
     JASSERT(_startAddr != NULL && _startAddr != MAP_FAILED);
     JTRACE("RECORD; filling in _recordedStartAddr.") ((long)_startAddr);
@@ -131,8 +156,25 @@ void dmtcp::SynchronizationLog::init_common(size_t size)
   }
 }
 
-void dmtcp::SynchronizationLog::destroy()
+void dmtcp::SynchronizationLog::destroy(int mode)
 {
+  /* When the log is destroyed, we save our place in the log so we can
+     restore to that exact entry when we restore from the checkpoint
+     image. For the first checkpoint, this will be 0 to indicate there
+     are no entries. For subsequent checkpoints during replay, it will
+     be the point in the log from which to start replay. */
+  if (mode == SYNC_RECORD) {
+    // Checkpoint during RECORD mode.
+    _entryOffsetMarker = getDataSize();
+    if (_numEntries != NULL) { // Will be NULL on first checkpoint.
+      _entryIndexMarker  = __sync_fetch_and_add(_numEntries, 0);
+    }
+  } else {
+    JASSERT(mode == SYNC_REPLAY);
+    _entryOffsetMarker = getIndex();
+    _entryIndexMarker  = _entryIndex;
+  }    
+
   if (_startAddr != NULL) {
     unmap();
   }
@@ -160,72 +202,46 @@ void dmtcp::SynchronizationLog::unmap()
 void dmtcp::SynchronizationLog::map_in(const char *path, size_t size,
                                        bool mapWithNoReserveFlag)
 {
-#if 0
-  bool created = false;
-  struct stat buf;
-  if (stat(path, &buf) == -1 && errno == ENOENT) {
-    created = true;
-    /* Make sure to clear old state, if this is not the first checkpoint.
-       This case can happen (not first checkpoint, but create the log file)
-       if log files have been moved or deleted. */
-    _startAddr = NULL;
-    destroy();
-  }
-#endif
-  int fd = _real_open(path, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
-  JASSERT(path==NULL || fd != -1);
-  if (SYNC_IS_RECORD) {
-    JASSERT(fd == -1 || _real_lseek(fd, size, SEEK_SET) == (off_t)size);
-    if (fd != -1) Util::writeAll(fd, "", 1);
-  }
-  // FIXME: Instead of MAP_NORESERVE, we may also choose to back it with
-  // /dev/null which would also _not_ allocate pages until needed.
+  int fd;
   int mmapProt = PROT_READ | PROT_WRITE;
-  int mmapFlags;
-  void *mmapAddr = NULL;
+  int mmapFlags = MAP_SHARED;
+  void *mmapAddr = NULL, *tempAddr = NULL;
+  LogMetadata *tempMetadata;
+  
+  JASSERT(path != NULL);
+  fd = _real_open(path, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+  JASSERT(fd != -1);
 
-  if (fd != -1) {
-    mmapFlags = MAP_SHARED;
-  } else {
-    mmapFlags = MAP_PRIVATE | MAP_ANONYMOUS;
+  if (SYNC_IS_RECORD) {
+    JASSERT(_real_lseek(fd, size, SEEK_SET) == (off_t)size);
+    Util::writeAll(fd, "", 1);
   }
+
   if (mapWithNoReserveFlag) {
+    // FIXME: Instead of MAP_NORESERVE, we may also choose to back it with
+    // /dev/null which would also _not_ allocate pages until needed.
     mmapFlags |= MAP_NORESERVE;
   }
-  if (SYNC_IS_REPLAY) {
-    void *tempAddr = _real_mmap(NULL, LOG_OFFSET_FROM_START, mmapProt,
-                                mmapFlags, fd, 0);
-    JASSERT(tempAddr != MAP_FAILED);
-    LogMetadata *tempMetadata = (LogMetadata *) tempAddr;
-    mmapAddr = tempMetadata->recordedStartAddr;
-    JASSERT(mmapAddr != NULL);
+
+  tempAddr = _real_mmap(NULL, LOG_OFFSET_FROM_START, mmapProt,
+                        mmapFlags, fd, 0);
+  JASSERT(tempAddr != MAP_FAILED);
+  tempMetadata = (LogMetadata *) tempAddr;
+  mmapAddr = tempMetadata->recordedStartAddr;
+  if (mmapAddr != NULL) {
     mmapFlags |= MAP_FIXED;
-    _real_munmap(tempAddr, LOG_OFFSET_FROM_START);
   }
+  _real_munmap(tempAddr, LOG_OFFSET_FROM_START);
 
   SET_IN_MMAP_WRAPPER();
-  /* _startAddr may not be null if this is not the first checkpoint. */
-  if (_startAddr == NULL) {
-    _startAddr = (char*) _real_mmap(mmapAddr, size, mmapProt, mmapFlags, fd, 0);
-  } else {
-    // XXX: Is there any bad interaction between mmapAddr being set above,
-    // and this branch?
-    void *retval = (char*) _real_mmap(_startAddr, size, mmapProt,
-                                      mmapFlags | MAP_FIXED, fd, 0);
-    JASSERT ( retval == (void *)_startAddr );
+  _startAddr = (char*) _real_mmap(mmapAddr, size, mmapProt, mmapFlags, fd, 0);
+  if (mmapAddr != NULL) {
+    JASSERT ( (void *)_startAddr == mmapAddr );
   }
   UNSET_IN_MMAP_WRAPPER();
-  JASSERT(_startAddr != MAP_FAILED) (JASSERT_ERRNO);
+
   _real_close(fd);
-  _path = path == NULL ? "" : path;
-#if 0
-  if (created || _size == NULL) {
-    /* We either had to create the file, or this is the first checkpoint. */
-    init_common(size);
-  }
-#else
   init_common(size);
-#endif
 }
 
 void dmtcp::SynchronizationLog::map_in()
@@ -235,17 +251,6 @@ void dmtcp::SynchronizationLog::map_in()
   /* We don't want to pass a pointer to _path, because that could be reset
      as part of a subsequent call to destroy(). */
   map_in(path_copy, _savedSize, false);
-}
-
-/* Truncate the log to the current position. */
-void dmtcp::SynchronizationLog::truncate()
-{
-  JTRACE ( "Truncating log to current position." )
-    ( _path ) ( _entryIndex ) ( getIndex() );
-  memset(&_log[getIndex()], 0, getDataSize() - getIndex());
-  // Note that currently _size is constant, so we don't modify it here.
-  *_numEntries = _entryIndex;
-  setDataSize(getIndex());
 }
 
 int dmtcp::SynchronizationLog::advanceToNextEntry()

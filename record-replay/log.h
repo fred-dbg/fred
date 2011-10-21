@@ -72,6 +72,8 @@ namespace dmtcp
         , _numEntries (NULL)
         , _numThreads (NULL)
         , _sharedInterfaceInfo (NULL)
+        , _entryOffsetMarker (0)
+        , _entryIndexMarker (0)
       {}
 
       ~SynchronizationLog() {}
@@ -84,12 +86,11 @@ namespace dmtcp
       void destroy_shm();
 
     public:
-      void   destroy();
+      void   destroy(int mode);
       void   unmap();
       void   map_in(const char *path, size_t size,
 		    bool mapWithNoReserveFlag);
       void   map_in();
-      void   truncate();
       size_t currentEntryIndex() { return _entryIndex; }
       bool   empty() { return numEntries() == 0; }
       size_t getIndex();
@@ -136,6 +137,8 @@ namespace dmtcp
       size_t *_numThreads; // Must be modified atomically.
       void ** _recordedStartAddr;
       fred_interface_info_t *_sharedInterfaceInfo;
+      size_t _entryOffsetMarker;
+      size_t _entryIndexMarker;
   };
 
 }
