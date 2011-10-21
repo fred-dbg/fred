@@ -112,32 +112,85 @@ def kill_peers():
     else:
         os.waitpid(pid, 0)
 
-def checkpoint():
-    """Perform a blocking checkpoint request."""
+def create_master_branch(s_name):
+    """Create the master branch."""
+    fredutil.fred_assert(not branch_exists(s_name))
+    # Copy current tmpdir to correct path.
+    relocate_dmtcp_tmpdir(s_name)
+    load_dmtcp_tmpdir(s_name)
+    
+def create_branch(s_name):
+    """Create and switch to a new branch. This call is blocking."""
     global gn_index_suffix
-    # Create an indexed temp directory (.X). If this is the first checkpoint,
-    # move the existent directory instead of creating one.
-    s_path = os.environ["DMTCP_TMPDIR"] + "." + str(gn_index_suffix)
-    if gn_index_suffix == 0: # first checkpoint
-        shutil.move(os.environ["DMTCP_TMPDIR"], s_path)
-    else:
-        fredutil.fred_debug("Creating new indexed temp directory: %s" % s_path)
-        os.makedirs(s_path, 0755)
-    gn_index_suffix += 1
-    # Link the main DMTCP temp directory to that indexed one.
-    if os.path.exists(os.environ["DMTCP_TMPDIR"]):
-        os.remove(os.environ["DMTCP_TMPDIR"])
-    os.symlink(s_path, os.environ["DMTCP_TMPDIR"])
-    # Remove any checkpoint files or synchronization files from the tmpdir.
-    # We should have only ONE set of ckpt files/sync files per tmpdir.
-    l_files = [os.path.join(os.environ["DMTCP_TMPDIR"], x) \
-               for x in os.listdir(os.environ["DMTCP_TMPDIR"]) \
-               if x.endswith(".dmtcp") or x.startswith("synchronization-")]
-    map(os.remove, l_files)
+    
+    if branch_exists(s_name):
+        fredutil.fred_error("Branch named '%s' already exists.")
+        return
+    
+    # CREATE the branch: Take the branch base checkpoint. When it
+    # finishes, record/replay will have already reopened the log
+    # files, or created new ones.
+    checkpoint()
+
+    # Copy the whole dmtcp_tmpdir to the new branch location and
+    # symlink to the new location.
+    relocate_dmtcp_tmpdir(s_name)
+    load_dmtcp_tmpdir(s_name)
+
+    # SWITCH to the branch: Remove all checkpoint images in the new
+    # branch except for the most recently created one (the branch base
+    # checkpoint). Rename that base checkpoint to index 0.
+    remove_checkpoints_except_index(gn_index_suffix)
+    rename_index_to_base(gn_index_suffix)
+
+    # Reset checkpoint indexing past the base checkpoint.
+    reset_checkpoint_indexing()
+    
+    # Restart from the base checkpoint.
+    restart(0)
+
+def switch_branch(s_name):
+    """Switch to the specified branch."""
+    if not branch_exists(s_name):
+        fredutil.fred_error("Branch '%s' does not exist." % s_name)
+    # Kill peers: force log flush.
+    kill_peers()
+
+    # Symlink dmtcp_tmpdir to branch tmpdir.
+    load_dmtcp_tmpdir(s_name)
+
+    reset_checkpoint_indexing()
+    
+    # Restart from branch base checkpoint
+    restart(0)
+
+def branch_exists(s_name):
+    """Return True if the given branch name exists on disk."""
+    return os.path.exists(get_dmtcp_tmpdir_path(s_name))
+
+def checkpoint():
+    """Perform a blocking checkpoint request and rename the checkpoint files."""
+    global gn_index_suffix
+    s_checkpoint_re = "ckpt_.+\.dmtcp\..*"
+    l_ckpts_before = [os.path.join(os.environ["DMTCP_TMPDIR"], x) \
+                      for x in os.listdir(os.environ["DMTCP_TMPDIR"]) \
+                      if re.search(s_checkpoint_re, x) != None]
+    fredutil.fred_debug("List ckpts before: %s" % str(l_ckpts_before))
     # Request the checkpoint.
     cmdstr = ["dmtcp_command", "--quiet", "bc"]
     fredutil.execute_shell_command_and_wait(cmdstr)
     fredutil.fred_debug("After blocking checkpoint command.")
+
+    l_ckpts_after = [os.path.join(os.environ["DMTCP_TMPDIR"], x) \
+                     for x in os.listdir(os.environ["DMTCP_TMPDIR"]) \
+                     if x.startswith("ckpt_")]
+    fredutil.fred_debug("List ckpts after: %s" % str(l_ckpts_after))
+    l_new_ckpts = [x for x in l_ckpts_after if x not in l_ckpts_before]
+    for f in l_new_ckpts:
+        fredutil.fred_debug("Renaming ckpt file from '%s' to '%s.%d'" %
+                            (f, f, gn_index_suffix))
+        os.rename(f, "%s.%d" % (f, gn_index_suffix))
+    gn_index_suffix += 1
 
 def restart(n_index):
     """Restart from the given index."""
@@ -146,14 +199,9 @@ def restart(n_index):
     # Wait until the peers are really gone
     while get_num_peers() != 0:
         time.sleep(0.01)
-    # Remove the main temp link.
-    os.remove(os.environ["DMTCP_TMPDIR"])
-    # Re-link to the desired index.
-    os.symlink(os.environ["DMTCP_TMPDIR"] + "." + str(n_index),
-               os.environ["DMTCP_TMPDIR"])
     l_ckpt_files = [os.path.join(os.environ["DMTCP_TMPDIR"], x) \
                     for x in os.listdir(os.environ["DMTCP_TMPDIR"]) \
-                    if x.endswith(".dmtcp")]
+                    if x.endswith(".dmtcp.%d" % n_index)]
     if (len(l_ckpt_files) > 2):
         # XXX: I think this is a Python bug.... sometimes even when there are
         # physically only two checkpoint files on disk, l_ckpt_files will
@@ -165,17 +213,98 @@ def restart(n_index):
         #'/tmp/fred.tyler/dmtcp_tmpdir/ckpt_gdb_X-3081-4db5c59c.dmtcp']
         # I have replaced the hostname with X for readability.
         l_ckpt_files = list(set(l_ckpt_files))
-    fredutil.fred_debug("Restarting checkpoint files: %s" % str(l_ckpt_files))
+
+    # Due to what is arguably a bug in DMTCP, checkpoint files must
+    # end in "*.dmtcp" in order for DMTCP to restart from them. So we
+    # symlink to conform to that pattern before restarting.
+    l_symlinks = []
+    for f in l_ckpt_files:
+        s_new_path = os.path.join(os.environ["DMTCP_TMPDIR"],
+                                  re.search("(ckpt_.*\.dmtcp)\..*", f).group(1))
+        if os.path.exists(s_new_path):
+            os.remove(s_new_path)
+        os.symlink(f, s_new_path)
+        l_symlinks.append(s_new_path)
+    fredutil.fred_debug("Restarting checkpoint files: %s" % str(l_symlinks))
     cmdstr = ["dmtcp_restart"]
-    map(cmdstr.append, l_ckpt_files)
+    map(cmdstr.append, l_symlinks)
     fredio.reexec(cmdstr)
     # Wait until every peer has finished resuming:
-    while get_num_peers() < len(l_ckpt_files) or not is_running():
+    while get_num_peers() < len(l_symlinks) or not is_running():
         time.sleep(0.01)
 
-def erase_checkpoints(n_begin, n_end):
-    pass
+def get_dmtcp_tmpdir_path(s_name):
+    """Return the full path for DMTCP_TMPDIR with suffix s_name."""
+    return "%s-%s" % (os.environ["DMTCP_TMPDIR"], s_name)
 
+def relocate_dmtcp_tmpdir(s_name):
+    """Copy the current DMTCP_TMPDIR to a new location with suffix s_name."""
+    if os.path.isdir(os.environ["DMTCP_TMPDIR"]):
+        # When creating the master branch, the tmpdir is a directory not a link
+        # Just move it and return.
+        s_new_path = get_dmtcp_tmpdir_path(s_name)
+        os.rename(os.environ["DMTCP_TMPDIR"], s_new_path)
+        return
+    
+    s_current_path = os.path.normpath(os.readlink(os.environ["DMTCP_TMPDIR"]))
+    if not os.path.isabs(s_current_path):
+        # Resolve relative to absolute path.
+        s_current_path = os.path.join(os.path.dirname(os.environ["DMTCP_TMPDIR"]),
+                                      s_current_path)
+    s_new_path = get_dmtcp_tmpdir_path(s_name)
+    if os.path.exists(s_new_path):
+        fredutil.fred_error("Requested new path '%s' already exists." %
+                            s_new_path)
+        return
+    shutil.copytree(s_current_path, s_new_path)
+    fredutil.fred_debug("Copied DMTCP_TMPDIR from '%s' to '%s'." %
+                        (s_current_path, s_new_path))
+
+def load_dmtcp_tmpdir(s_name):
+    """Change the DMTCP_TMPDIR symlink to point at the given tmpdir name."""
+    if os.path.exists(os.environ["DMTCP_TMPDIR"]):
+        os.remove(os.environ["DMTCP_TMPDIR"])
+    s_path = get_dmtcp_tmpdir_path(s_name)
+    os.symlink(s_path, os.environ["DMTCP_TMPDIR"])
+    fredutil.fred_debug("Symlinked DMTCP_TMPDIR to: %s" % s_path)
+
+def remove_checkpoints_except_index(n_index):
+    """Remove all checkpoint images in the current DMTCP_TMPDIR except
+    the specified index."""
+    s_path = os.environ["DMTCP_TMPDIR"]
+    s_checkpoint_re = "ckpt_.+\.dmtcp.*"
+    l_files = [os.path.join(os.environ["DMTCP_TMPDIR"], x) \
+               for x in os.listdir(os.environ["DMTCP_TMPDIR"]) \
+               if re.search(s_checkpoint_re, x) != None and \
+                  not x.endswith(".%d" % n_index)]
+    fredutil.fred_debug("Removing files: %s" % str(l_files))
+    map(os.remove, l_files)
+
+def rename_index_to_base(n_index):
+    """Rename all checkpoint images of the given index to index 0 ("*.0")."""
+    l_files = [os.path.join(os.environ["DMTCP_TMPDIR"], x) \
+               for x in os.listdir(os.environ["DMTCP_TMPDIR"]) \
+               if x.endswith(".%d" % n_index)]
+    s_checkpoint_re = "(ckpt_.+\.dmtcp)\..*"
+    for f in l_files:
+        s_new_name = "%s.0" % re.search(s_checkpoint_re, f).group(1)
+        os.rename(f, s_new_name)
+
+def reset_checkpoint_indexing():
+    """Set gn_index_suffix to the appropriate value based on existent
+    checkpoint files."""
+    global gn_index_suffix
+    s_checkpoint_re = "ckpt_.+\.dmtcp\.(.*)"
+    l_files = [os.path.join(os.environ["DMTCP_TMPDIR"], x) \
+               for x in os.listdir(os.environ["DMTCP_TMPDIR"]) \
+               if re.search(s_checkpoint_re, x) != None]
+    if len(l_files) == 0:
+        gn_index_suffix = 0
+    else:
+        n_max_index = max([int(re.search(s_checkpoint_re, x).group(1)) \
+                           for x in l_files])
+        gn_index_suffix = n_max_index + 1
+    
 def resume(s_fred_tmpdir, s_resume_dir):
     """Set up tmpdir structure from a given path."""
     global gn_index_suffix

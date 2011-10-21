@@ -115,11 +115,11 @@ def fred_command_help():
   fred-reverse-finish, fred-rf:        Reverse execute until function exited.
   fred-reverse-continue, fred-rc:      Reverse execute to previous breakpoint.
   fred-checkpoint, fred-ckpt: Request a new checkpoint to be made.
-  fred-restart:               Restart from last checkpoint.
+  fred-restart [n]:           Restart from a checkpoint.
   fred-reverse-watch <EXPR>, fred-rw <EXPR>:
                               Reverse execute until expression EXPR changes.
   fred-source <FILE>:         Read commands from source file.
-  fred-list:                  List the available checkpoint files.
+  fred-list:                  List the available checkpoints.
   fred-help:                  Display this help message.
   fred-history:               Display your command history up to this point.
   fred-debug:                 (*Experts only) Drop into a pdb prompt for FReD.
@@ -161,7 +161,7 @@ def handle_fred_command(s_command):
         g_debugger.do_checkpoint()
     elif s_command_name == "restart":
         # n_count defaults to 1 if no argument given (not appropriate here)
-        n_index = fredutil.to_int(s_command_name, 0)
+        n_index = fredutil.to_int(s_command_args, 0)
         g_debugger.do_restart(n_index, b_clear_history=True)
     elif s_command_name in ["reverse-watch", "rw"]:
         reverse_watch.reverse_watch_with_log_support(g_debugger, s_command_args)
@@ -327,6 +327,7 @@ def fred_setup():
     if not b_resume:
         cleanup_fred_files()
         setup_fredio(l_cmd, True)
+        g_debugger.create_master_branch()
     else:
         setup_fredio(l_cmd, False)
         dmtcpmanager.resume(GS_FRED_TMPDIR, gs_resume_dir_path)

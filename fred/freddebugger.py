@@ -96,6 +96,11 @@ class ReversibleDebugger(debugger.Debugger):
         self.l_branches.append(self.branch)
         self._p.destroy()
 
+    def create_master_branch(self):
+        """Create the master branch (on startup)."""
+        global GS_FRED_MASTER_BRANCH_NAME
+        dmtcpmanager.create_master_branch(GS_FRED_MASTER_BRANCH_NAME)
+        
     def setup_from_resume(self):
         """Set up data structures from a resume."""
         global GS_FRED_MASTER_BRANCH_NAME
