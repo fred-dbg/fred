@@ -154,6 +154,37 @@ def gdb_record_replay_time(n_count=1):
         print GS_PASSED_STRING
         end_session()
 
+def gdb_multiple_checkpoints_record_st(n_count=1):
+    """Run a single-threaded test for multiple checkpoints during RECORD."""
+    global GS_TEST_PROGRAMS_DIRECTORY
+    l_cmd = ["gdb", GS_TEST_PROGRAMS_DIRECTORY + "/test-list"]
+    for i in range(0, n_count):
+        print_test_name("gdb mult. ckpts RECORD st %d" % i)
+        start_session(l_cmd)
+        execute_commands(["b main", "r", "fred-ckpt", "n 15",
+                          "fred-ckpt", "n 5", "fred-ckpt", "fred-restart 0",
+                          "p list_len(head)", "fred-restart 1",
+                          "p list_len(head)", "fred-restart 2",
+                          "p list_len(head)"])
+        print GS_PASSED_STRING
+        end_session()
+
+def gdb_multiple_checkpoints_replay_st(n_count=1):
+    """Run a single-threaded test for multiple checkpoints during RECORD."""
+    global GS_TEST_PROGRAMS_DIRECTORY
+    l_cmd = ["gdb", GS_TEST_PROGRAMS_DIRECTORY + "/test-list"]
+    for i in range(0, n_count):
+        print_test_name("gdb mult. ckpts REPLAY st %d" % i)
+        start_session(l_cmd)
+        execute_commands(["b main", "r", "fred-ckpt", "b 29", "c",
+                          "fred-restart 0", "next 15", "fred-ckpt",
+                          "next 5", "fred-ckpt", "fred-restart 0",
+                          "p list_len(head)", "fred-restart 1",
+                          "p list_len(head)", "fred-restart 2",
+                          "p list_len(head)"])
+        print GS_PASSED_STRING
+        end_session()
+    
 def gdb_syscall_tester(n_count=1):
     """Run a test on deterministic record/replay on syscall-tester example."""
     global GS_TEST_PROGRAMS_DIRECTORY
@@ -319,6 +350,8 @@ def run_integration_tests():
     gdb_record_replay()
     gdb_record_replay_pthread_cond()
     gdb_record_replay_time()
+    gdb_multiple_checkpoints_record_st()
+    gdb_multiple_checkpoints_replay_st()
     gdb_syscall_tester()
     gdb_reverse_watch()
     gdb_reverse_next()
@@ -401,6 +434,10 @@ def initialize_tests():
     # When you add a new test, update this map from test name -> test fnc.
     gd_tests = { "gdb-record-replay" : gdb_record_replay,
                  "gdb-record-replay-time" : gdb_record_replay_time,
+                 "gdb-multiple-checkpoints-record-st" :
+                     gdb_multiple_checkpoints_record_st,
+                 "gdb-multiple-checkpoints-replay-st" :
+                     gdb_multiple_checkpoints_replay_st,
                  "gdb-record-replay-pthread-cond" : 
                  gdb_record_replay_pthread_cond,
                  "gdb-syscall-tester" : gdb_syscall_tester,
