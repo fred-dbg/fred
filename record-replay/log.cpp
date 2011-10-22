@@ -69,14 +69,10 @@ void dmtcp::SynchronizationLog::initialize(const char *path, size_t size)
     log_entry_t temp_entry = EMPTY_LOG_ENTRY;
     int entrySize = getEntryAtOffset(temp_entry, _entryOffsetMarker);
 
-    if (entrySize > 0) {
-      /* True if we checkpointed during replay. Keep interface info up
-         to date. */
-      _index = _entryOffsetMarker;
-      _entryIndex = _entryIndexMarker;
-      _sharedInterfaceInfo->current_clone_id = GET_COMMON(temp_entry, clone_id);
-      _sharedInterfaceInfo->current_log_entry_index = _entryIndex;
-    }
+    _index = _entryOffsetMarker;
+    _entryIndex = _entryIndexMarker;
+    _sharedInterfaceInfo->current_clone_id = GET_COMMON(temp_entry, clone_id);
+    _sharedInterfaceInfo->current_log_entry_index = _entryIndex;
 
     JTRACE ("Restored log to index and offset from intermediate checkpoint.")
       ( _entryIndexMarker ) ( _entryOffsetMarker );
@@ -99,10 +95,8 @@ void dmtcp::SynchronizationLog::init_shm()
     retval = unlink(name);
     JASSERT ( retval != -1 );
     fd = open(name, O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
-    JASSERT ( fd != -1 ) (name) ( strerror(errno) );
-  } else {
-    JASSERT ( fd != -1 ) (name) ( strerror(errno) );
   }
+  JASSERT ( fd != -1 ) (name) ( strerror(errno) );
 
   retval = ftruncate(fd, FRED_INTERFACE_SHM_SIZE);
   JASSERT ( retval != -1 ) ( strerror(errno) );
@@ -112,6 +106,7 @@ void dmtcp::SynchronizationLog::init_shm()
     (fred_interface_info_t *)mmap(NULL, FRED_INTERFACE_SHM_SIZE,
                                   PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
   JASSERT((void *)_sharedInterfaceInfo != MAP_FAILED);
+  close(fd);
   JTRACE ( "Mapped shared memory region." ) ( _sharedInterfaceInfo );
 
   _sharedInterfaceInfo->total_entries = *_numEntries;
@@ -284,6 +279,10 @@ int dmtcp::SynchronizationLog::advanceToNextEntry()
 int dmtcp::SynchronizationLog::getCurrentEntry(log_entry_t& entry)
 {
   int entrySize = getEntryAtOffset(entry, getIndex());
+  if (entrySize == 0) {
+    JTRACE ( "Switching back to RECORD." );
+    set_sync_mode(SYNC_RECORD);
+  }
   return entrySize;
 }
 

@@ -172,10 +172,15 @@ void fred_post_checkpoint_resume()
 
 void fred_post_restart_resume()
 {
+  log_entry_t temp_entry;
   initSyncAddresses();
   set_sync_mode(SYNC_REPLAY);
   sync_mode_pre_ckpt = SYNC_NOOP;
   initLogsForRecordReplay();
+  if (global_log.getCurrentEntry(temp_entry) == 0) {
+    // If no log entries, go back to RECORD.
+    set_sync_mode(SYNC_RECORD);
+  }
   log_all_allocs = 1;
   log_all_socketpair = 1;
 }
