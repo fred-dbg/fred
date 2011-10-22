@@ -138,11 +138,13 @@ def create_branch(s_name):
     
     if branch_exists(s_name):
         fredutil.fred_error("Branch named '%s' already exists.")
-        return
-    
+        return    
+    fredutil.fred_debug("Creating branch '%s'" % s_name)
+
     # CREATE the branch: Take the branch base checkpoint. When it
     # finishes, record/replay will have already reopened the log
     # files, or created new ones.
+    n_branched_index = gn_index_suffix
     checkpoint()
 
     # Copy the whole dmtcp_tmpdir to the new branch location and
@@ -153,13 +155,14 @@ def create_branch(s_name):
     # SWITCH to the branch: Remove all checkpoint images in the new
     # branch except for the most recently created one (the branch base
     # checkpoint). Rename that base checkpoint to index 0.
-    remove_checkpoints_except_index(gn_index_suffix)
-    rename_index_to_base(gn_index_suffix)
+    remove_checkpoints_except_index(n_branched_index)
+    rename_index_to_base(n_branched_index)
 
     # Reset checkpoint indexing past the base checkpoint.
     reset_checkpoint_indexing()
     
-    # Restart from the base checkpoint.
+    # Restart from the base checkpoint. This is required so the logs
+    # will be closed and reopened in the new branch.
     restart(0)
 
 def switch_branch(s_name):
@@ -191,7 +194,7 @@ def checkpoint():
     l_ckpts_before = [os.path.join(os.environ["DMTCP_TMPDIR"], x) \
                       for x in os.listdir(os.environ["DMTCP_TMPDIR"]) \
                       if re.search(s_checkpoint_re, x) != None]
-    fredutil.fred_debug("List ckpts before: %s" % str(l_ckpts_before))
+    #fredutil.fred_debug("List ckpts before: %s" % str(l_ckpts_before))
     # Request the checkpoint.
     n_peers = get_num_peers()
     cmdstr = ["dmtcp_command", "--quiet", "bc"]
@@ -206,7 +209,7 @@ def checkpoint():
         l_ckpts_after = [os.path.join(os.environ["DMTCP_TMPDIR"], x) \
                          for x in os.listdir(os.environ["DMTCP_TMPDIR"]) \
                          if x.startswith("ckpt_")]
-        fredutil.fred_debug("List ckpts after: %s" % str(l_ckpts_after))
+        #fredutil.fred_debug("List ckpts after: %s" % str(l_ckpts_after))
         l_new_ckpts = [x for x in l_ckpts_after if x not in l_ckpts_before]
         time.sleep(0.001)
     for f in l_new_ckpts:
@@ -265,9 +268,10 @@ def get_dmtcp_tmpdir_path(s_name):
 
 def relocate_dmtcp_tmpdir(s_name):
     """Copy the current DMTCP_TMPDIR to a new location with suffix s_name."""
-    if os.path.isdir(os.environ["DMTCP_TMPDIR"]):
+    if not os.path.islink(os.environ["DMTCP_TMPDIR"]):
         # When creating the master branch, the tmpdir is a directory not a link
         # Just move it and return.
+        fredutil.fred_debug("DMTCP_TMPDIR is a directory, not a link.")
         s_new_path = get_dmtcp_tmpdir_path(s_name)
         os.rename(os.environ["DMTCP_TMPDIR"], s_new_path)
         return
@@ -313,7 +317,11 @@ def rename_index_to_base(n_index):
                if x.endswith(".%d" % n_index)]
     s_checkpoint_re = "(ckpt_.+\.dmtcp)\..*"
     for f in l_files:
-        s_new_name = "%s.0" % re.search(s_checkpoint_re, f).group(1)
+        s_new_name = os.path.join(os.environ["DMTCP_TMPDIR"],
+                                  "%s.0" % re.search(s_checkpoint_re,
+                                                     f).group(1))
+        fredutil.fred_debug("Renaming ckpt %s to base ckpt %s." %
+                            (f, s_new_name))
         os.rename(f, s_new_name)
 
 def reset_checkpoint_indexing():

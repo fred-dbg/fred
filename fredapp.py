@@ -119,7 +119,9 @@ def fred_command_help():
   fred-reverse-watch <EXPR>, fred-rw <EXPR>:
                               Reverse execute until expression EXPR changes.
   fred-source <FILE>:         Read commands from source file.
-  fred-list:                  List the available checkpoints.
+  fred-list:                  List the available branches and checkpoints.
+  fred-branch <NAME>:         Create new branch <NAME> from current point.
+  fred-switch <NAME>:         Switch to branch <NAME>.
   fred-help:                  Display this help message.
   fred-history:               Display your command history up to this point.
   fred-debug:                 (*Experts only) Drop into a pdb prompt for FReD.
@@ -169,7 +171,11 @@ def handle_fred_command(s_command):
     elif s_command_name == "source":
         source_from_file(s_command_args)
     elif s_command_name == "list":
-        print g_debugger.list_checkpoints()
+        g_debugger.print_branches()
+    elif s_command_name == "branch":
+        g_debugger.do_branch(s_command_args)
+    elif s_command_name == "switch":
+        g_debugger.switch_to_branch(s_command_args)
     elif s_command_name == "help":
         fred_command_help()
     elif s_command_name == "history":

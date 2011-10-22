@@ -100,6 +100,34 @@ class ReversibleDebugger(debugger.Debugger):
         """Create the master branch (on startup)."""
         global GS_FRED_MASTER_BRANCH_NAME
         dmtcpmanager.create_master_branch(GS_FRED_MASTER_BRANCH_NAME)
+
+    def do_branch(self, s_name):
+        """Create and switch to a new branch named s_name."""
+        if dmtcpmanager.branch_exists(s_name):
+            fredutil.fred_error("Branch '%s' already exists." % s_name)
+            return
+        self.branch = Branch(s_name)
+        self.l_branches.append(self.branch)
+        dmtcpmanager.create_branch(s_name)
+        # Creating branches always creates ckpt 0:
+        self.branch.add_checkpoint(Checkpoint(0))
+        self.branch.set_current_checkpoint(self.branch.get_checkpoint(0))
+        self.update_state()
+        fredutil.fred_info("Now in new branch '%s'." % s_name)
+
+    def switch_to_branch(self, s_name):
+        """Switch to the named branch."""
+        if not dmtcpmanager.branch_exists(s_name):
+            fredutil.fred_error("Branch '%s' does not exist." % s_name)
+            return
+        for b in self.l_branches:
+            if b.get_name() == s_name:
+                self.branch = b
+        dmtcpmanager.switch_branch(s_name)
+        # Switching to branches always restarts in ckpt 0:
+        self.branch.set_current_checkpoint(self.branch.get_checkpoint(0))
+        self.update_state()
+        fredutil.fred_info("Switched to branch '%s'." % s_name)
         
     def setup_from_resume(self):
         """Set up data structures from a resume."""
@@ -131,13 +159,13 @@ class ReversibleDebugger(debugger.Debugger):
         """Restart from the previous checkpoint."""
         self.do_restart(self.current_checkpoint().get_index() - 1)
         
-    def list_checkpoints(self):
-        """Return the list of available Checkpoint files."""
+    def print_branches(self):
+        """Print the list of branches and checkpoints."""
         for branch in self.l_branches:
             if branch.get_name() == self.branch.get_name():
                 print "*",
             print "%s: %s" % (branch.get_name(), 
-                              self.branch.get_all_checkpoints())
+                              branch.get_all_checkpoints())
     
     # Gene - bad name?  Maybe checkpoint_history() or ckpt_history() ?
     def history(self):
