@@ -288,10 +288,10 @@ def gdb_reverse_next(n_count=1):
     for i in range(0, n_count):
         print_test_name("gdb reverse next %d" % i)
         start_session(l_cmd)
-        execute_commands(["b main", "r", "fred-ckpt", "b 85",
+        execute_commands(["b main", "r", "fred-ckpt", "b 90",
                           "c", "fred-reverse-next"])
         current_backtrace_frame = g_debugger.current_position()
-        if current_backtrace_frame.line() == 84:
+        if current_backtrace_frame.line() == 89:
             print GS_PASSED_STRING
         else:
             print GS_FAILED_STRING
@@ -321,9 +321,9 @@ def gdb_reverse_continue(n_count=1):
         print_test_name("gdb reverse continue %d" % i)
         start_session(l_cmd)
         execute_commands(["b main", "r", "fred-ckpt", "b print_solution",
-                          "b 84", "c", "c", "c", "fred-rc"])
+                          "b 89", "c", "c", "c", "fred-rc"])
         current_backtrace_frame = g_debugger.current_position()
-        if g_debugger.at_breakpoint() and current_backtrace_frame.line() == 84:
+        if g_debugger.at_breakpoint() and current_backtrace_frame.line() == 89:
             print GS_PASSED_STRING
         else:
             print GS_FAILED_STRING
