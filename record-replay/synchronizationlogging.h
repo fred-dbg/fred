@@ -759,6 +759,8 @@ static const int log_event_ppoll_size = sizeof(log_event_ppoll_t);
 typedef struct {
   // For signal handlers:
   int sig;
+  siginfo_t *info;
+  void *data;
 } log_event_signal_handler_t;
 
 static const int log_event_signal_handler_size = sizeof(log_event_signal_handler_t);
@@ -2230,7 +2232,7 @@ CREATE_ENTRY_FUNC(getsockopt,
                   int sockfd, int level, int optname,
                   void* optval, socklen_t* optlen);
 CREATE_ENTRY_FUNC(ioctl, int d, int request, void* arg);
-CREATE_ENTRY_FUNC(signal_handler, int sig);
+CREATE_ENTRY_FUNC(signal_handler, int sig, siginfo_t *info, void *data);
 CREATE_ENTRY_FUNC(sigwait, const sigset_t *set, int *sig);
 CREATE_ENTRY_FUNC(srand, unsigned int seed);
 CREATE_ENTRY_FUNC(socket, int domain, int type, int protocol);

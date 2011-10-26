@@ -1435,16 +1435,19 @@ log_entry_t create_ioctl_entry(clone_id_t clone_id, event_code_t event, int d,
   return e;
 }
 
-log_entry_t create_signal_handler_entry(clone_id_t clone_id, event_code_t event, int sig)
+log_entry_t create_signal_handler_entry(clone_id_t clone_id, event_code_t event,
+                                        int sig, siginfo_t *info, void *data)
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
   SET_FIELD(e, signal_handler, sig);
+  SET_FIELD(e, signal_handler, info);
+  SET_FIELD(e, signal_handler, data);
   return e;
 }
 
-log_entry_t create_sigwait_entry(clone_id_t clone_id, event_code_t event, const sigset_t *set,
-    int *sigwait_sig)
+log_entry_t create_sigwait_entry(clone_id_t clone_id, event_code_t event,
+                                 const sigset_t *set, int *sigwait_sig)
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
@@ -2188,7 +2191,11 @@ TURN_CHECK_P(signal_handler_turn_check)
 {
   return base_turn_check(e1,e2) &&
     GET_FIELD_PTR(e1, signal_handler, sig) ==
-    GET_FIELD_PTR(e2, signal_handler, sig);
+      GET_FIELD_PTR(e2, signal_handler, sig) &&
+    GET_FIELD_PTR(e1, signal_handler, info) ==
+      GET_FIELD_PTR(e2, signal_handler, info) &&
+    GET_FIELD_PTR(e1, signal_handler, data) ==
+      GET_FIELD_PTR(e2, signal_handler, data);
 }
 
 TURN_CHECK_P(sigwait_turn_check)

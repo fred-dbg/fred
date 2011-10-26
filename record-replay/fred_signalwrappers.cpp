@@ -34,7 +34,10 @@
 #define EXTERNC extern "C"
 #endif
 
+typedef void (*sa_sigaction_t)(int, siginfo_t *, void *);
+
 static dmtcp::map<int, sighandler_t> user_sig_handlers;
+static dmtcp::map<int, sa_sigaction_t> user_sa_sigaction;
 
 static inline sigset_t patchPOSIXMask(const sigset_t* mask){
   JASSERT(mask != NULL);
@@ -58,12 +61,38 @@ if (!shouldSynchronize(return_addr)) {
   }
   int retval = 0;
   log_entry_t my_entry = create_signal_handler_entry(my_clone_id,
-                                                     signal_handler_event, sig);
+                                                     signal_handler_event,
+                                                     sig, NULL, NULL);
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY(signal_handler);
     (*user_sig_handlers[sig]) (sig);
   } else if (SYNC_IS_RECORD) {
     (*user_sig_handlers[sig]) (sig);
+    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+  }
+}
+
+static void sig_sa_sigaction_wrapper(int sig, siginfo_t *info, void *data)
+{
+  // FIXME: Why is the following  commented out?
+  /*void *return_addr = GET_RETURN_ADDRESS();
+if (!shouldSynchronize(return_addr)) {
+    kill(getpid(), SIGSEGV);
+    return (*user_sig_handlers[sig]) (sig);
+    }*/
+  if (jalib::Filesystem::GetProgramName() == "gdb") {
+    JASSERT ( false ) .Text("don't want this");
+    return (*user_sa_sigaction[sig]) (sig, info, data);
+  }
+  int retval = 0;
+  log_entry_t my_entry = create_signal_handler_entry(my_clone_id,
+                                                     signal_handler_event,
+                                                     sig, info, data);
+  if (SYNC_IS_REPLAY) {
+    WRAPPER_REPLAY(signal_handler);
+    (*user_sa_sigaction[sig]) (sig, info, data);
+  } else if (SYNC_IS_RECORD) {
+    (*user_sa_sigaction[sig]) (sig, info, data);
     WRAPPER_LOG_WRITE_ENTRY(my_entry);
   }
 }
@@ -115,9 +144,9 @@ EXTERNC int sigaction(int signum, const struct sigaction *act,
     } else {
       // Save user's signal handler
       if (act->sa_flags & SA_SIGINFO) {
-        JASSERT ( false ).Text("Unimplemented.");
-        //user_sig_handlers[signum] = act->sa_sigaction;
-        //newact.sa_sigaction = act->sa_sigaction;
+        //JASSERT ( false ).Text("Unimplemented.");
+        user_sa_sigaction[signum] = act->sa_sigaction;
+        newact.sa_sigaction = &sig_sa_sigaction_wrapper;
       } else {
         user_sig_handlers[signum] = act->sa_handler;
         newact.sa_handler = &sig_handler_wrapper;
