@@ -259,11 +259,13 @@ int dmtcp::SynchronizationLog::advanceToNextEntry()
   }
 
   log_entry_t temp_entry = EMPTY_LOG_ENTRY;
-  int entrySize = getEntryAtOffset(temp_entry, getIndex());
-  if (entrySize != 0) {
-    atomicIncrementIndex(entrySize);
-    atomicIncrementEntryIndex();
-  }
+  int entrySize = getCurrentEntry(temp_entry);
+  JASSERT(entrySize > 0);
+  atomicIncrementIndex(entrySize);
+  atomicIncrementEntryIndex();
+  // Load the new entry.
+  entrySize = getCurrentEntry(temp_entry);
+
   /* Keep interface info up to date. */
   _sharedInterfaceInfo->current_clone_id = GET_COMMON(temp_entry, clone_id);
   _sharedInterfaceInfo->current_log_entry_index = _entryIndex;
@@ -274,10 +276,6 @@ int dmtcp::SynchronizationLog::advanceToNextEntry()
 int dmtcp::SynchronizationLog::getCurrentEntry(log_entry_t& entry)
 {
   int entrySize = getEntryAtOffset(entry, getIndex());
-  if (entrySize == 0) {
-    JTRACE ( "Switching back to RECORD." );
-    set_sync_mode(SYNC_RECORD);
-  }
   return entrySize;
 }
 

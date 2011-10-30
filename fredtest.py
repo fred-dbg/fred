@@ -126,6 +126,20 @@ def gdb_record_replay(n_count=1):
             print GS_FAILED_STRING
         end_session()
 
+def gdb_record_replay_past_end(n_count=1):
+    """Run a record/prelay test on test_list linked list example,
+    where we replay past the end of the program."""
+    global GS_TEST_PROGRAMS_DIRECTORY
+    l_cmd = ["gdb", GS_TEST_PROGRAMS_DIRECTORY + "/test-list"]
+    for i in range(0, n_count):
+        print_test_name("gdb record/replay past end %d" % i)
+        start_session(l_cmd)
+        execute_commands(["b main", "r", "fred-ckpt", "b 30",
+                          "c", "fred-restart", "next 128",
+                          "fred-restart", "c", "c"])
+        print GS_PASSED_STRING
+        end_session()
+
 def gdb_record_replay_pthread_cond(n_count=1):
     """Run a test on deterministic record/replay on pthread-cond-var example."""
     global GS_TEST_PROGRAMS_DIRECTORY
@@ -348,6 +362,7 @@ def gdb_reverse_finish(n_count=1):
 def run_integration_tests():
     """Run all available integration tests."""
     gdb_record_replay()
+    gdb_record_replay_past_end()
     gdb_record_replay_pthread_cond()
     gdb_record_replay_time()
     gdb_multiple_checkpoints_record_st()
@@ -433,6 +448,7 @@ def initialize_tests():
     global gd_tests
     # When you add a new test, update this map from test name -> test fnc.
     gd_tests = { "gdb-record-replay" : gdb_record_replay,
+                 "gdb-record-replay-past-end" : gdb_record_replay_past_end,
                  "gdb-record-replay-time" : gdb_record_replay_time,
                  "gdb-multiple-checkpoints-record-st" :
                      gdb_multiple_checkpoints_record_st,
