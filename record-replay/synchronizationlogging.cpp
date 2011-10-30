@@ -65,6 +65,7 @@ LIB_PRIVATE dmtcp::SynchronizationLog global_log;
 LIB_PRIVATE __thread clone_id_t my_clone_id = -1;
 LIB_PRIVATE __thread int in_mmap_wrapper = 0;
 LIB_PRIVATE __thread unsigned char isOptionalEvent = 0;
+LIB_PRIVATE __thread bool ok_to_log_next_func = false;
 
 
 /* Volatiles: */
@@ -143,6 +144,10 @@ int shouldSynchronize(void *return_addr)
   }
   if (isProcessGDB()) {
     return 0;
+  }
+  if (ok_to_log_next_func) {
+    ok_to_log_next_func = false;
+    return 1;
   }
   if (!validAddress(return_addr)) {
     return 0;

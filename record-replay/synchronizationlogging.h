@@ -2099,6 +2099,7 @@ LIB_PRIVATE extern pthread_mutex_t global_clone_counter_mutex;
 LIB_PRIVATE extern __thread clone_id_t my_clone_id;
 LIB_PRIVATE extern __thread int in_mmap_wrapper;
 LIB_PRIVATE extern __thread unsigned char isOptionalEvent;
+LIB_PRIVATE extern __thread bool ok_to_log_next_func;
 
 /* Volatiles: */
 LIB_PRIVATE extern volatile clone_id_t    global_clone_counter;

@@ -57,9 +57,6 @@
 #undef openat
 #undef read
 
-static __thread bool ok_to_log_readdir = false;
-static __thread bool ok_to_log_setvbuf = false;
-
 extern "C" int close ( int fd )
 {
   BASIC_SYNC_WRAPPER(int, close, _real_close, fd);
@@ -1236,9 +1233,8 @@ extern "C" struct dirent * /*__attribute__ ((optimize(0)))*/ readdir(DIR *dirp)
   struct dirent *ptr;
   int res = 0;
 
-  ok_to_log_readdir = true;
+  ok_to_log_next_func = true;
   res = readdir_r(dirp, &buf, &ptr);
-  ok_to_log_readdir = false;
 
   if (res == 0) {
     return ptr;
@@ -1290,8 +1286,7 @@ extern "C" int readdir_r(DIR *dirp, struct dirent *entry,
                          struct dirent **result)
 {
   void *return_addr = GET_RETURN_ADDRESS();
-  if ((!shouldSynchronize(return_addr) &&
-       (SYNC_IS_NOOP || !ok_to_log_readdir)) ||
+  if (!shouldSynchronize(return_addr) ||
       jalib::Filesystem::GetProgramName() == "gdb") {
     return _real_readdir_r(dirp, entry, result);
   }
@@ -1350,31 +1345,27 @@ extern "C" int fflush(FILE *stream)
 
 extern "C" void setbuf(FILE *stream, char *buf)
 {
-  ok_to_log_setvbuf = true;
+  ok_to_log_next_func = true;
   setvbuf(stream, buf, buf ? _IOFBF : _IONBF, BUFSIZ);
-  ok_to_log_setvbuf = false;
 }
 
 extern "C" void setbuffer(FILE *stream, char *buf, size_t size)
 {
-  ok_to_log_setvbuf = true;
+  ok_to_log_next_func = true;
   setvbuf(stream, buf, buf ? _IOFBF : _IONBF, size);
-  ok_to_log_setvbuf = false;
 }
 
 extern "C" void setlinebuf(FILE *stream)
 {
-  ok_to_log_setvbuf = true;
+  ok_to_log_next_func = true;
   setvbuf(stream, (char*) NULL, _IOLBF, 0);
-  ok_to_log_setvbuf = false;
 }
 
 extern "C" int setvbuf(FILE *stream, char *buf, int mode, size_t size)
 {
   void *return_addr = GET_RETURN_ADDRESS();
-  if ((!shouldSynchronize(return_addr) ||
-       jalib::Filesystem::GetProgramName() == "gdb") &&
-      !ok_to_log_setvbuf) {
+  if (!shouldSynchronize(return_addr) ||
+      jalib::Filesystem::GetProgramName() == "gdb") {
     return _real_setvbuf(stream, buf, mode, size);
   }
   int retval;

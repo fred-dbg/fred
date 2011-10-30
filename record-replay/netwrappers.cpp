@@ -45,11 +45,6 @@
 #include <sys/mman.h>
 #include <sys/syscall.h>
 
-static __thread bool ok_to_log_getpwnam = false;
-static __thread bool ok_to_log_getpwuid = false;
-static __thread bool ok_to_log_getgrnam = false;
-static __thread bool ok_to_log_getgrgid = false;
-
 extern "C" int getsockname(int sockfd, struct sockaddr *addr,
                            socklen_t *addrlen)
 {
@@ -106,9 +101,8 @@ extern "C" struct passwd *getpwnam(const char *name)
   static __thread struct passwd pwd;
   static __thread struct passwd *result;
 
-  if (!SYNC_IS_NOOP) ok_to_log_getpwnam = true;
+  ok_to_log_next_func = true;
   int res = getpwnam_r(name, &pwd, buf, sizeof(buf), &result);
-  ok_to_log_getpwnam = false;
 
   if (res == 0) {
     return result;
@@ -123,9 +117,8 @@ extern "C" struct passwd *getpwuid(uid_t uid)
   static __thread struct passwd pwd;
   static __thread struct passwd *result;
 
-  if (!SYNC_IS_NOOP) ok_to_log_getpwuid = true;
+  ok_to_log_next_func = true;
   int res = getpwuid_r(uid, &pwd, buf, sizeof(buf), &result);
-  ok_to_log_getpwuid = false;
 
   if (res == 0) {
     return &pwd;
@@ -140,9 +133,8 @@ extern "C" struct group *getgrnam(const char *name)
   static __thread struct group grp;
   static __thread struct group *result;
 
-  if (!SYNC_IS_NOOP) ok_to_log_getgrnam = true;
+  ok_to_log_next_func = true;
   int res = getgrnam_r(name, &grp, buf, sizeof(buf), &result);
-  ok_to_log_getgrnam = false;
 
   if (res == 0) {
     return &grp;
@@ -157,9 +149,8 @@ extern "C" struct group *getgrgid(gid_t gid)
   static __thread struct group grp;
   static __thread struct group *result;
 
-  if (!SYNC_IS_NOOP) ok_to_log_getgrgid = true;
+  ok_to_log_next_func = true;
   int res = getgrgid_r(gid, &grp, buf, sizeof(buf), &result);
-  ok_to_log_getgrgid = false;
 
   if (res == 0) {
     return &grp;
@@ -171,15 +162,7 @@ extern "C" struct group *getgrgid(gid_t gid)
 extern "C" int getpwnam_r(const char *name, struct passwd *pwd,
                           char *buf, size_t buflen, struct passwd **result)
 {
-  void *return_addr = GET_RETURN_ADDRESS();
-  if ((!shouldSynchronize(return_addr) &&
-       (SYNC_IS_NOOP || !ok_to_log_getpwnam)) ||
-      jalib::Filesystem::GetProgramName() == "gdb") {
-    return _real_getpwnam_r(name, pwd, buf, buflen, result);
-  }
-  int retval;
-  log_entry_t my_entry = create_getpwnam_r_entry(my_clone_id,
-      getpwnam_r_event, name, pwd, buf, buflen, result);
+  WRAPPER_HEADER(int, getpwnam_r, _real_getpwnam_r, name, pwd, buf, buflen, result);
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_START(getpwnam_r);
     if (retval == 0 &&
@@ -206,15 +189,7 @@ extern "C" int getpwnam_r(const char *name, struct passwd *pwd,
 extern "C" int getpwuid_r(uid_t uid, struct passwd *pwd,
                           char *buf, size_t buflen, struct passwd **result)
 {
-  void *return_addr = GET_RETURN_ADDRESS();
-  if ((!shouldSynchronize(return_addr) &&
-       (SYNC_IS_NOOP || !ok_to_log_getpwuid)) ||
-      jalib::Filesystem::GetProgramName() == "gdb") {
-    return _real_getpwuid_r(uid, pwd, buf, buflen, result);
-  }
-  int retval;
-  log_entry_t my_entry = create_getpwuid_r_entry(my_clone_id,
-      getpwuid_r_event, uid, pwd, buf, buflen, result);
+  WRAPPER_HEADER(int, getpwuid_r, _real_getpwuid_r, uid, pwd, buf, buflen, result);
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_START(getpwuid_r);
     if (retval == 0 &&
@@ -241,15 +216,7 @@ extern "C" int getpwuid_r(uid_t uid, struct passwd *pwd,
 extern "C" int getgrnam_r(const char *name, struct group *grp,
                           char *buf, size_t buflen, struct group **result)
 {
-  void *return_addr = GET_RETURN_ADDRESS();
-  if ((!shouldSynchronize(return_addr) &&
-       (SYNC_IS_NOOP || !ok_to_log_getgrnam)) ||
-      jalib::Filesystem::GetProgramName() == "gdb") {
-    return _real_getgrnam_r(name, grp, buf, buflen, result);
-  }
-  int retval;
-  log_entry_t my_entry = create_getgrnam_r_entry(my_clone_id,
-      getgrnam_r_event, name, grp, buf, buflen, result);
+  WRAPPER_HEADER(int, getgrnam_r, _real_getgrnam_r, name, grp, buf, buflen, result);
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_START(getgrnam_r);
     if (retval == 0 &&
@@ -276,15 +243,7 @@ extern "C" int getgrnam_r(const char *name, struct group *grp,
 extern "C" int getgrgid_r(gid_t gid, struct group *grp,
                           char *buf, size_t buflen, struct group **result)
 {
-  void *return_addr = GET_RETURN_ADDRESS();
-  if ((!shouldSynchronize(return_addr) &&
-       (SYNC_IS_NOOP || !ok_to_log_getgrgid)) ||
-      jalib::Filesystem::GetProgramName() == "gdb") {
-    return _real_getgrgid_r(gid, grp, buf, buflen, result);
-  }
-  int retval;
-  log_entry_t my_entry = create_getgrgid_r_entry(my_clone_id,
-      getgrgid_r_event, gid, grp, buf, buflen, result);
+  WRAPPER_HEADER(int, getgrgid_r, _real_getgrgid_r, gid, grp, buf, buflen, result);
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_START(getgrgid_r);
     if (retval == 0 &&

@@ -45,8 +45,6 @@
 
 extern "C"
 {
-static __thread bool ok_to_log_sendrecv = false;
-
 int socket ( int domain, int type, int protocol )
 {
   BASIC_SYNC_WRAPPER(int, socket, _real_socket, domain, type, protocol);
@@ -184,31 +182,15 @@ int getsockopt ( int sockfd, int  level,  int  optname,  void  *optval,
 
 extern "C" ssize_t send(int sockfd, const void *buf, size_t len, int flags)
 {
-  ok_to_log_sendrecv = true;
-  ssize_t retval = sendto(sockfd, buf, len, flags, NULL, 0);
-  ok_to_log_sendrecv = false;
-  return retval;
+  ok_to_log_next_func = true;
+  return sendto(sockfd, buf, len, flags, NULL, 0);
 }
 
 extern "C" ssize_t sendto(int sockfd, const void *buf, size_t len, int flags,
                           const struct sockaddr *dest_addr, socklen_t addrlen)
 {
-  void *return_addr = GET_RETURN_ADDRESS();
-  if ((!shouldSynchronize(return_addr) &&
-       (SYNC_IS_NOOP || !ok_to_log_sendrecv)) ||
-      jalib::Filesystem::GetProgramName() == "gdb") {
-    return _real_sendto(sockfd, buf, len, flags, dest_addr, addrlen);
-  }
-  int retval;
-  log_entry_t my_entry = create_sendto_entry(my_clone_id,
-      sendto_event, sockfd, buf, len, flags, dest_addr, addrlen);
-
-  if (SYNC_IS_REPLAY) {
-    WRAPPER_REPLAY_TYPED(ssize_t, sendto);
-  } else if (SYNC_IS_RECORD) {
-    WRAPPER_LOG(_real_sendto, sockfd, buf, len, flags, dest_addr, addrlen);
-  }
-  return retval;
+  BASIC_SYNC_WRAPPER(ssize_t, sendto, _real_sendto, sockfd, buf, len, flags,
+                     dest_addr, addrlen);
 }
 
 extern "C" ssize_t sendmsg(int sockfd, const struct msghdr *msg, int flags)
@@ -218,24 +200,15 @@ extern "C" ssize_t sendmsg(int sockfd, const struct msghdr *msg, int flags)
 
 extern "C" ssize_t recv(int sockfd, void *buf, size_t len, int flags)
 {
-  ok_to_log_sendrecv = true;
-  ssize_t retval = recvfrom(sockfd, buf, len, flags, NULL, NULL);
-  ok_to_log_sendrecv = false;
-  return retval;
+  ok_to_log_next_func = true;
+  return recvfrom(sockfd, buf, len, flags, NULL, NULL);
 }
 
 extern "C" ssize_t recvfrom(int sockfd, void *buf, size_t len, int flags,
                             struct sockaddr *src_addr, socklen_t *addrlen)
 {
-  void *return_addr = GET_RETURN_ADDRESS();
-  if ((!shouldSynchronize(return_addr) &&
-       (SYNC_IS_NOOP || !ok_to_log_sendrecv)) ||
-      jalib::Filesystem::GetProgramName() == "gdb") {
-    return _real_recvfrom(sockfd, buf, len, flags, src_addr, addrlen);
-  }
-  int retval;
-  log_entry_t my_entry = create_recvfrom_entry(my_clone_id,
-      recvfrom_event, sockfd, buf, len, flags, src_addr, addrlen);
+  WRAPPER_HEADER(ssize_t, recvfrom, _real_recvfrom, sockfd, buf, len, flags, src_addr,
+                 addrlen);
 
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_START(recvfrom);
