@@ -543,7 +543,23 @@ extern "C" int fseek(FILE *stream, long offset, int whence)
 
 extern "C" int _IO_getc(FILE *stream)
 {
-  BASIC_SYNC_WRAPPER(int, getc, _real_getc, stream);
+  WRAPPER_HEADER(int, getc, _real_getc, stream);
+  if (SYNC_IS_REPLAY) {
+    WRAPPER_REPLAY_TYPED(int, getc);
+  } else if (SYNC_IS_RECORD) {
+    isOptionalEvent = true;
+    retval = _real_getc(stream);
+    isOptionalEvent = false;
+    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+  }
+  return retval;
+}
+
+extern "C" int __uflow(FILE *stream)
+{
+  JASSERT(isProcessGDB()). Text("Not Implemented: *_unlocked fstream functions");
+  ok_to_log_next_func = true;
+  return _IO_getc(stream);
 }
 
 extern "C" int fgetc(FILE *stream)
