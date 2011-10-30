@@ -96,7 +96,7 @@ static bool should_reap_thread(pthread_t thd)
   for (it = threads_with_allocated_stack.begin();
        it < threads_with_allocated_stack.end();
        it++) {
-    if (*it == thd) {
+    if (pthread_equal(*it, thd)) {
       return true;
     }
   }
@@ -109,7 +109,7 @@ static void remove_reaped_thread(pthread_t thd)
   for (it = threads_with_allocated_stack.begin();
        it < threads_with_allocated_stack.end();
        it++) {
-    if (*it == thd) {
+    if (pthread_equal(*it, thd)) {
       threads_with_allocated_stack.erase(it);
       break;
     }
