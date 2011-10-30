@@ -942,7 +942,7 @@ extern "C" struct tm *localtime(const time_t *timep)
   WRAPPER_HEADER(struct tm *, localtime, _real_localtime, timep);
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_START_TYPED(struct tm *, localtime);
-    if (retval == NULL) {
+    if (retval != NULL) {
       *retval = GET_FIELD(my_entry, localtime, localtime_retval);
     }
     WRAPPER_REPLAY_END(localtime);
@@ -950,7 +950,7 @@ extern "C" struct tm *localtime(const time_t *timep)
     isOptionalEvent = true;
     retval = _real_localtime(timep);
     isOptionalEvent = false;
-    if (retval == NULL) {
+    if (retval != NULL) {
       SET_FIELD2(my_entry, localtime, localtime_retval, *retval);
     }
     WRAPPER_LOG_WRITE_ENTRY(my_entry);
