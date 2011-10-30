@@ -1433,34 +1433,62 @@ void ioctl_helper(log_entry_t &my_entry, int &retval, int d, int request,
     WRAPPER_LOG_WRITE_ENTRY(my_entry);
   }
 }
+#endif
+#endif
 
 extern "C" int ioctl(int d,  unsigned long int request, ...)
 {
   va_list ap;
-  int retval;
+  va_start(ap, request);
+  void *arg = va_arg(ap, void*);
+  va_end(ap);
 
-  if (send_sigwinch && request == TIOCGWINSZ) {
-    send_sigwinch = 0;
-    va_list local_ap;
-    va_copy(local_ap, ap);
-    va_start(local_ap, request);
-    struct winsize * win = va_arg(local_ap, struct winsize *);
-    va_end(local_ap);
-    WRAPPER_HEADER(int, ioctl, _real_ioctl, d, request, win);
-    ioctl_helper(my_entry, retval, d, request, win);
-    win->ws_col--; // Lie to application, and force it to resize window,
-                   //  reset any scroll regions, etc.
-    kill(getpid(), SIGWINCH); // Tell application to look up true winsize
-                              // and resize again.
-  } else {
-    void * arg;
-    va_start(ap, request);
-    arg = va_arg(ap, void *);
-    va_end(ap);
-    WRAPPER_HEADER(int, ioctl, _real_ioctl, d, request, arg);
-    ioctl_helper(my_entry, retval, d, request, arg);
+  WRAPPER_HEADER(int, ioctl, _real_ioctl, d, request, arg);
+
+  if (SYNC_IS_REPLAY) {
+    WRAPPER_REPLAY_START(ioctl);
+    switch (request) {
+      case SIOCGIFCONF: {
+        *((struct ifconf *)arg) = GET_FIELD(my_entry, ioctl, ifconf_val);
+        struct ifconf *i = (struct ifconf *)arg;
+        WRAPPER_REPLAY_READ_FROM_READ_LOG(ioctl, i->ifc_buf, i->ifc_len);
+        break;
+      }
+      case TIOCGWINSZ: {
+        *((struct winsize *)arg) = GET_FIELD(my_entry, ioctl, win_val);
+        break;
+      }
+      case FIONREAD: {
+        *(int*) arg = GET_FIELD(my_entry, ioctl, fionread_val);
+        break;
+      }
+      default:
+        break;
+    }
+    WRAPPER_REPLAY_END(ioctl);
+  } else if (SYNC_IS_RECORD) {
+    retval = _real_ioctl(d, request, arg);
+    switch (request) {
+      case SIOCGIFCONF: {
+        SET_FIELD2(my_entry, ioctl, ifconf_val, *((struct ifconf *)arg));
+        struct ifconf *i = (struct ifconf *)arg;
+        WRAPPER_LOG_WRITE_INTO_READ_LOG(ioctl, i->ifc_buf, i->ifc_len);
+        break;
+      }
+      case TIOCGWINSZ: {
+        SET_FIELD2(my_entry, ioctl, win_val, *((struct winsize *)arg));
+        break;
+      }
+      case FIONREAD: {
+        SET_FIELD2(my_entry, ioctl, win_val, *((struct winsize *)arg));
+        break;
+      }
+      default: {
+        break;
+      }
+    }
+    WRAPPER_LOG_WRITE_ENTRY(my_entry);
   }
+
   return retval;
 }
-#endif
-#endif

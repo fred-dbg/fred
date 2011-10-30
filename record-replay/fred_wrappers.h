@@ -489,6 +489,7 @@ LIB_PRIVATE extern __thread int thread_performing_dlopen_dlsym;
   int _real_epoll_pwait(int epfd, struct epoll_event *events,
                         int maxevents, int timeout, const sigset_t *sigmask);
 
+  int _real_ioctl(int d,  unsigned long int request, ...) __THROW;
 #ifdef PID_VIRTUALIZATION
   pid_t _real_getpid(void);
   pid_t _real_getppid(void);
@@ -515,7 +516,6 @@ LIB_PRIVATE extern __thread int thread_performing_dlopen_dlsym;
   pid_t _real_wait4(pid_t pid, __WAIT_STATUS status, int options,
                     struct rusage *rusage);
   LIB_PRIVATE extern int send_sigwinch;
-  int _real_ioctl(int d,  unsigned long int request, ...) __THROW;
 
   int _real_setgid(gid_t gid);
   int _real_setuid(uid_t uid);

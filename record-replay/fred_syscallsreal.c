@@ -453,6 +453,21 @@ int _real_sigtimedwait(const sigset_t *set, siginfo_t *info,
   REAL_FUNC_PASSTHROUGH ( sigtimedwait ) ( set, info, timeout);
 }
 
+LIB_PRIVATE
+int _real_ioctl(int d, unsigned long int request, ...) {
+  void * arg;
+  va_list ap;
+
+  // Most calls to ioctl take 'void *', 'int' or no extra argument
+  // A few specialized ones take more args, but we don't need to handle those.
+  va_start(ap, request);
+  arg = va_arg(ap, void *);
+  va_end(ap);
+
+  // /usr/include/unistd.h says syscall returns long int (contrary to man page)
+  REAL_FUNC_PASSTHROUGH_TYPED ( int, ioctl ) ( d, request, arg );
+}
+
 #ifdef PID_VIRTUALIZATION
 LIB_PRIVATE
 pid_t _real_getpid(void){
@@ -536,21 +551,6 @@ pid_t _real_wait3(__WAIT_STATUS status, int options, struct rusage *rusage) {
 LIB_PRIVATE
 pid_t _real_wait4(pid_t pid, __WAIT_STATUS status, int options, struct rusage *rusage) {
   REAL_FUNC_PASSTHROUGH_TYPED ( pid_t, wait4 ) ( pid, status, options, rusage );
-}
-
-LIB_PRIVATE
-int _real_ioctl(int d, unsigned long int request, ...) {
-  void * arg;
-  va_list ap;
-
-  // Most calls to ioctl take 'void *', 'int' or no extra argument
-  // A few specialized ones take more args, but we don't need to handle those.
-  va_start(ap, request);
-  arg = va_arg(ap, void *);
-  va_end(ap);
-
-  // /usr/include/unistd.h says syscall returns long int (contrary to man page)
-  REAL_FUNC_PASSTHROUGH_TYPED ( int, ioctl ) ( d, request, arg );
 }
 
 LIB_PRIVATE

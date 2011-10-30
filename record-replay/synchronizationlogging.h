@@ -954,6 +954,7 @@ typedef struct {
   void *arg;
   struct winsize win_val;
   struct ifconf ifconf_val;
+  int fionread_val;
   off_t data_offset;
 } log_event_ioctl_t;
 
