@@ -42,6 +42,7 @@
 #include "fred_wrappers.h"
 
 static void *thread_reaper(void *arg);
+static void create_reaper_thread();
 static pthread_t reaperThread;
 static int reaper_thread_alive = 0;
 static int signal_thread_alive = 0;
@@ -52,6 +53,11 @@ static volatile pthread_t arguments_were_decoded = 0;
 static pthread_mutex_t attributes_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t arguments_decode_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t create_destroy_guard = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t  reap_cv = PTHREAD_COND_INITIALIZER;
+static pthread_mutex_t reap_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_t       thread_to_reap = 0;
+static dmtcp::vector<pthread_t> threads_with_allocated_stack;
+
 //static pthread_mutex_t read_mutex = PTHREAD_MUTEX_INITIALIZER;
 static inline void memfence() {  asm volatile ("mfence" ::: "memory"); }
 struct create_arg
@@ -84,6 +90,32 @@ static int internal_pthread_mutex_unlock(pthread_mutex_t *);
   thread_create_destroy = 0;                            \
   internal_pthread_mutex_unlock(&create_destroy_guard); \
 
+static bool should_reap_thread(pthread_t thd)
+{
+  dmtcp::vector<pthread_t>::iterator it;
+  for (it = threads_with_allocated_stack.begin();
+       it < threads_with_allocated_stack.end();
+       it++) {
+    if (*it == thd) {
+      return true;
+    }
+  }
+  return false;
+}
+
+static void remove_reaped_thread(pthread_t thd)
+{
+  dmtcp::vector<pthread_t>::iterator it;
+  for (it = threads_with_allocated_stack.begin();
+       it < threads_with_allocated_stack.end();
+       it++) {
+    if (*it == thd) {
+      threads_with_allocated_stack.erase(it);
+      break;
+    }
+  }
+}
+
 static void *start_wrapper(void *arg)
 {
   /*
@@ -100,6 +132,7 @@ static void *start_wrapper(void *arg)
   arguments_were_decoded = 1;
   _real_pthread_mutex_unlock(&arguments_decode_mutex);
   void *retval;
+
   retval = (*user_fnc)(thread_arg);
   JTRACE ( "User start function over." );
   ACQUIRE_THREAD_CREATE_DESTROY_LOCK(); // For thread destruction.
@@ -161,6 +194,7 @@ static void setupThreadStack(pthread_attr_t *attr_out,
       ( strerror(errno) ) (global_log.currentEntryIndex());
     JASSERT ( false );
   }
+
   pthread_attr_setstack(attr_out, s, mmap_size);
 }
 
@@ -369,9 +403,13 @@ static int internal_pthread_create(pthread_t *thread,
     pthread_attr_destroy(&the_attr);
     SET_FIELD(my_entry, pthread_create, stack_addr);
     SET_FIELD(my_entry, pthread_create, stack_size);
+
     // Log annotation on the fly.
     WRAPPER_LOG_UPDATE_ENTRY(my_entry);
   }
+  
+  threads_with_allocated_stack.push_back(*thread);
+
   return retval;
 }
 
@@ -557,6 +595,12 @@ static void reapThread()
   void *stack_addr;
   int retval = 0;
   clone_id_t cid_to_reap;
+  /* Only reap threads for which we explicitly created a thread stack. */
+  if (!should_reap_thread(thread_to_reap)) {
+    thread_to_reap = 0;
+    //RELEASE_THREAD_CREATE_DESTROY_LOCK(); // End of thread destruction.
+    return;
+  }
   pthread_getattr_np(thread_to_reap, &attr); // calls realloc().
   pthread_attr_getstack(&attr, &stack_addr, &stack_size);
   pthread_attr_destroy(&attr);
@@ -580,6 +624,8 @@ static void reapThread()
   tid_to_clone_id_table->erase(thread_to_reap);
 
   //mtcpFuncPtrs.process_pthread_join ( thread_to_reap );
+  // Reset for next thread:
+  thread_to_reap = 0;
   RELEASE_THREAD_CREATE_DESTROY_LOCK(); // End of thread destruction.
 }
 
@@ -588,6 +634,8 @@ static void reapThread()
    synchronize these. */
 static void *thread_reaper(void *arg)
 {
+  /* Wait until mode is not SYNC_NOOP. */
+  while (SYNC_IS_NOOP) { usleep(1000); }
   while (1) {
     /* Wait until there is a thread that needs to be reaped.  We call the
     internal_* versions here because we want them to be logged/replayed, but we
@@ -595,13 +643,31 @@ static void *thread_reaper(void *arg)
     log/replay these because they are not coming from user code. */
     internal_pthread_mutex_lock(&reap_mutex);
     reaper_thread_ready = 1;
-    internal_pthread_cond_wait(&reap_cv, &reap_mutex);
+    while (thread_to_reap == 0) {
+      internal_pthread_cond_wait(&reap_cv, &reap_mutex);
+    }
     reaper_thread_ready = 0;
     reapThread();
     internal_pthread_mutex_unlock(&reap_mutex);
   }
   JASSERT(false) .Text("Unreachable");
   return NULL;
+}
+
+static void create_reaper_thread()
+{
+  if (__builtin_expect(reaper_thread_alive, 1)) {
+    return;
+  }
+  reaper_thread_alive = 1;
+  if (SYNC_IS_RECORD || SYNC_IS_REPLAY) {
+    internal_pthread_create(&reaperThread, NULL, thread_reaper, NULL);
+    return;
+  }
+  JASSERT(SYNC_IS_NOOP);
+  int retval = 0;
+  retval = _real_pthread_create(&reaperThread, NULL, thread_reaper, NULL);
+  JASSERT( retval == 0 );
 }
 
 LIB_PRIVATE void reapThisThread()
@@ -637,21 +703,32 @@ LIB_PRIVATE void reapThisThread()
 extern "C" int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
     void *(*start_routine)(void*), void *arg)
 {
-  WRAPPER_HEADER_RAW(int, pthread_create, _real_pthread_create,
-                     thread, attr, start_routine, arg);
-  if (__builtin_expect(reaper_thread_alive == 0, 0)) {
-    // Create the reaper thread
-    reaper_thread_alive = 1;
-    internal_pthread_create(&reaperThread, NULL, thread_reaper, NULL);
+  /* Here I've split apart WRAPPER_HEADER_RAW because we need to create the
+   * reaper thread even if the current mode is SYNC_IS_NOOP. */
+  void *return_addr = GET_RETURN_ADDRESS();
+  if (!dmtcp_is_running_state() ||
+      !validAddress(return_addr) ||
+      jalib::Filesystem::GetProgramName() == "gdb") {
+    return _real_pthread_create(thread, attr, start_routine, arg);
   }
-  int retval = internal_pthread_create(thread, attr, start_routine, arg);
+  /* Create the reaper thread always, even if we are not in SYNC_RECORD mode
+   * yet. */
+  create_reaper_thread();
+  int retval;
+  if (SYNC_IS_NOOP) {
+    retval = _real_pthread_create(thread, attr, start_routine, arg);
+  } else {
+    int retval = internal_pthread_create(thread, attr, start_routine, arg);
+  }
   return retval;
 }
 
 extern "C" void pthread_exit(void *value_ptr)
 {
   WRAPPER_HEADER_NO_RETURN(pthread_exit, _real_pthread_exit, value_ptr);
-
+  if (!should_reap_thread(pthread_self())) {
+    _real_pthread_exit(value_ptr);
+  }
   if (SYNC_IS_REPLAY) {
     waitForTurn(&my_entry, &pthread_exit_turn_check);
     getNextLogEntry();
@@ -745,7 +822,8 @@ extern "C" int pthread_join (pthread_t thread, void **value_ptr)
      We DO need to call it from the thread reaper reapThread(), however, which
      is in pthreadwrappers.cpp. */
   void *return_addr = GET_RETURN_ADDRESS();
-  if (!shouldSynchronize(return_addr)) {
+  if (!shouldSynchronize(return_addr) ||
+      !should_reap_thread(thread)) {
     int retval = _real_pthread_join(thread, value_ptr);
     return retval;
   }
@@ -794,6 +872,7 @@ extern "C" int pthread_join (pthread_t thread, void **value_ptr)
     }
     WRAPPER_LOG_WRITE_ENTRY(my_entry);
   }
+  remove_reaped_thread(thread);
   return retval;
 }
 

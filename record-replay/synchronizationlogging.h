@@ -2093,10 +2093,7 @@ LIB_PRIVATE extern dmtcp::SynchronizationLog global_log;
 
 // TODO: rename this, since a log entry is not a char. maybe log_event_TYPE_SIZE?
 #define LOG_ENTRY_SIZE sizeof(char)
-LIB_PRIVATE extern pthread_cond_t  reap_cv;
 LIB_PRIVATE extern pthread_mutex_t global_clone_counter_mutex;
-LIB_PRIVATE extern pthread_mutex_t reap_mutex;
-LIB_PRIVATE extern pthread_t       thread_to_reap;
 
 /* Thread locals: */
 LIB_PRIVATE extern __thread clone_id_t my_clone_id;

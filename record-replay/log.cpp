@@ -90,12 +90,7 @@ void dmtcp::SynchronizationLog::init_shm()
   int fd, retval;
   sprintf(name, FRED_INTERFACE_SHM_FILE_FMT, dmtcp_get_tmpdir(), getpid());
 
-  fd = open(name, O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
-  if (fd == -1 && errno == EEXIST) {
-    retval = unlink(name);
-    JASSERT ( retval != -1 );
-    fd = open(name, O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
-  }
+  fd = open(name, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
   JASSERT ( fd != -1 ) (name) ( strerror(errno) );
 
   retval = ftruncate(fd, FRED_INTERFACE_SHM_SIZE);
@@ -111,6 +106,7 @@ void dmtcp::SynchronizationLog::init_shm()
 
   _sharedInterfaceInfo->total_entries = *_numEntries;
   _sharedInterfaceInfo->total_threads = *_numThreads;
+  _sharedInterfaceInfo->breakpoint_at_index = FRED_INTERFACE_NO_BP;
 }
 
 /* Destroy shared memory region. */
@@ -165,7 +161,6 @@ void dmtcp::SynchronizationLog::destroy(int mode)
       _entryIndexMarker  = __sync_fetch_and_add(_numEntries, 0);
     }
   } else {
-    JASSERT(mode == SYNC_REPLAY);
     _entryOffsetMarker = getIndex();
     _entryIndexMarker  = _entryIndex;
   }    
