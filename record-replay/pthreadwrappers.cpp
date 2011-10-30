@@ -407,7 +407,7 @@ static int internal_pthread_create(pthread_t *thread,
     // Log annotation on the fly.
     WRAPPER_LOG_UPDATE_ENTRY(my_entry);
   }
-  
+
   threads_with_allocated_stack.push_back(*thread);
 
   return retval;
@@ -876,6 +876,12 @@ extern "C" int pthread_join (pthread_t thread, void **value_ptr)
   return retval;
 }
 
+extern "C" long int random()
+{
+  ok_to_log_next_func = true;
+  return rand();
+}
+
 extern "C" int rand()
 {
   WRAPPER_HEADER_NO_ARGS(int, rand, _real_rand);
@@ -894,6 +900,11 @@ extern "C" void srand(unsigned int seed)
 {
   BASIC_SYNC_WRAPPER_VOID(srand, _real_srand, seed);
 }
+extern "C" void srandom(unsigned int seed)
+{
+  BASIC_SYNC_WRAPPER_VOID(srand, _real_srand, seed);
+}
+
 
 extern "C" time_t time(time_t *tloc)
 {
