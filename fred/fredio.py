@@ -43,9 +43,9 @@ GS_FRED_DEMO_UNHIDE_PREFIX = ['next', 'step']
 
 # Maximum length of a prompt string (from any debugger)
 GN_MAX_PROMPT_LENGTH = 32
+
 # Maximum length of a string for requesting additional user input
 gn_max_need_input_length = 0
-
 # Pid of child (debugger)
 gn_child_pid = -1
 # File descriptor of child stdin/stdout.
@@ -79,6 +79,9 @@ g_print_prompt_function = None
 gls_needs_user_input = []
 # Will be True when the debugger needs user input.
 gb_need_user_input = False
+# The last few characters printed by the child. This is used for detecting
+# when the prompt is printed.
+gs_last_printed = ""
 
 # Functions beginning with an underscore ('_') should not be used outside of
 # this file!
@@ -88,17 +91,13 @@ class ThreadedOutput(threading.Thread):
         global gb_prompt_ready, gb_capture_output, gs_captured_output, \
                g_capture_output_event, gb_capture_output_til_prompt, \
                gb_hide_output, gn_max_need_input_length, gb_need_user_input, \
-               gb_capture_output_multi_page
-        # Last printed will be the last 'n' characters printed from child. This
-        # is so we can know when the debugger prompt has been printed to
-        # screen.
-        last_printed = ""
+               gb_capture_output_multi_page, gs_last_printed
         # Used to detect when debugger needs additional user input
         last_printed_need_input = ""
         while 1:
             output = _get_child_output()
             if output != None:
-                last_printed = fredutil.last_n(last_printed, output,
+                gs_last_printed = fredutil.last_n(gs_last_printed, output,
                                                GN_MAX_PROMPT_LENGTH)
                 last_printed_need_input = \
                     fredutil.last_n(last_printed_need_input, output,
@@ -109,9 +108,11 @@ class ThreadedOutput(threading.Thread):
                         if _match_needs_user_input(last_printed_need_input):
                             _send_child_input("\n")
                     if gb_capture_output_til_prompt:
-                        if g_find_prompt_function(last_printed):
+                        if g_find_prompt_function(gs_last_printed):
+                            gs_last_printed = ""
                             g_capture_output_event.set()
                     else:
+                        gs_last_printed = ""
                         g_capture_output_event.set()
                 if not gb_hide_output:
                     # Always remove prompt from output so we can print it:
@@ -119,7 +120,7 @@ class ThreadedOutput(threading.Thread):
                     sys.stdout.write(output)
                     sys.stdout.flush()
             # Always keep these up-to-date:
-            gb_prompt_ready = g_find_prompt_function(last_printed)
+            gb_prompt_ready = g_find_prompt_function(gs_last_printed)
             gb_need_user_input = _match_needs_user_input(last_printed_need_input)
 
 def _start_output_thread():
@@ -130,6 +131,11 @@ def _start_output_thread():
     o.daemon = True
     o.start()
     gb_output_thread_alive = True
+
+def _reset_last_printed():
+    """Reset the tracking of the debugger's last few printed characters."""
+    global gs_last_printed
+    gs_last_printed = ""    
 
 def _send_child_input(input):
     """Write the given input string to the child process."""
@@ -169,6 +175,7 @@ def _start_output_capture(wait_for_prompt):
     to be saved."""
     global gb_capture_output, gs_captured_output, g_capture_output_event, \
            gb_capture_output_til_prompt
+    _reset_last_printed()
     gb_capture_output_til_prompt = wait_for_prompt
     gb_capture_output = True
     g_capture_output_event.clear()
