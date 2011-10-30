@@ -901,14 +901,36 @@ log_entry_t create_libc_memalign_entry(clone_id_t clone_id, event_code_t event, 
   return e;
 }
 
-log_entry_t create_lseek_entry(clone_id_t clone_id, event_code_t event, int fd, off_t offset,
-     int whence)
+log_entry_t create_lseek_entry(clone_id_t clone_id, event_code_t event,
+                               int fd, off_t offset, int whence)
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
   SET_FIELD(e, lseek, fd);
   SET_FIELD(e, lseek, offset);
   SET_FIELD(e, lseek, whence);
+  return e;
+}
+
+log_entry_t create_lseek64_entry(clone_id_t clone_id, event_code_t event,
+                                 int fd, off64_t offset, int whence)
+{
+  log_entry_t e = EMPTY_LOG_ENTRY;
+  setupCommonFields(&e, clone_id, event);
+  SET_FIELD(e, lseek64, fd);
+  SET_FIELD(e, lseek64, offset);
+  SET_FIELD(e, lseek64, whence);
+  return e;
+}
+
+log_entry_t create_llseek_entry(clone_id_t clone_id, event_code_t event,
+                                int fd, loff_t offset, int whence)
+{
+  log_entry_t e = EMPTY_LOG_ENTRY;
+  setupCommonFields(&e, clone_id, event);
+  SET_FIELD(e, llseek, fd);
+  SET_FIELD(e, llseek, offset);
+  SET_FIELD(e, llseek, whence);
   return e;
 }
 
@@ -919,6 +941,16 @@ log_entry_t create_link_entry(clone_id_t clone_id, event_code_t event, const cha
   setupCommonFields(&e, clone_id, event);
   SET_FIELD2(e, link, oldpath, (char*)oldpath);
   SET_FIELD2(e, link, newpath, (char*)newpath);
+  return e;
+}
+
+log_entry_t create_symlink_entry(clone_id_t clone_id, event_code_t event,
+                                 const char *oldpath, const char *newpath)
+{
+  log_entry_t e = EMPTY_LOG_ENTRY;
+  setupCommonFields(&e, clone_id, event);
+  SET_FIELD2(e, symlink, oldpath, (char*)oldpath);
+  SET_FIELD2(e, symlink, newpath, (char*)newpath);
   return e;
 }
 
@@ -2461,12 +2493,25 @@ TURN_CHECK_P(chown_turn_check)
 TURN_CHECK_P(lseek_turn_check)
 {
   return base_turn_check(e1,e2) &&
-    /*GET_FIELD_PTR(e1, lseek, fd) ==
-      GET_FIELD_PTR(e2, lseek, fd) &&*/
-    GET_FIELD_PTR(e1, lseek, offset) ==
-      GET_FIELD_PTR(e2, lseek, offset) &&
-    GET_FIELD_PTR(e1, lseek, whence) ==
-      GET_FIELD_PTR(e2, lseek, whence);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, lseek, fd) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, lseek, offset) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, lseek, whence);
+}
+
+TURN_CHECK_P(lseek64_turn_check)
+{
+  return base_turn_check(e1,e2) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, lseek64, fd) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, lseek64, offset) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, lseek64, whence);
+}
+
+TURN_CHECK_P(llseek_turn_check)
+{
+  return base_turn_check(e1,e2) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, llseek, fd) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, llseek, offset) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, llseek, whence);
 }
 
 TURN_CHECK_P(link_turn_check)
@@ -2476,6 +2521,13 @@ TURN_CHECK_P(link_turn_check)
       GET_FIELD_PTR(e2, link, oldpath) &&
     GET_FIELD_PTR(e1, link, newpath) ==
       GET_FIELD_PTR(e2, link, newpath);
+}
+
+TURN_CHECK_P(symlink_turn_check)
+{
+  return base_turn_check(e1,e2) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, symlink, oldpath) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, symlink, newpath);
 }
 
 TURN_CHECK_P(listen_turn_check)

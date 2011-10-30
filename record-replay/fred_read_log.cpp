@@ -383,11 +383,34 @@ void print_log_entry_lseek(int idx, log_entry_t *entry) {
          GET_FIELD_PTR(entry, lseek, whence));
 }
 
+void print_log_entry_lseek64(int idx, log_entry_t *entry) {
+  print_log_entry_common(idx, entry);
+  printf(", fd=%d, offset=%Zu, whence=%d\n",
+         GET_FIELD_PTR(entry, lseek64, fd),
+         GET_FIELD_PTR(entry, lseek64, offset),
+         GET_FIELD_PTR(entry, lseek64, whence));
+}
+
+void print_log_entry_llseek(int idx, log_entry_t *entry) {
+  print_log_entry_common(idx, entry);
+  printf(", fd=%d, offset=%Zu, whence=%d\n",
+         GET_FIELD_PTR(entry, llseek, fd),
+         GET_FIELD_PTR(entry, llseek, offset),
+         GET_FIELD_PTR(entry, llseek, whence));
+}
+
 void print_log_entry_link(int idx, log_entry_t *entry) {
   print_log_entry_common(idx, entry);
   printf(", oldpath=%p, newpath=%p\n",
          GET_FIELD_PTR(entry, link, oldpath),
          GET_FIELD_PTR(entry, link, newpath));
+}
+
+void print_log_entry_symlink(int idx, log_entry_t *entry) {
+  print_log_entry_common(idx, entry);
+  printf(", oldpath=%p, newpath=%p\n",
+         GET_FIELD_PTR(entry, symlink, oldpath),
+         GET_FIELD_PTR(entry, symlink, newpath));
 }
 
 void print_log_entry_listen(int idx, log_entry_t *entry) {

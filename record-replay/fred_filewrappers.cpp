@@ -1179,6 +1179,17 @@ extern "C" off_t lseek(int fd, off_t offset, int whence)
   BASIC_SYNC_WRAPPER(off_t, lseek, _real_lseek, fd, offset, whence);
 }
 
+// FIXME: Add proper wrapper for lseek64 and llseek
+extern "C" off64_t lseek64(int fd, off64_t offset, int whence)
+{
+  BASIC_SYNC_WRAPPER(off64_t, lseek64, _real_lseek64, fd, offset, whence);
+}
+
+extern "C" loff_t llseek(int fd, loff_t offset, int whence)
+{
+  BASIC_SYNC_WRAPPER(loff_t, llseek, _real_llseek, fd, offset, whence);
+}
+
 extern "C" int unlink(const char *pathname)
 {
   BASIC_SYNC_WRAPPER(int, unlink, _real_unlink, pathname);
@@ -1197,6 +1208,11 @@ extern "C" int fsync(int fd)
 extern "C" int link(const char *oldpath, const char *newpath)
 {
   BASIC_SYNC_WRAPPER(int, link, _real_link, oldpath, newpath);
+}
+
+extern "C" int symlink(const char *oldpath, const char *newpath)
+{
+  BASIC_SYNC_WRAPPER(int, symlink, _real_symlink, oldpath, newpath);
 }
 
 extern "C" int rename(const char *oldpath, const char *newpath)

@@ -932,6 +932,11 @@ int _real_link(const char *oldpath, const char *newpath) {
 }
 
 LIB_PRIVATE
+int _real_symlink(const char *oldpath, const char *newpath) {
+  REAL_FUNC_PASSTHROUGH_TYPED ( int, symlink ) ( oldpath, newpath );
+}
+
+LIB_PRIVATE
 int _real_rename(const char *oldpath, const char *newpath) {
   REAL_FUNC_PASSTHROUGH_TYPED ( int, rename ) ( oldpath, newpath );
 }
@@ -1118,6 +1123,16 @@ int _real_dup3(int oldfd, int newfd, int flags) {
 LIB_PRIVATE
 off_t _real_lseek(int fd, off_t offset, int whence) {
   REAL_FUNC_PASSTHROUGH_TYPED ( off_t,lseek) ( fd, offset, whence );
+}
+
+LIB_PRIVATE
+off64_t _real_lseek64(int fd, off64_t offset, int whence) {
+  REAL_FUNC_PASSTHROUGH_TYPED ( off64_t,lseek64) ( fd, offset, whence );
+}
+
+LIB_PRIVATE
+loff_t _real_llseek(int fd, loff_t offset, int whence) {
+  REAL_FUNC_PASSTHROUGH_TYPED ( loff_t,llseek) ( fd, offset, whence );
 }
 
 LIB_PRIVATE

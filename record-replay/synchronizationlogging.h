@@ -394,7 +394,10 @@ static inline bool isProcessGDB() {
     MACRO(ioctl, __VA_ARGS__);                                                 \
     MACRO(libc_memalign, __VA_ARGS__);                                         \
     MACRO(lseek, __VA_ARGS__);                                                 \
+    MACRO(lseek64, __VA_ARGS__);                                               \
+    MACRO(llseek, __VA_ARGS__);                                                \
     MACRO(link, __VA_ARGS__);                                                  \
+    MACRO(symlink, __VA_ARGS__);                                               \
     MACRO(listen, __VA_ARGS__);                                                \
     MACRO(localtime, __VA_ARGS__);                                             \
     MACRO(lxstat, __VA_ARGS__);                                                \
@@ -532,9 +535,12 @@ typedef enum {
   getsockopt_event,
   libc_memalign_event,
   link_event,
+  symlink_event,
   listen_event,
   localtime_event,
   lseek_event,
+  lseek64_event,
+  llseek_event,
   lxstat_event,
   lxstat64_event,
   malloc_event,
@@ -1215,6 +1221,14 @@ typedef struct {
 static const int log_event_link_size = sizeof(log_event_link_t);
 
 typedef struct {
+  // For symlink():
+  char *oldpath;
+  char *newpath;
+} log_event_symlink_t;
+
+static const int log_event_symlink_size = sizeof(log_event_symlink_t);
+
+typedef struct {
   // For listen():
   int sockfd;
   int backlog;
@@ -1238,6 +1252,24 @@ typedef struct {
 } log_event_lseek_t;
 
 static const int log_event_lseek_size = sizeof(log_event_lseek_t);
+
+typedef struct {
+  // For lseek64():
+  int fd;
+  off64_t offset;
+  int whence;
+} log_event_lseek64_t;
+
+static const int log_event_lseek64_size = sizeof(log_event_lseek64_t);
+
+typedef struct {
+  // For llseek():
+  int fd;
+  loff_t offset;
+  int whence;
+} log_event_llseek_t;
+
+static const int log_event_llseek_size = sizeof(log_event_llseek_t);
 
 typedef struct {
   // For lxstat():
@@ -1893,9 +1925,12 @@ typedef struct {
     log_event_pthread_exit_t                     log_event_pthread_exit;
     log_event_pthread_detach_t                   log_event_pthread_detach;
     log_event_link_t                             log_event_link;
+    log_event_symlink_t                          log_event_symlink;
     log_event_listen_t                           log_event_listen;
     log_event_localtime_t                        log_event_localtime;
     log_event_lseek_t                            log_event_lseek;
+    log_event_lseek64_t                          log_event_lseek64;
+    log_event_llseek_t                           log_event_llseek;
     log_event_lxstat_t                           log_event_lxstat;
     log_event_lxstat64_t                         log_event_lxstat64;
     log_event_malloc_t                           log_event_malloc;
@@ -2164,9 +2199,12 @@ CREATE_ENTRY_FUNC(getsockname, int sockfd,
                   struct sockaddr *addr, socklen_t *addrlen);
 CREATE_ENTRY_FUNC(libc_memalign, size_t boundary, size_t size);
 CREATE_ENTRY_FUNC(link, const char *oldpath, const char *newpath);
+CREATE_ENTRY_FUNC(symlink, const char *oldpath, const char *newpath);
 CREATE_ENTRY_FUNC(listen, int sockfd, int backlog);
 CREATE_ENTRY_FUNC(localtime, const time_t *timep);
 CREATE_ENTRY_FUNC(lseek, int fd, off_t offset, int whence);
+CREATE_ENTRY_FUNC(lseek64, int fd, off64_t offset, int whence);
+CREATE_ENTRY_FUNC(llseek, int fd, loff_t offset, int whence);
 CREATE_ENTRY_FUNC(lxstat, int vers, const char *path, struct stat *buf);
 CREATE_ENTRY_FUNC(lxstat64, int vers, const char *path, struct stat64 *buf);
 CREATE_ENTRY_FUNC(malloc, size_t size);

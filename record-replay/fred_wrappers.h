@@ -246,6 +246,8 @@ LIB_PRIVATE extern __thread int thread_performing_dlopen_dlsym;
   MACRO(dup2)                                 \
   MACRO(dup3)                                 \
   MACRO(lseek)                                \
+  MACRO(lseek64)                              \
+  MACRO(llseek)                               \
   MACRO(__fxstat)                             \
   MACRO(__fxstat64)                           \
   MACRO(unlink)                               \
@@ -269,6 +271,7 @@ LIB_PRIVATE extern __thread int thread_performing_dlopen_dlsym;
   MACRO(fsync)                                \
   MACRO(fseek)                                \
   MACRO(link)                                 \
+  MACRO(symlink)                              \
   MACRO(getc)                                 \
   MACRO(getcwd)                               \
   MACRO(gettimeofday)                         \
@@ -467,6 +470,8 @@ LIB_PRIVATE extern __thread int thread_performing_dlopen_dlsym;
   int _real_dup2(int oldfd, int newfd);
   int _real_dup3(int oldfd, int newfd, int flags);
   off_t _real_lseek(int fd, off_t offset, int whence);
+  off64_t _real_lseek64(int fd, off64_t offset, int whence);
+  loff_t _real_llseek(int fd, loff_t offset, int whence);
   int _real_unlink(const char *pathname);
 
   int _real_pthread_mutex_lock(pthread_mutex_t *mutex);
@@ -554,6 +559,7 @@ LIB_PRIVATE extern __thread int thread_performing_dlopen_dlsym;
   int _real_fxstat(int vers, int fd, struct stat *buf);
   int _real_fxstat64(int vers, int fd, struct stat64 *buf);
   int _real_link(const char *oldpath, const char *newpath);
+  int _real_symlink(const char *oldpath, const char *newpath);
   int _real_rename(const char *oldpath, const char *newpath);
   void _real_rewind(FILE *stream);
   int _real_rmdir(const char *pathname);
