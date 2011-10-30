@@ -139,7 +139,6 @@ void fred_post_suspend ()
 
   set_sync_mode(SYNC_NOOP);
   log_all_allocs = 0;
-  log_all_socketpair = 0;
 
   global_log.destroy(sync_mode_pre_ckpt);
 
@@ -167,7 +166,6 @@ void fred_post_checkpoint_resume()
   sync_mode_pre_ckpt = SYNC_NOOP;
   initLogsForRecordReplay();
   log_all_allocs = 1;
-  log_all_socketpair = 1;
 }
 
 void fred_post_restart_resume()
@@ -182,7 +180,6 @@ void fred_post_restart_resume()
     set_sync_mode(SYNC_RECORD);
   }
   log_all_allocs = 1;
-  log_all_socketpair = 1;
 }
 
 void fred_reset_on_fork()

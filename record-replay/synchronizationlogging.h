@@ -2087,7 +2087,6 @@ LIB_PRIVATE extern char RECORD_READ_DATA_LOG_PATH[RECORD_LOG_PATH_MAX];
 LIB_PRIVATE extern int             read_data_fd;
 LIB_PRIVATE extern int             sync_logging_branch;
 LIB_PRIVATE extern int             log_all_allocs;
-LIB_PRIVATE extern int             log_all_socketpair;
 
 LIB_PRIVATE extern dmtcp::SynchronizationLog global_log;
 

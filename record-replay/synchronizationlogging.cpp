@@ -53,7 +53,7 @@ LIB_PRIVATE int             sync_logging_branch = 0;
 /* Setting this will log/replay *ALL* malloc family
    functions (i.e. including ones from DMTCP, std C++ lib, etc.). */
 LIB_PRIVATE int             log_all_allocs = 0;
-LIB_PRIVATE int             log_all_socketpair = 0;
+LIB_PRIVATE pthread_cond_t  reap_cv = PTHREAD_COND_INITIALIZER;
 LIB_PRIVATE pthread_mutex_t global_clone_counter_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 LIB_PRIVATE void           *stack_base_addr = NULL;

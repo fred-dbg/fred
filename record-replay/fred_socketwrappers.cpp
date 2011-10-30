@@ -111,17 +111,28 @@ int accept4 ( int sockfd, struct sockaddr *addr, socklen_t *addrlen, int flags )
 }
 //#endif
 
+extern "C" int pipe(int fds[2])
+{
+  ok_to_log_next_func = true;
+  return socketpair ( AF_UNIX, SOCK_STREAM, 0, fds );
+}
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,27)) && __GLIBC_PREREQ(2,9)
+// pipe2 appeared in Linux 2.6.27
+extern "C" int pipe2 ( int fds[2], int flags )
+{
+  //just promote pipes to socketpairs
+  int newFlags = 0;
+  if ((flags & O_NONBLOCK) != 0) newFlags |= SOCK_NONBLOCK;
+  if ((flags & O_CLOEXEC)  != 0) newFlags |= SOCK_CLOEXEC;
+  ok_to_log_next_func = true;
+  return socketpair ( AF_UNIX, SOCK_STREAM | newFlags, 0, fds );
+}
+#endif
+
 extern "C" int socketpair ( int domain, int type, int protocol, int sv[2] )
 {
-  void *return_addr = GET_RETURN_ADDRESS();
-  if ((!shouldSynchronize(return_addr) && !log_all_socketpair) ||
-      jalib::Filesystem::GetProgramName() == "gdb") {
-    return _real_socketpair(domain, type, protocol, sv);
-  };
-
-  int retval;
-  log_entry_t my_entry = create_socketpair_entry(my_clone_id, socketpair_event,
-                                                 domain, type, protocol, sv);
+  WRAPPER_HEADER(int, socketpair, _real_socketpair, domain, type, protocol, sv);
 
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_START(socketpair);
