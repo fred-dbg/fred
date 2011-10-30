@@ -984,7 +984,7 @@ extern "C" int ppoll(struct pollfd *fds, nfds_t nfds,
   WRAPPER_HEADER(int, ppoll, _real_ppoll, fds, nfds, timeout_ts, sigmask)
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_START(ppoll);
-    if (retval != -1) {
+    if (retval > 0 && fds != NULL) {
       WRAPPER_REPLAY_READ_FROM_READ_LOG(ppoll, (void*)fds,
                                         retval * sizeof(struct pollfd));
     }
@@ -992,7 +992,7 @@ extern "C" int ppoll(struct pollfd *fds, nfds_t nfds,
   } else if (SYNC_IS_RECORD) {
     retval = _real_ppoll(fds, nfds, timeout_ts, sigmask);
     int saved_errno = errno;
-    if (retval != -1) {
+    if (retval > 0 && fds != NULL) {
       WRAPPER_LOG_WRITE_INTO_READ_LOG(ppoll, (void*)fds,
                                       retval * sizeof(struct pollfd));
     }
@@ -1015,26 +1015,8 @@ extern "C" int poll(struct pollfd *fds, nfds_t nfds, int time)
     timeout_ts->tv_sec = time/1000;
     timeout_ts->tv_nsec = (time % 1000) * 1000000;
   }
-
-  WRAPPER_HEADER(int, ppoll, _real_ppoll, fds, nfds, timeout_ts, sigmask)
-  if (SYNC_IS_REPLAY) {
-    WRAPPER_REPLAY_START(ppoll);
-    if (retval != -1) {
-      WRAPPER_REPLAY_READ_FROM_READ_LOG(ppoll, (void*)fds,
-                                        retval * sizeof(struct pollfd));
-    }
-    WRAPPER_REPLAY_END(ppoll);
-  } else if (SYNC_IS_RECORD) {
-    retval = _real_ppoll(fds, nfds, timeout_ts, sigmask);
-    int saved_errno = errno;
-    if (retval != -1) {
-      WRAPPER_LOG_WRITE_INTO_READ_LOG(ppoll, (void*)fds,
-                                      retval * sizeof(struct pollfd));
-    }
-    errno = saved_errno;
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
-  }
-  return retval;
+  ok_to_log_next_func = true;
+  return ppoll(fds, nfds, timeout_ts, NULL);
 }
 
 extern "C" ssize_t read(int fd, void *buf, size_t count)
