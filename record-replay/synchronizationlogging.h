@@ -206,11 +206,6 @@ static inline bool isProcessGDB() {
 
 #define WRAPPER_REPLAY_READ_FROM_READ_LOG(name, ptr, len)           \
   do {                                                              \
-    if (__builtin_expect(read_data_fd == -1, 0)) {                  \
-      int fd = _real_open(RECORD_READ_DATA_LOG_PATH, O_RDONLY, 0);  \
-      read_data_fd = _real_dup2(fd, dmtcp_get_readlog_fd());        \
-      _real_close(fd);                                              \
-    }                                                               \
     JASSERT ( read_data_fd != -1 );                                 \
     lseek(read_data_fd,                                             \
           GET_FIELD(my_entry, name, data_offset), SEEK_SET);        \
@@ -229,11 +224,6 @@ static inline bool isProcessGDB() {
 
 #define WRAPPER_REPLAY_READ_VECTOR_FROM_READ_LOG(name, iov, iovcnt)           \
   do {                                                              \
-    if (__builtin_expect(read_data_fd == -1, 0)) {                  \
-      int fd = _real_open(RECORD_READ_DATA_LOG_PATH, O_RDONLY, 0);  \
-      read_data_fd = _real_dup2(fd, dmtcp_get_readlog_fd());        \
-      _real_close(fd);                                              \
-    }                                                               \
     JASSERT ( read_data_fd != -1 );                                 \
     lseek(read_data_fd,                                             \
           GET_FIELD(my_entry, name, data_offset), SEEK_SET);        \
@@ -246,13 +236,6 @@ static inline bool isProcessGDB() {
     if (SYNC_IS_REPLAY) {                                           \
       JASSERT (false).Text("Asked to log read data while in replay."\
                            "\nThis is probably not intended.");     \
-    }                                                               \
-    if (read_data_fd == -1) {                                       \
-      int fd = _real_open(RECORD_READ_DATA_LOG_PATH,                \
-                          O_WRONLY | O_CREAT | O_APPEND,            \
-                          S_IRUSR | S_IWUSR);                       \
-      read_data_fd = _real_dup2(fd, dmtcp_get_readlog_fd());        \
-      _real_close(fd);                                              \
     }                                                               \
     JASSERT ( read_data_fd != -1 );                                 \
     _real_pthread_mutex_lock(&read_data_mutex);                     \

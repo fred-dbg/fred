@@ -169,6 +169,22 @@ void initializeLogNames()
 void initLogsForRecordReplay()
 {
   global_log.initialize(RECORD_LOG_PATH, MAX_LOG_LENGTH);
+
+  if (read_data_fd == -1) {
+    int fd;
+    JASSERT(SYNC_IS_RECORD || SYNC_IS_REPLAY);
+    if (SYNC_IS_RECORD) {
+      fd = _real_open(RECORD_READ_DATA_LOG_PATH,
+                      O_WRONLY | O_CREAT | O_APPEND, S_IRUSR | S_IWUSR);
+    } else if (SYNC_IS_REPLAY) {
+      fd = _real_open(RECORD_READ_DATA_LOG_PATH, O_RDONLY, 0);
+    } else {
+      JASSERT(false) .Text("Not Reached");
+    }
+    JASSERT(fd != -1);
+    read_data_fd = _real_dup2(fd, dmtcp_get_readlog_fd());
+    _real_close(fd);
+  }
 }
 
 
@@ -393,12 +409,7 @@ void logReadData(void *buf, int count)
     JASSERT (false).Text("Asked to log read data while in replay. "
         "This is probably not intended.");
   }
-  if (read_data_fd == -1) {
-    int fd = _real_open(RECORD_READ_DATA_LOG_PATH,
-        O_WRONLY | O_CREAT | O_APPEND, S_IRUSR | S_IWUSR);
-    read_data_fd = _real_dup2(fd, dmtcp_get_readlog_fd());
-    _real_close(fd);
-  }
+  JASSERT(read_data_fd != -1);
   int written = _real_write(read_data_fd, buf, count);
   JASSERT ( written == count );
   read_log_pos += written;
