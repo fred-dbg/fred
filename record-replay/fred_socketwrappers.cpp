@@ -249,14 +249,28 @@ extern "C" ssize_t recvmsg(int sockfd, struct msghdr *msg, int flags)
   WRAPPER_HEADER(ssize_t, recvmsg, _real_recvmsg, sockfd, msg, flags);
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_START(recvmsg);
-    if (retval != -1) {
-      WRAPPER_REPLAY_READ_FROM_READ_LOG(recvmsg, msg, retval);
+    if (retval > 0) {
+      int saved_errno = errno;
+      *msg = GET_FIELD(my_entry, recvmsg, ret_msg);
+      WRAPPER_REPLAY_READ_VECTOR_FROM_READ_LOG(recvmsg, msg->msg_iov, msg->msg_iovlen);
+
+      lseek(read_data_fd, GET_FIELD(my_entry, recvmsg, control_buf_offset), SEEK_SET);
+      dmtcp::Util::readAll(read_data_fd, msg->msg_control, msg->msg_controllen);
+      errno = saved_errno;
     }
     WRAPPER_REPLAY_END(recvmsg);
   } else if (SYNC_IS_RECORD) {
     retval = _real_recvmsg(sockfd, msg, flags);
-    if (retval != -1) {
-      WRAPPER_LOG_WRITE_INTO_READ_LOG(recvmsg, msg, retval);
+    if (retval > 0) {
+      int saved_errno = errno;
+      SET_FIELD2(my_entry, recvmsg, ret_msg, *msg);
+      WRAPPER_LOG_WRITE_VECTOR_INTO_READ_LOG(recvmsg, msg->msg_iov, msg->msg_iovlen,
+                                             retval);
+      _real_pthread_mutex_lock(&read_data_mutex);
+      SET_FIELD2(my_entry, recvmsg, control_buf_offset, read_log_pos);
+      logReadData(msg->msg_control, msg->msg_controllen);
+      _real_pthread_mutex_unlock(&read_data_mutex);
+      errno = saved_errno;
     }
     WRAPPER_LOG_WRITE_ENTRY(my_entry);
   }

@@ -1805,7 +1805,9 @@ typedef struct {
   int sockfd;
   struct msghdr *msg;
   int flags;
+  struct msghdr ret_msg;
   off_t data_offset;
+  off_t control_buf_offset;
 } log_event_recvmsg_t;
 
 static const int log_event_recvmsg_size = sizeof(log_event_recvmsg_t);

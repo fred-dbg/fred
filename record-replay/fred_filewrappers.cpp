@@ -986,7 +986,7 @@ extern "C" int ppoll(struct pollfd *fds, nfds_t nfds,
     WRAPPER_REPLAY_START(ppoll);
     if (retval > 0 && fds != NULL) {
       WRAPPER_REPLAY_READ_FROM_READ_LOG(ppoll, (void*)fds,
-                                        retval * sizeof(struct pollfd));
+                                        nfds * sizeof(struct pollfd));
     }
     WRAPPER_REPLAY_END(ppoll);
   } else if (SYNC_IS_RECORD) {
@@ -994,7 +994,7 @@ extern "C" int ppoll(struct pollfd *fds, nfds_t nfds,
     int saved_errno = errno;
     if (retval > 0 && fds != NULL) {
       WRAPPER_LOG_WRITE_INTO_READ_LOG(ppoll, (void*)fds,
-                                      retval * sizeof(struct pollfd));
+                                      nfds * sizeof(struct pollfd));
     }
     errno = saved_errno;
     WRAPPER_LOG_WRITE_ENTRY(my_entry);
