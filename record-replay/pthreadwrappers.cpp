@@ -718,7 +718,7 @@ extern "C" int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
   if (SYNC_IS_NOOP) {
     retval = _real_pthread_create(thread, attr, start_routine, arg);
   } else {
-    int retval = internal_pthread_create(thread, attr, start_routine, arg);
+    retval = internal_pthread_create(thread, attr, start_routine, arg);
   }
   return retval;
 }

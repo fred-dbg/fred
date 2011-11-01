@@ -864,7 +864,7 @@ extern "C" int fcntl(int fd, int cmd, ...)
       if (retval == 0 && buf != NULL) {                                     \
         *buf = GET_FIELD(my_entry, name, buf);                              \
       }                                                                     \
-      getNextLogEntry();                                                    \
+      WRAPPER_REPLAY_END(name);                                             \
       if (saved_errno != 0) {                                               \
         errno = saved_errno;                                                \
       }                                                                     \
@@ -938,13 +938,13 @@ extern "C" READLINK_RET_TYPE readlink(const char *path, char *buf,
                  path, buf, bufsiz);
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_START_TYPED(READLINK_RET_TYPE, readlink);
-    if (retval == 0 && buf != NULL) {
+    if (retval > 0 && buf != NULL) {
       WRAPPER_REPLAY_READ_FROM_READ_LOG(readlink, buf, retval);
     }
     WRAPPER_REPLAY_END(readlink);
   } else if (SYNC_IS_RECORD) {
     retval = _real_readlink(path, buf, bufsiz);
-    if (retval != -1 && buf != NULL) {
+    if (retval > 0 && buf != NULL) {
       WRAPPER_LOG_WRITE_INTO_READ_LOG(getline, buf, retval);
     }
     WRAPPER_LOG_WRITE_ENTRY(my_entry);
