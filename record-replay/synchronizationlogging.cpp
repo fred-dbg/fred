@@ -54,9 +54,6 @@ LIB_PRIVATE int             sync_logging_branch = 0;
    functions (i.e. including ones from DMTCP, std C++ lib, etc.). */
 LIB_PRIVATE int             log_all_allocs = 0;
 LIB_PRIVATE pthread_mutex_t global_clone_counter_mutex = PTHREAD_MUTEX_INITIALIZER;
-
-LIB_PRIVATE void           *stack_base_addr = NULL;
-
 LIB_PRIVATE pthread_mutex_t read_data_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 LIB_PRIVATE dmtcp::SynchronizationLog global_log;
@@ -189,120 +186,42 @@ void initLogsForRecordReplay()
 }
 
 
-#define MAX_PROC_MAPS_AREAS 1024
-LIB_PRIVATE pthread_mutex_t procMapsAreasMutex = PTHREAD_MUTEX_INITIALIZER;
+#define MAX_PROC_MAPS_AREAS 32
+static dmtcp::Util::ProcMapsArea areasToNotLog[MAX_PROC_MAPS_AREAS];
+static size_t areasToNotLogLen = 0;
 
-typedef struct ProcMapsAreaInfo {
-  dmtcp::Util::ProcMapsArea area;
-  bool                      shouldLog;
-} ProcMapsAreaInfo;
-
-static ProcMapsAreaInfo procMapsAreaInfo[MAX_PROC_MAPS_AREAS];
-static size_t procMapsAreaInfoLen = 0;
-
-/* Specify the patterns that you wish to log. The current logic uses
+/* Specify the patterns that you do not wish to log. The current logic uses
  * strStartsWith() and so add accordingly.
- * The current Approach is _WHITE-LIST_ based, we might want to switch to
- * _BLACK-LIST_ based approach here."
  */
-static const char *logLibraryPattern[] = {
-  "/usr/lib64/firefox",
-  "/usr/lib64/libxcb",
-  "/usr/lib64/libX11",
-  "/usr/lib64/libg",
-  "/usr/lib64/libgnome",
-  "/usr/lib64/libgconf",
-  "/usr/lib64/libICE",
-  "/usr/lib64/libSM",
-  "/lib64/libglib",
-  "/lib64/libgio",
-  "/lib64/libgthread",
-  "/lib64/libgobject",
-  "/lib64/libgmodule",
-  "[stack]"
+static const char *logLibraryBlacklistPattern[] = {
+  "/libc-2",
+  "/libpthread-2",
+  // FIXME: Shouldn't we log libdl and ld.so as well?
+  "/libdl-2",
+  "/ld-2"
 };
 
 static bool shouldLogArea(char *area_name)
 {
-  dmtcp::string progpath = jalib::Filesystem::GetProgramPath();
-  int n = sizeof(logLibraryPattern) / sizeof(char*);
+  int n = sizeof(logLibraryBlacklistPattern) / sizeof(char*);
 
-  if (dmtcp::Util::strStartsWith(area_name, progpath.c_str())) {
-    return true;
-  }
-  for (int i = 0; i < n; i++) {
-    if (dmtcp::Util::strStartsWith(area_name, logLibraryPattern[i])) {
-      return true;
-    }
-  }
-  return false;
-}
-
-static bool compareProcMemAreaInfo(ProcMapsAreaInfo info1,
-                                   ProcMapsAreaInfo info2) {
-  return info1.area.addr < info2.area.addr;
-}
-
-static void sortProcMapsAreaInfo() {
-  std::sort(procMapsAreaInfo, procMapsAreaInfo + procMapsAreaInfoLen,
-       compareProcMemAreaInfo);
-}
-
-static ProcMapsAreaInfo *searchAddrInProcMapsAreaInfo(void *addr) {
-  int min = 0;
-  int max = procMapsAreaInfoLen - 1;
-  if (procMapsAreaInfo[max].area.endAddr <= addr) {
-    return NULL;
+  if (dmtcp::Util::strEndsWith(area_name, "dmtcphijack.so") ||
+      dmtcp::Util::strEndsWith(area_name, "ptracehijack.so") ||
+      dmtcp::Util::strEndsWith(area_name, "libmtcp.so") ||
+      dmtcp::Util::strEndsWith(area_name, "fredhijack.so")) {
+    return false;
   }
 
-  while (max >= min) {
-    int mid = (min + max) / 2;
-    if (procMapsAreaInfo[mid].area.endAddr <= addr) {
-      min = mid + 1;
-    } else {
-      if (addr >= procMapsAreaInfo[mid].area.addr) {
-        return &procMapsAreaInfo[mid];
+  if (dmtcp::Util::strStartsWith(area_name, "/lib/") ||
+      dmtcp::Util::strStartsWith(area_name, "/lib64/") ||
+      dmtcp::Util::strStartsWith(area_name, "/lib32/")) {
+    for (int i = 0; i < n; i++) {
+      if (strstr(area_name, logLibraryBlacklistPattern[i]) != NULL) {
+        return false;
       }
-      max = mid - 1;
     }
   }
-
-  return NULL;
-}
-
-static void recordMemArea(dmtcp::Util::ProcMapsArea& area)
-{
-  JASSERT(procMapsAreaInfoLen < MAX_PROC_MAPS_AREAS);
-  procMapsAreaInfo[procMapsAreaInfoLen].area = area;
-  procMapsAreaInfo[procMapsAreaInfoLen].shouldLog = shouldLogArea(area.name);
-  procMapsAreaInfoLen++;
-}
-
-static void analyzeAndRecordAddress(void *addr)
-{
-  int mapsFd = -1;
-  dmtcp::Util::ProcMapsArea area;
-
-  if ((mapsFd = _real_open("/proc/self/maps", O_RDONLY, S_IRUSR)) == -1) {
-    perror("open");
-    exit(1);
-  }
-
-  // There is a potential race in calling analyzeAndRecordAddress(). Although
-  // the data structures are protected by a mutex, the acquisition order is
-  // not guaranteed at REPLAY.
-  _real_pthread_mutex_lock(&procMapsAreasMutex);
-  while (dmtcp::Util::readProcMapsLine(mapsFd, &area)) {
-    if (addr >= area.addr && addr < area.endAddr) {
-      JASSERT((area.prot & PROT_EXEC) != 0) // && strlen(area.name) != 0)
-        (area.name) (area.addr) (area.prot);
-      recordMemArea(area);
-      break;
-    }
-  }
-  sortProcMapsAreaInfo();
-  _real_pthread_mutex_unlock(&procMapsAreasMutex);
-  _real_close(mapsFd);
+  return true;
 }
 
 LIB_PRIVATE
@@ -314,57 +233,64 @@ void initSyncAddresses()
   if (isProcessGDB()) {
     return;
   }
+  if (areasToNotLogLen > 0) {
+    return;
+  }
+
   if ((mapsFd = _real_open("/proc/self/maps", O_RDONLY, S_IRUSR)) == -1) {
     perror("open");
     exit(1);
   }
 
-  _real_pthread_mutex_lock(&procMapsAreasMutex);
-  procMapsAreaInfoLen = 0;
-
   while (dmtcp::Util::readProcMapsLine(mapsFd, &area)) {
-    /* Initialize the stack_base addr. The label '[stack]' might be missing
-     * after restart and so we can't rely on /proc/self/maps to provide us with
-     * the correct stack bounds.
-     * Good news is that the stack_base_addr will not change in _most_ sane programs.
-     *
-     * FIXME: On some systems, stack might not be labelled as "[stack]".
-     * Instead, use environ[NN] to find an address in the stack and then use
-     * /proc/self/maps to find the mmap() location within which this address
-     * falls.
-     */
-    if (stack_base_addr == NULL) {
-      if (area.name == "[stack]") {
-        stack_base_addr == area.endAddr;
-      }
-    }
-
-    if (area.endAddr == stack_base_addr) {
-      strcpy(area.name, "[stack]");
-    }
-
-    if ((area.prot & PROT_EXEC) != 0  && strlen(area.name) != 0) {
-      recordMemArea(area);
+    if ((area.prot & PROT_EXEC) != 0  && strlen(area.name) != 0 &&
+        shouldLogArea(area.name) == false) {
+      JASSERT(areasToNotLogLen < MAX_PROC_MAPS_AREAS) (areasToNotLogLen);
+      areasToNotLog[areasToNotLogLen++] = area;
     }
   }
-  _real_pthread_mutex_unlock(&procMapsAreasMutex);
   _real_close(mapsFd);
+
+  for (int i = 1; i < areasToNotLogLen; i++) {
+    JASSERT(areasToNotLog[i].addr >= areasToNotLog[i-1].endAddr)
+      (areasToNotLog[i].name) (areasToNotLog[i].addr) (areasToNotLog[i].endAddr)
+      (areasToNotLog[i-1].name) (areasToNotLog[i-1].addr)
+      (areasToNotLog[i-1].endAddr)
+      .Text ("ERROR: Blacklisted library addresses not in ascending order.");
+  }
 }
 
-int validAddress(void *addr)
+LIB_PRIVATE
+bool validAddress(void *addr)
 {
-  ProcMapsAreaInfo *info;
-  _real_pthread_mutex_unlock(&procMapsAreasMutex);
-  info = searchAddrInProcMapsAreaInfo(addr);
-  if (info == NULL) {
-    analyzeAndRecordAddress(addr);
-    info = searchAddrInProcMapsAreaInfo(addr);
+  if (areasToNotLogLen == 0) {
+    initSyncAddresses();
   }
-  JASSERT(info != NULL);
-  int result = info->shouldLog;
-  _real_pthread_mutex_unlock(&procMapsAreasMutex);
 
-  return result;
+  // Most user libraries are loaded at a lower memory address than the
+  // blacklisted libraries.
+  if (addr < areasToNotLog[0].addr ||
+      addr >= areasToNotLog[areasToNotLogLen - 1].endAddr) {
+    return true;
+  }
+
+  // Now do a binary search
+  int min = 0;
+  int max = areasToNotLogLen - 1;
+  while (max >= min) {
+    int mid = (min + max) / 2;
+    if (addr >= areasToNotLog[mid].addr &&
+        addr <  areasToNotLog[mid].endAddr) {
+      return false;
+    }
+    if (addr < areasToNotLog[mid].addr) {
+      max = mid - 1;
+    } else {
+      min = mid + 1;
+    }
+  }
+
+  return true;
 }
 
 void copyFdSet(fd_set *src, fd_set *dest)

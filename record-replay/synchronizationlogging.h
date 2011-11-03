@@ -2138,8 +2138,8 @@ LIB_PRIVATE void   initSyncAddresses();
 LIB_PRIVATE void   userSynchronizedEvent();
 LIB_PRIVATE void   userSynchronizedEventBegin();
 LIB_PRIVATE void   userSynchronizedEventEnd();
-LIB_PRIVATE int    validAddress(void *addr);
 LIB_PRIVATE ssize_t writeAll(int fd, const void *buf, size_t count);
+LIB_PRIVATE bool validAddress(void *addr);
 
 /* These 'create_XXX_entry' functions are used library-wide by their
    respective wrapper functions. Their usages are hidden by the
