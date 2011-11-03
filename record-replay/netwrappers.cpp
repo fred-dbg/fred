@@ -267,6 +267,41 @@ extern "C" int getgrgid_r(gid_t gid, struct group *grp,
   return retval;
 }
 
+extern "C" char *getlogin(void)
+{
+  const size_t buflen = 1024;
+  static __thread char buf[buflen];
+  int res = getlogin_r(buf, buflen);
+  if (res != 0) {
+    return NULL;
+  }
+  return buf;
+}
+
+extern "C" int getlogin_r(char *name, size_t bufsize)
+{
+  uid_t uid = getuid();
+  const size_t buflen = 1024;
+  struct passwd pwd;
+  struct passwd *tpwd;
+  int result = 0;
+  int res;
+  char buf[buflen];
+
+  ok_to_log_next_func = true;
+  res = getpwuid_r(uid, &pwd, buf, buflen, &tpwd);
+  JASSERT(res == 0 || errno != ERANGE);
+
+  if (strlen(pwd.pw_name) > bufsize) {
+    errno = ERANGE;
+    result = ERANGE;
+  } else {
+    strcpy(name, pwd.pw_name);
+  }
+  return result;
+}
+
+
 #define ADDRINFO_MAX_RES 32
 struct addrinfo_extended {
   struct addrinfo *_addrinfo_p;

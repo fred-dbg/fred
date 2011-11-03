@@ -117,6 +117,10 @@ static void recordReplayInit()
    * By calling setlocale(LC_ALL, ...) we avoid all this.
    */
   setlocale(LC_ALL, "");
+  char *login_name = getlogin();
+  JASSERT(login_name != NULL);
+
+
   JTRACE ( "Record/replay finished initializing." );
 }
 

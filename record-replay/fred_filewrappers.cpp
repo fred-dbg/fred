@@ -711,6 +711,38 @@ extern "C" long ftell(FILE *stream)
   BASIC_SYNC_WRAPPER(long, ftell, _real_ftell, stream);
 }
 
+extern "C" int fgetpos(FILE *stream, fpos_t *pos)
+{
+  ok_to_log_next_func = true;
+  long res = ftell(stream);
+  if (res != -1) {
+    pos->__pos = (off_t) res;
+  }
+  return res;
+}
+
+extern "C" int fsetpos(FILE *stream, const fpos_t *pos)
+{
+  ok_to_log_next_func = true;
+  return fseek(stream, (long) pos->__pos, SEEK_SET);
+}
+
+extern "C" int fgetpos64(FILE *stream, fpos64_t *pos)
+{
+  ok_to_log_next_func = true;
+  long res = ftell(stream);
+  if (res != -1) {
+    pos->__pos = (off64_t) res;
+  }
+  return res;
+}
+
+extern "C" int fsetpos64(FILE *stream, const fpos64_t *pos)
+{
+  ok_to_log_next_func = true;
+  return fseek(stream, (long)pos->__pos, SEEK_SET);
+}
+
 extern "C" FILE *fopen (const char* path, const char* mode)
 {
   WRAPPER_HEADER(FILE *, fopen, _real_fopen, path, mode);
