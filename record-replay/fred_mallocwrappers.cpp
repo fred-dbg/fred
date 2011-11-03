@@ -386,7 +386,7 @@ extern "C" void *mmap(void *addr, size_t length, int prot, int flags,
   if (SYNC_IS_REPLAY) {
     bool mmap_read_from_readlog = false;
     MMAP_WRAPPER_REPLAY_START(mmap);
-    JASSERT ( addr == NULL ).Text("Unimplemented to have non-null addr.");
+    //JWARNING ( addr == NULL ).Text("Unimplemented to have non-null addr.");
     addr = GET_COMMON(my_entry, retval);
     if (retval != MAP_FAILED && fd != -1 &&
         ((flags & MAP_PRIVATE) != 0 || (flags & MAP_SHARED) != 0)) {
