@@ -1549,6 +1549,7 @@ extern "C" int waitid(idtype_t idtype, id_t id, siginfo_t *infop, int options)
 
 extern "C" pid_t wait3(__WAIT_STATUS status, int options, struct rusage *rusage)
 {
+  ok_to_log_next_func = true;
   return wait4 (-1, status, options, rusage);
 }
 
