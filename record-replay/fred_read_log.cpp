@@ -1068,6 +1068,24 @@ void print_log_entry_recvmsg(int idx, log_entry_t *entry) {
          GET_FIELD_PTR(entry, recvmsg, flags));
 }
 
+void print_log_entry_waitid(int idx, log_entry_t *entry) {
+  print_log_entry_common(idx, entry);
+  printf(", idtype:%d, id:%d, infop:%p, options:%d\n",
+         GET_FIELD_PTR(entry, waitid, idtype),
+         GET_FIELD_PTR(entry, waitid, id),
+         GET_FIELD_PTR(entry, waitid, infop),
+         GET_FIELD_PTR(entry, waitid, options));
+}
+
+void print_log_entry_wait4(int idx, log_entry_t *entry) {
+  print_log_entry_common(idx, entry);
+  printf(", pid:%d, status:%p, options:%d, rusage:%p\n",
+         GET_FIELD_PTR(entry, wait4, pid),
+         GET_FIELD_PTR(entry, wait4, status),
+         GET_FIELD_PTR(entry, wait4, options),
+         GET_FIELD_PTR(entry, wait4, rusage));
+}
+
 
 void printEntry(int idx, log_entry_t *entry)
 {

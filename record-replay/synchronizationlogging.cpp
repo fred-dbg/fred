@@ -1814,6 +1814,32 @@ log_entry_t create_recvmsg_entry(clone_id_t clone_id, event_code_t event,
   return e;
 }
 
+log_entry_t create_waitid_entry(clone_id_t clone_id, event_code_t event,
+                                idtype_t idtype, id_t id, siginfo_t *infop,
+                                int options)
+{
+  log_entry_t e = EMPTY_LOG_ENTRY;
+  setupCommonFields(&e, clone_id, event);
+  SET_FIELD(e, waitid, idtype);
+  SET_FIELD(e, waitid, id);
+  SET_FIELD(e, waitid, infop);
+  SET_FIELD(e, waitid, options);
+  return e;
+}
+
+log_entry_t create_wait4_entry(clone_id_t clone_id, event_code_t event,
+                                pid_t pid, __WAIT_STATUS status, int options,
+                                struct rusage *rusage)
+{
+  log_entry_t e = EMPTY_LOG_ENTRY;
+  setupCommonFields(&e, clone_id, event);
+  SET_FIELD(e, wait4, pid);
+  SET_FIELD(e, wait4, status);
+  SET_FIELD(e, wait4, options);
+  SET_FIELD(e, wait4, rusage);
+  return e;
+}
+
 
 static TURN_CHECK_P(base_turn_check)
 {
@@ -3016,6 +3042,24 @@ TURN_CHECK_P(recvmsg_turn_check)
     ARE_FIELDS_EQUAL_PTR(e1, e2, recvmsg, sockfd) &&
     ARE_FIELDS_EQUAL_PTR(e1, e2, recvmsg, msg) &&
     ARE_FIELDS_EQUAL_PTR(e1, e2, recvmsg, flags);
+}
+
+TURN_CHECK_P(waitid_turn_check)
+{
+  return base_turn_check(e1,e2) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, waitid, idtype) &&
+    //ARE_FIELDS_EQUAL_PTR(e1, e2, waitid, id) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, waitid, infop) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, waitid, options);
+}
+
+TURN_CHECK_P(wait4_turn_check)
+{
+  return base_turn_check(e1,e2) &&
+    //ARE_FIELDS_EQUAL_PTR(e1, e2, wait4, pid) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, wait4, status) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, wait4, options) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, wait4, rusage);
 }
 
 

@@ -1515,3 +1515,65 @@ extern "C" int ioctl(int d,  unsigned long int request, ...)
 
   return retval;
 }
+
+extern "C" pid_t wait (__WAIT_STATUS stat_loc)
+{
+  ok_to_log_next_func = true;
+  return wait4(-1, stat_loc, 0, NULL);
+}
+
+extern "C" pid_t waitpid(pid_t pid, int *status, int options)
+{
+  ok_to_log_next_func = true;
+  return wait4(pid, status, options, NULL);
+}
+
+extern "C" int waitid(idtype_t idtype, id_t id, siginfo_t *infop, int options)
+{
+  WRAPPER_HEADER(int, waitid, _real_waitid, idtype, id, infop, options);
+  if (SYNC_IS_REPLAY) {
+    WRAPPER_REPLAY_START_TYPED(int, waitid);
+    if (retval != -1 && infop != NULL) {
+      *infop = GET_FIELD(my_entry, waitid, ret_infop);
+    }
+    WRAPPER_REPLAY_END(waitid);
+  } else if (SYNC_IS_RECORD) {
+    retval = _real_waitid (idtype, id, infop, options);
+    if (retval != -1 && infop != NULL) {
+      SET_FIELD2(my_entry, waitid, ret_infop, *infop);
+    }
+    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+  }
+  return retval;
+}
+
+extern "C" pid_t wait3(__WAIT_STATUS status, int options, struct rusage *rusage)
+{
+  return wait4 (-1, status, options, rusage);
+}
+
+extern "C" pid_t wait4(pid_t pid, __WAIT_STATUS status, int options,
+                       struct rusage *rusage)
+{
+  WRAPPER_HEADER(pid_t, wait4, _real_wait4, pid, status, options, rusage);
+  if (SYNC_IS_REPLAY) {
+    WRAPPER_REPLAY_START_TYPED(pid_t, wait4);
+    if (retval != -1 && status != NULL) {
+      *(int*)status = GET_FIELD(my_entry, wait4, ret_status);
+    }
+    if (retval != -1 && rusage != NULL) {
+      *rusage = GET_FIELD(my_entry, wait4, ret_rusage);
+    }
+    WRAPPER_REPLAY_END(wait4);
+  } else if (SYNC_IS_RECORD) {
+    pid_t retval = _real_wait4(pid, status, options, rusage);
+    if (retval != -1 && status != NULL) {
+      SET_FIELD2(my_entry, wait4, ret_status, *(int*)status);
+    }
+    if (retval != -1 && rusage != NULL) {
+      SET_FIELD2(my_entry, wait4, ret_rusage, *rusage);
+    }
+    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+  }
+  return retval;
+}

@@ -468,6 +468,31 @@ int _real_ioctl(int d, unsigned long int request, ...) {
   REAL_FUNC_PASSTHROUGH_TYPED ( int, ioctl ) ( d, request, arg );
 }
 
+LIB_PRIVATE
+pid_t _real_wait(__WAIT_STATUS stat_loc) {
+  REAL_FUNC_PASSTHROUGH_TYPED ( pid_t, wait ) ( stat_loc );
+}
+
+LIB_PRIVATE
+pid_t _real_waitpid(pid_t pid, int *stat_loc, int options) {
+  REAL_FUNC_PASSTHROUGH_TYPED ( pid_t, waitpid ) ( pid, stat_loc, options );
+}
+
+LIB_PRIVATE
+int   _real_waitid(idtype_t idtype, id_t id, siginfo_t *infop, int options) {
+  REAL_FUNC_PASSTHROUGH ( waitid ) ( idtype, id, infop, options );
+}
+
+LIB_PRIVATE
+pid_t _real_wait3(__WAIT_STATUS status, int options, struct rusage *rusage) {
+  REAL_FUNC_PASSTHROUGH_TYPED ( pid_t, wait3 ) ( status, options, rusage );
+}
+
+LIB_PRIVATE
+pid_t _real_wait4(pid_t pid, __WAIT_STATUS status, int options, struct rusage *rusage) {
+  REAL_FUNC_PASSTHROUGH_TYPED ( pid_t, wait4 ) ( pid, status, options, rusage );
+}
+
 #ifdef PID_VIRTUALIZATION
 LIB_PRIVATE
 pid_t _real_getpid(void){
@@ -526,31 +551,6 @@ pid_t _real_setsid(void) {
 LIB_PRIVATE
 int   _real_kill(pid_t pid, int sig) {
   REAL_FUNC_PASSTHROUGH ( kill ) ( pid, sig );
-}
-
-LIB_PRIVATE
-pid_t _real_wait(__WAIT_STATUS stat_loc) {
-  REAL_FUNC_PASSTHROUGH_TYPED ( pid_t, wait ) ( stat_loc );
-}
-
-LIB_PRIVATE
-pid_t _real_waitpid(pid_t pid, int *stat_loc, int options) {
-  REAL_FUNC_PASSTHROUGH_TYPED ( pid_t, waitpid ) ( pid, stat_loc, options );
-}
-
-LIB_PRIVATE
-int   _real_waitid(idtype_t idtype, id_t id, siginfo_t *infop, int options) {
-  REAL_FUNC_PASSTHROUGH ( waitid ) ( idtype, id, infop, options );
-}
-
-LIB_PRIVATE
-pid_t _real_wait3(__WAIT_STATUS status, int options, struct rusage *rusage) {
-  REAL_FUNC_PASSTHROUGH_TYPED ( pid_t, wait3 ) ( status, options, rusage );
-}
-
-LIB_PRIVATE
-pid_t _real_wait4(pid_t pid, __WAIT_STATUS status, int options, struct rusage *rusage) {
-  REAL_FUNC_PASSTHROUGH_TYPED ( pid_t, wait4 ) ( pid, status, options, rusage );
 }
 
 LIB_PRIVATE

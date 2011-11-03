@@ -31,6 +31,7 @@
 #include <dirent.h>
 #include <stdio.h>
 #include <sys/time.h>
+#include <sys/wait.h>
 #include <sys/select.h>
 #include <poll.h>
 #include <pwd.h>
@@ -457,6 +458,9 @@ static inline bool isProcessGDB() {
     MACRO(sendmsg, __VA_ARGS__);                                               \
     MACRO(recvfrom, __VA_ARGS__);                                              \
     MACRO(recvmsg, __VA_ARGS__);                                               \
+                                                                               \
+    MACRO(wait4, __VA_ARGS__);                                                 \
+    MACRO(waitid, __VA_ARGS__);                                               \
   } while(0)
 
 /* Event codes: */
@@ -596,7 +600,10 @@ typedef enum {
   sendto_event,
   sendmsg_event,
   recvfrom_event,
-  recvmsg_event
+  recvmsg_event,
+
+  wait4_event,
+  waitid_event
 } event_code_t;
 /* end event codes */
 
@@ -1799,7 +1806,7 @@ typedef struct {
 static const int log_event_recvfrom_size = sizeof(log_event_recvfrom_t);
 
 typedef struct {
-  // For recvmsf();
+  // For recvmsg();
   int sockfd;
   struct msghdr *msg;
   int flags;
@@ -1809,6 +1816,30 @@ typedef struct {
 } log_event_recvmsg_t;
 
 static const int log_event_recvmsg_size = sizeof(log_event_recvmsg_t);
+
+typedef struct {
+  // For waitid();
+  idtype_t idtype;
+  id_t id;
+  siginfo_t *infop;
+  int options;
+  siginfo_t ret_infop;
+} log_event_waitid_t;
+
+static const int log_event_waitid_size = sizeof(log_event_waitid_t);
+
+typedef struct {
+  // For wait4();
+  pid_t pid;
+  __WAIT_STATUS status;
+  int options;
+  struct rusage *rusage;
+
+  int ret_status;
+  struct rusage ret_rusage;
+} log_event_wait4_t;
+
+static const int log_event_wait4_size = sizeof(log_event_wait4_t);
 
 
 typedef struct {
@@ -1966,6 +1997,9 @@ typedef struct {
     log_event_sendmsg_t                          log_event_sendmsg;
     log_event_recvfrom_t                         log_event_recvfrom;
     log_event_recvmsg_t                          log_event_recvmsg;
+
+    log_event_waitid_t                           log_event_waitid;
+    log_event_wait4_t                            log_event_wait4;
   } event_data;
 } log_entry_t;
 
@@ -2292,6 +2326,11 @@ CREATE_ENTRY_FUNC(sendmsg, int sockfd, const struct msghdr *msg, int flags);
 CREATE_ENTRY_FUNC(recvfrom, int sockfd, void *buf, size_t len, int flags,
                   struct sockaddr *src_addr, socklen_t *addrlen);
 CREATE_ENTRY_FUNC(recvmsg, int sockfd, struct msghdr *msg, int flags);
+
+CREATE_ENTRY_FUNC(waitid, idtype_t idtype, id_t id, siginfo_t *infop,
+                  int options);
+CREATE_ENTRY_FUNC(wait4, pid_t pid, __WAIT_STATUS status, int options,
+                  struct rusage *rusage);
 
 /* Special case: user synchronized events. */
 CREATE_ENTRY_FUNC(user);
