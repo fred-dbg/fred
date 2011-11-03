@@ -68,9 +68,10 @@ extern "C" int fclose(FILE *fp)
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_TYPED(int, fclose);
   } else if (SYNC_IS_RECORD) {
+    bool savedIsOptionalEvent = isOptionalEvent;
     isOptionalEvent = true;
     retval = _real_fclose(fp);
-    isOptionalEvent = false;
+    isOptionalEvent = savedIsOptionalEvent;
     WRAPPER_LOG_WRITE_ENTRY(my_entry);
   }
   return retval;
@@ -753,9 +754,10 @@ extern "C" FILE *fopen (const char* path, const char* mode)
     }
     WRAPPER_REPLAY_END(fopen);
   } else if (SYNC_IS_RECORD) {
+    bool savedIsOptionalEvent = isOptionalEvent;
     isOptionalEvent = true;
     retval = _real_fopen(path, mode);
-    isOptionalEvent = false;
+    isOptionalEvent = savedIsOptionalEvent;
     if (retval != NULL) {
       SET_FIELD2(my_entry, fopen, fopen_retval, *retval);
     }

@@ -3077,7 +3077,8 @@ static inline bool is_optional_event_for(event_code_t event,
   case getpwuid_r_event:
     return query || opt_event == malloc_event ||
       opt_event == free_event || opt_event == calloc_event ||
-      opt_event == mmap_event;
+      opt_event == mmap_event || opt_event == ftell_event ||
+      opt_event == fopen_event || opt_event == fclose_event;
   default:
      return false;
   }
@@ -3108,6 +3109,19 @@ static void execute_optional_event(int opt_event_num)
     size_t size = GET_FIELD(temp_entry, calloc, size);
     size_t nmemb = GET_FIELD(temp_entry, calloc, nmemb);
     JASSERT(calloc(nmemb, size) != NULL);
+  } else if (opt_event_num == fopen_event) {
+    char *name = GET_FIELD(temp_entry, fopen, name);
+    char *mode = GET_FIELD(temp_entry, fopen, mode);
+    ok_to_log_next_func = true;
+    fopen(name, mode);
+  } else if (opt_event_num == fclose_event) {
+    FILE *fp = GET_FIELD(temp_entry, fclose, fp);
+    ok_to_log_next_func = true;
+    fclose(fp);
+  } else if (opt_event_num == ftell_event) {
+    FILE *fp = GET_FIELD(temp_entry, ftell, stream);
+    ok_to_log_next_func = true;
+    ftell(fp);
   } else {
     JASSERT (false)(opt_event_num).Text("No action known for optional event.");
   }
