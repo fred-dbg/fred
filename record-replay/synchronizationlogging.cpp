@@ -57,6 +57,7 @@ LIB_PRIVATE pthread_mutex_t global_clone_counter_mutex = PTHREAD_MUTEX_INITIALIZ
 
 LIB_PRIVATE void           *stack_base_addr = NULL;
 
+LIB_PRIVATE pthread_mutex_t read_data_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 LIB_PRIVATE dmtcp::SynchronizationLog global_log;
 

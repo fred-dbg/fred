@@ -392,7 +392,7 @@ static int internal_pthread_create(pthread_t *thread,
 
     retval = _real_pthread_create(thread, &the_attr,
                                   start_wrapper, (void *)&createArg);
-    SET_COMMON2(my_entry, retval, (void*)retval);
+    SET_COMMON2(my_entry, retval, (void*)(unsigned long)retval);
     SET_COMMON2(my_entry, my_errno, errno);
 
     waitForChildThreadToInitialize();

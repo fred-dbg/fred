@@ -57,8 +57,6 @@ typedef unsigned long int log_off_t;
 
 namespace dmtcp { class SynchronizationLog; }
 
-static pthread_mutex_t read_data_mutex = PTHREAD_MUTEX_INITIALIZER;
-
 static inline bool isProcessGDB() {
   static bool isGDB = jalib::Filesystem::GetProgramName() == "gdb";
   return isGDB;
@@ -258,7 +256,7 @@ static inline bool isProcessGDB() {
 
 #define WRAPPER_LOG_WRITE_ENTRY(my_entry)                           \
   do {                                                              \
-    SET_COMMON2(my_entry, retval, (void*)retval);                   \
+    SET_COMMON2(my_entry, retval, (void*)(unsigned long)retval);    \
     WRAPPER_LOG_WRITE_ENTRY_VOID(my_entry);                         \
   } while (0)
 
@@ -2072,6 +2070,7 @@ LIB_PRIVATE extern char RECORD_READ_DATA_LOG_PATH[RECORD_LOG_PATH_MAX];
 LIB_PRIVATE extern int             read_data_fd;
 LIB_PRIVATE extern int             sync_logging_branch;
 LIB_PRIVATE extern int             log_all_allocs;
+LIB_PRIVATE extern pthread_mutex_t read_data_mutex;
 
 LIB_PRIVATE extern dmtcp::SynchronizationLog global_log;
 
