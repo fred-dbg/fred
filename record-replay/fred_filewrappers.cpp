@@ -979,7 +979,8 @@ extern "C" int select(int nfds, fd_set *readfds, fd_set *writefds,
 }
 
 extern "C" int ppoll(struct pollfd *fds, nfds_t nfds,
-                 const struct timespec *timeout_ts, const sigset_t *sigmask)
+                     const struct timespec *timeout_ts,
+                     const sigset_t *sigmask)
 {
   WRAPPER_HEADER(int, ppoll, _real_ppoll, fds, nfds, timeout_ts, sigmask)
   if (SYNC_IS_REPLAY) {
@@ -1006,7 +1007,6 @@ extern "C" int poll(struct pollfd *fds, nfds_t nfds, int time)
 {
   struct timespec time_ts;
   struct timespec *timeout_ts;
-  const sigset_t *sigmask = NULL;
 
   if (time <= -1) {
     timeout_ts = NULL;

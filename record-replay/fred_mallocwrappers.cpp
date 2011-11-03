@@ -397,7 +397,7 @@ extern "C" void *mmap(void *addr, size_t length, int prot, int flags,
       offset = 0;
       size_t page_size = sysconf(_SC_PAGESIZE);
       size_t page_mask = ~(page_size - 1);
-      length = (length + page_size - 1) & PAGE_MASK ;
+      length = (length + page_size - 1) & page_mask ;
       mmap_read_from_readlog = true;
     }
     flags |= MAP_FIXED;
@@ -442,7 +442,7 @@ extern "C" void *mmap64 (void *addr, size_t length, int prot, int flags,
       offset = 0;
       size_t page_size = sysconf(_SC_PAGESIZE);
       size_t page_mask = ~(page_size - 1);
-      length = (length + page_size - 1) & PAGE_MASK ;
+      length = (length + page_size - 1) & page_mask ;
       mmap_read_from_readlog = true;
     }
     flags |= MAP_FIXED;

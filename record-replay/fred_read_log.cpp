@@ -538,7 +538,7 @@ void print_log_entry_pread(int idx, log_entry_t *entry) {
 
 void print_log_entry_preadv(int idx, log_entry_t *entry) {
   print_log_entry_common(idx, entry);
-  printf(", fd=%d, iov=%p, iovcnt=%Zu, offset=%ld\n",
+  printf(", fd=%d, iov=%p, iovcnt=%d, offset=%ld\n",
          GET_FIELD_PTR(entry, preadv, fd),
          GET_FIELD_PTR(entry, preadv, iov),
          GET_FIELD_PTR(entry, preadv, iovcnt),
@@ -563,7 +563,7 @@ void print_log_entry_pwrite(int idx, log_entry_t *entry) {
 
 void print_log_entry_pwritev(int idx, log_entry_t *entry) {
   print_log_entry_common(idx, entry);
-  printf(", fd=%d, iov=%p, iovcnt=%Zu, offset=%ld\n",
+  printf(", fd=%d, iov=%p, iovcnt=%d, offset=%ld\n",
          GET_FIELD_PTR(entry, pwritev, fd),
          GET_FIELD_PTR(entry, pwritev, iov),
          GET_FIELD_PTR(entry, pwritev, iovcnt),
@@ -682,7 +682,7 @@ void print_log_entry_read(int idx, log_entry_t *entry) {
 
 void print_log_entry_readv(int idx, log_entry_t *entry) {
   print_log_entry_common(idx, entry);
-  printf(", fd=%d, iov=%p, iovcnt=%Zu, data_offset=%ld\n",
+  printf(", fd=%d, iov=%p, iovcnt=%d, data_offset=%ld\n",
          GET_FIELD_PTR(entry, readv, fd),
          GET_FIELD_PTR(entry, readv, iov),
          GET_FIELD_PTR(entry, readv, iovcnt),
@@ -745,9 +745,10 @@ void print_log_entry_select(int idx, log_entry_t *entry) {
 
 void print_log_entry_ppoll(int idx, log_entry_t *entry) {
   print_log_entry_common(idx, entry);
-  printf(", fds=%p, nfds=%d\n",
+  printf(", fds=%p, timeout_ts=%p, sigmask=%p\n",
          GET_FIELD_PTR(entry, ppoll, fds),
-         GET_FIELD_PTR(entry, ppoll, nfds));
+         GET_FIELD_PTR(entry, ppoll, timeout_ts),
+         GET_FIELD_PTR(entry, ppoll, sigmask));
 }
 
 void print_log_entry_signal_handler(int idx, log_entry_t *entry) {
@@ -883,7 +884,7 @@ void print_log_entry_write(int idx, log_entry_t *entry) {
 
 void print_log_entry_writev(int idx, log_entry_t *entry) {
   print_log_entry_common(idx, entry);
-  printf(", fd=%d, iov=%p, iovcnt=%Zu\n",
+  printf(", fd=%d, iov=%p, iovcnt=%d\n",
          GET_FIELD_PTR(entry, writev, fd),
          GET_FIELD_PTR(entry, writev, iov),
          GET_FIELD_PTR(entry, writev, iovcnt));

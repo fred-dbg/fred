@@ -29,15 +29,17 @@ typedef struct {
   size_t current_log_entry_index;
   size_t total_entries;
   size_t total_threads;
-  unsigned breakpoint_at_index;
+  ssize_t breakpoint_at_index;
 } fred_interface_info_t;
 
 #define FRED_INTERFACE_SHM_SIZE sizeof(fred_interface_info_t)
 #define FRED_INTERFACE_SHM_FILE_FMT "%s/fred-shm.%d"
 
-/* Indicates no breakpoint is currently set. */
-#define FRED_INTERFACE_NO_BP -1
-/* Indicates that the set breakpoint has been hit. */
-#define FRED_INTERFACE_BP_HIT -2
+enum {
+  /* Indicates no breakpoint is currently set. */
+  FRED_INTERFACE_NO_BP = -1,
+  /* Indicates that the set breakpoint has been hit. */
+  FRED_INTERFACE_BP_HIT = -2
+};
 
 #endif
