@@ -76,7 +76,7 @@ void dmtcp::SynchronizationLog::initialize(const char *path, size_t size)
 
     JTRACE ("Restored log to index and offset from intermediate checkpoint.")
       ( _entryIndexMarker ) ( _entryOffsetMarker );
-    
+
     // Reset for the next checkpoint.
     _entryOffsetMarker = 0;
     _entryIndexMarker = 0;
@@ -88,7 +88,10 @@ void dmtcp::SynchronizationLog::init_shm()
 {
   char name[PATH_MAX];
   int fd, retval;
+  void *mmapAddr = (void*) _sharedInterfaceInfo;
   sprintf(name, FRED_INTERFACE_SHM_FILE_FMT, dmtcp_get_tmpdir(), getpid());
+
+  JASSERT((void*)_sharedInterfaceInfo != NULL || SYNC_IS_RECORD);
 
   fd = open(name, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
   JASSERT ( fd != -1 ) (name) ( strerror(errno) );
@@ -98,15 +101,27 @@ void dmtcp::SynchronizationLog::init_shm()
   JTRACE ( "Opened shared memory region." ) ( name );
 
   _sharedInterfaceInfo =
-    (fred_interface_info_t *)mmap(NULL, FRED_INTERFACE_SHM_SIZE,
-                                  PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-  JASSERT((void *)_sharedInterfaceInfo != MAP_FAILED);
-  close(fd);
+    (fred_interface_info_t *) mmap(mmapAddr, FRED_INTERFACE_SHM_SIZE,
+                                   PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+  JASSERT((void*)_sharedInterfaceInfo != MAP_FAILED);
   JTRACE ( "Mapped shared memory region." ) ( _sharedInterfaceInfo );
+  close(fd);
 
   _sharedInterfaceInfo->total_entries = *_numEntries;
   _sharedInterfaceInfo->total_threads = *_numThreads;
   _sharedInterfaceInfo->breakpoint_at_index = FRED_INTERFACE_NO_BP;
+
+  LogMetadata *metadata = (LogMetadata *) _startAddr;
+
+  if (mmapAddr == NULL) {
+    JASSERT(SYNC_IS_RECORD);
+    JTRACE("RECORD; filling in recordedSharedInterfaceInfoMapAddr.")
+      ((long)(void*)_sharedInterfaceInfo);
+
+    JASSERT(_startAddr);
+    LogMetadata *metadata = (LogMetadata *) _startAddr;
+    metadata->recordedSharedInterfaceInfoMapAddr = _sharedInterfaceInfo;
+  }
 }
 
 /* Destroy shared memory region. */
@@ -134,6 +149,9 @@ void dmtcp::SynchronizationLog::init_common(size_t size)
   _dataSize = &(metadata->dataSize);
   _size = &(metadata->size);
   _recordedStartAddr = &(metadata->recordedStartAddr);
+
+  _sharedInterfaceInfo =
+    (fred_interface_info_t *) metadata->recordedSharedInterfaceInfoMapAddr;
 
   *_size = size;
   _log = _startAddr + LOG_OFFSET_FROM_START;
@@ -163,7 +181,7 @@ void dmtcp::SynchronizationLog::destroy(int mode)
   } else {
     _entryOffsetMarker = getIndex();
     _entryIndexMarker  = _entryIndex;
-  }    
+  }
 
   if (_startAddr != NULL) {
     unmap();
@@ -197,7 +215,7 @@ void dmtcp::SynchronizationLog::map_in(const char *path, size_t size,
   int mmapFlags = MAP_SHARED;
   void *mmapAddr = NULL, *tempAddr = NULL;
   LogMetadata *tempMetadata;
-  
+
   JASSERT(path != NULL);
   fd = _real_open(path, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
   JASSERT(fd != -1);
@@ -231,6 +249,7 @@ void dmtcp::SynchronizationLog::map_in(const char *path, size_t size,
   UNSET_IN_MMAP_WRAPPER();
 
   _real_close(fd);
+  _path = path == NULL ? "" : path;
   init_common(size);
 }
 

@@ -49,6 +49,7 @@ namespace dmtcp
     size_t numEntries;
     size_t numThreads;
     void * recordedStartAddr;
+    void * recordedSharedInterfaceInfoMapAddr;
   } LogMetadata;
 
   class SynchronizationLog
