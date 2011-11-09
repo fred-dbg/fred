@@ -326,6 +326,5 @@ def setup(l_argv, b_spawn_child=True):
 
 def teardown():
     """Perform any cleanup associated with fredio module."""
-    global gs_last_printed
-    gs_last_printed = ""
+    _reset_last_printed()
     kill_child()
