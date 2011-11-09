@@ -325,5 +325,7 @@ def setup(l_argv, b_spawn_child=True):
                      l_argv)
 
 def teardown():
-    """Perform any cleanup associated with FReD exit."""
+    """Perform any cleanup associated with fredio module."""
+    global gs_last_printed
+    gs_last_printed = ""
     kill_child()
