@@ -320,6 +320,19 @@ static inline bool isProcessGDB() {
     WRAPPER_LOG_VOID(real_func, __VA_ARGS__);                       \
   }
 
+#define FAKE_BASIC_SYNC_WRAPPER(ret_type, name, ...)                \
+  do {                                                              \
+    ret_type retval;                                                \
+    log_entry_t my_entry = create_##name##_entry(my_clone_id,       \
+                                                 name##_event,      \
+                                                 __VA_ARGS__);      \
+    if (SYNC_IS_REPLAY) {                                           \
+      WRAPPER_REPLAY(name);                                         \
+    } else if (SYNC_IS_RECORD) {                                    \
+      WRAPPER_LOG_WRITE_ENTRY(my_entry);                            \
+    }                                                               \
+  } while (0)
+
 #define FOREACH_NAME(MACRO, ...)                                               \
   do {                                                                         \
     MACRO(accept, __VA_ARGS__);                                                \
