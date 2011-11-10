@@ -208,7 +208,7 @@ def checkpoint():
     while len(l_new_ckpts) < n_peers:
         l_ckpts_after = [os.path.join(os.environ["DMTCP_TMPDIR"], x) \
                          for x in os.listdir(os.environ["DMTCP_TMPDIR"]) \
-                         if x.startswith("ckpt_")]
+                         if x.startswith("ckpt_") and x.endswith("dmtcp")]
         #fredutil.fred_debug("List ckpts after: %s" % str(l_ckpts_after))
         l_new_ckpts = [x for x in l_ckpts_after if x not in l_ckpts_before]
         time.sleep(0.001)
