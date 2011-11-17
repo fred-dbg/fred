@@ -121,7 +121,7 @@ class ThreadedOutput(threading.Thread):
                     sys.stdout.flush()
             # Always keep these up-to-date:
             gb_need_user_input = _match_needs_user_input(last_printed_need_input)
-            if g_find_prompt_function(gs_last_printed):
+            if g_find_prompt_function(gs_last_printed) or gb_need_user_input:
                 g_prompt_ready_event.set()
 
 
@@ -160,13 +160,16 @@ def wait_for_prompt():
     """Block until the global g_prompt_ready_event has been set by the output
     thread."""
     global g_prompt_ready_event, gb_need_user_input
-    g_prompt_ready_event.wait()
-    if gb_need_user_input:
-        # Happens when, for example, gdb prints more than one screen,
-        # and the user must press 'return' to continue printing.
-        user_input = raw_input().strip()
-        _send_child_input(user_input + '\n')
-        gb_need_user_input = False
+    while True:
+        g_prompt_ready_event.wait()
+        if gb_need_user_input:
+            # Happens when, for example, gdb prints more than one screen,
+            # and the user must press 'return' to continue printing.
+            user_input = raw_input().strip()
+            _send_child_input(user_input + '\n')
+            gb_need_user_input = False
+        else:
+            break
     # Reset for next time
     g_prompt_ready_event.clear()
     
