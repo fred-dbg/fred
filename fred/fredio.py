@@ -50,8 +50,8 @@ gn_max_need_input_length = 0
 gn_child_pid = -1
 # File descriptor of child stdin/stdout.
 gn_child_fd = None
-# Will be True when debugger prompt is waiting for user input.
-gb_prompt_ready = False
+# Will be set when debugger prompt is waiting for user input.
+g_prompt_ready_event = threading.Event()
 # When True, all output from debugger is hidden.
 gb_hide_output = False
 # When True, all output from debugger is appended to gs_captured_output.
@@ -88,7 +88,7 @@ gs_last_printed = ""
 
 class ThreadedOutput(threading.Thread):
     def run(self):
-        global gb_prompt_ready, gb_capture_output, gs_captured_output, \
+        global g_prompt_ready_event, gb_capture_output, gs_captured_output, \
                g_capture_output_event, gb_capture_output_til_prompt, \
                gb_hide_output, gn_max_need_input_length, gb_need_user_input, \
                gb_capture_output_multi_page, gs_last_printed
@@ -120,8 +120,10 @@ class ThreadedOutput(threading.Thread):
                     sys.stdout.write(output)
                     sys.stdout.flush()
             # Always keep these up-to-date:
-            gb_prompt_ready = g_find_prompt_function(gs_last_printed)
             gb_need_user_input = _match_needs_user_input(last_printed_need_input)
+            if g_find_prompt_function(gs_last_printed):
+                g_prompt_ready_event.set()
+
 
 def _start_output_thread():
     """Start the output thread in daemon mode.
@@ -155,19 +157,18 @@ def _get_child_output():
     return output
 
 def wait_for_prompt():
-    """Spin until the global gb_prompt_ready flag has been set to True.
-    gb_prompt_ready is set by the output thread."""
-    global gb_prompt_ready, gb_need_user_input
-    while not gb_prompt_ready:
-        if gb_need_user_input:
-            # Happens when, for example, gdb prints more than one screen,
-            # and the user must press 'return' to continue printing.
-            user_input = raw_input().strip()
-            _send_child_input(user_input + '\n')
-            gb_need_user_input = False
-        pass
+    """Block until the global g_prompt_ready_event has been set by the output
+    thread."""
+    global g_prompt_ready_event, gb_need_user_input
+    g_prompt_ready_event.wait()
+    if gb_need_user_input:
+        # Happens when, for example, gdb prints more than one screen,
+        # and the user must press 'return' to continue printing.
+        user_input = raw_input().strip()
+        _send_child_input(user_input + '\n')
+        gb_need_user_input = False
     # Reset for next time
-    gb_prompt_ready = False
+    g_prompt_ready_event.clear()
     
 def _start_output_capture(wait_for_prompt):
     """Start recording output from child into global gs_captured_output.
@@ -298,9 +299,9 @@ def send_command_nonblocking(command):
 
 def send_command(command):
     """Send a command to the child process and wait for the prompt."""
-    global gb_prompt_ready, gb_need_user_input
+    global g_prompt_ready_event, gb_need_user_input
     _send_child_input(command+'\n')
-    gb_prompt_ready = False
+    g_prompt_ready_event.clear()
     gb_need_user_input = False
     wait_for_prompt()
     
