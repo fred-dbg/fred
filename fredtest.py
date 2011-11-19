@@ -79,13 +79,9 @@ def end_session():
     g_debugger.destroy()
     g_debugger = None
 
-def execute_commands(l_cmds, b_wait=True):
-    """Execute the given list of commands as if they were a source
-    file.  If b_wait is True (default), wait for the debugger prompt
-    after executing the last command."""
+def execute_commands(l_cmds):
+    """Execute the given list of commands as if they were a source file."""
     fredapp.source_from_list(l_cmds)
-    if b_wait:
-        fred.fredio.wait_for_prompt()
 
 def evaluate_variable(s_name):
     """Evaluate given variable in debugger and return value."""

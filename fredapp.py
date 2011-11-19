@@ -185,8 +185,9 @@ def handle_fred_command(s_command):
     else:
         fredutil.fred_error("Unknown FReD command '%s'" % s_command_name)
 
-def dispatch_command(s_command):
-    """Given a user command, dispatches and executes it in the right way."""
+def dispatch_command(s_command, b_wait=False):
+    """Given a user command, dispatches and executes it in the right way.
+    If b_wait is True, wait for the debugger prompt after each command."""
     fredutil.fred_timer_start(s_command)
     # TODO: Currently we do not log fred commands. Do we need to?
     if is_fred_command(s_command):
@@ -201,6 +202,8 @@ def dispatch_command(s_command):
 
         fredio.send_command(s_command)
         g_debugger.log_command(s_command)
+        if b_wait:
+           fredio.wait_for_prompt()
     fredutil.fred_timer_stop(s_command)
 
 def source_from_file(s_filename):
@@ -221,8 +224,7 @@ def source_from_list(ls_cmds):
     """Execute commands from given list."""
     for s_cmd in ls_cmds:
         s_cmd = s_cmd.strip()
-        dispatch_command(s_cmd)
-
+        dispatch_command(s_cmd, b_wait=True)
 
 def parse_program_args():
     """Initialize command line options, and parse them.
