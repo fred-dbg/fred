@@ -306,7 +306,7 @@ class ReversibleDebugger(debugger.Debugger):
         self.log_fred_command(fred_log_continue_cmd())
         fredmanager.wait_on_fred_breakpoint()
         # Interrupt inferior to bring back the debugger prompt.
-        self.interrupt_inferior()
+        self.stop_inferior()
         # Remove the log breakpoint that got us here (only support one
         # log bkpt right now).
         fredmanager.send_fred_continue()

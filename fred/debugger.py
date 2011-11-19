@@ -1,3 +1,6 @@
+import signal
+import os
+
 import fredutil
 
 class Debugger():
@@ -14,10 +17,19 @@ class Debugger():
         #  Then methods like get_personality_cmd can be abbreviated to get_cmd
         self._p     = personality
         self._state = DebuggerState()
+        self._n_pid = -1
 
     def personality_name(self):
         """Return the name of the personality."""
         return self._p.s_name
+
+    def get_debugger_pid(self):
+        """Return the pid of the debugger process."""
+        return self._n_pid
+
+    def set_debugger_pid(self, n_pid):
+        """Set the pid of the debugger process."""
+        self._n_pid = n_pid
 
     def _next(self, n):
         """Perform n 'next' commands. Returns output."""
@@ -119,15 +131,18 @@ class Debugger():
         else:
             return self._p.program_is_running()
 
-    def interrupt_inferior(self):
-        """Sends SIGINT to inferior process."""
-        # XXX: Shouldn't import fredio here... figure out better way.
-        import fredio, signal, os
-        n_pid = fredutil.get_inferior_pid(fredio.get_child_pid())
+    def stop_inferior(self):
+        """Sends SIGSTOP to inferior process."""
+        n_pid = fredutil.get_inferior_pid(self.get_debugger_pid())
         fredutil.fred_assert(n_pid != -1)
         os.kill(n_pid, signal.SIGSTOP)
         fredio.wait_for_prompt()
-        del fredio, signal, os
+
+    def interrupt_inferior(self):
+        """Sends a ^C to the inferior process."""
+        n_pid = fredutil.get_inferior_pid(self.get_debugger_pid())
+        if n_pid != -1:
+            os.kill(n_pid, signal.SIGINT)
 
 class DebuggerState():
     """Represents the current state of a debugger.

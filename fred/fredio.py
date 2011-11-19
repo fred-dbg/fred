@@ -44,6 +44,12 @@ GS_FRED_DEMO_UNHIDE_PREFIX = ['next', 'step']
 # Maximum length of a prompt string (from any debugger)
 GN_MAX_PROMPT_LENGTH = 32
 
+# Due to a Python "feature" we need to include a very high timeout for
+# all lock acquisitions in order to handle ^C correctly. The low-level
+# Python implementation of mutexes cannot be interrupted
+# asynchronously unless given a timeout.
+GN_PYTHON_BUG_LOCK_TIMEOUT = 9999999
+
 # Maximum length of a string for requesting additional user input
 gn_max_need_input_length = 0
 # Pid of child (debugger)
@@ -148,20 +154,26 @@ def _get_child_output():
     """Read and return a string of output from the child process."""
     global gn_child_fd
     output = None
+    if gn_child_fd == None:
+        return None
     try:
         l_ready = select.select([gn_child_fd], [], [], 1)
         if l_ready[0] == [gn_child_fd]:
             output = os.read(gn_child_fd, 1000)
-    except:
+    except OSError:
         return None
+    except select.error:
+        return None
+    except:
+        raise
     return output
 
 def wait_for_prompt():
     """Block until the global g_prompt_ready_event has been set by the output
     thread."""
-    global g_prompt_ready_event, gb_need_user_input
+    global g_prompt_ready_event, gb_need_user_input, GN_PYTHON_BUG_LOCK_TIMEOUT
     while True:
-        g_prompt_ready_event.wait()
+        g_prompt_ready_event.wait(GN_PYTHON_BUG_LOCK_TIMEOUT)
         if gb_need_user_input:
             # Happens when, for example, gdb prints more than one screen,
             # and the user must press 'return' to continue printing.
@@ -190,10 +202,11 @@ def _wait_for_captured_output(b_wait_for_prompt, b_multi_page):
     global gs_captured_output. This function resets that global string when
     finished."""
     global gb_capture_output, gs_captured_output, g_capture_output_event, \
-           gb_capture_output_til_prompt, gb_capture_output_multi_page
+           gb_capture_output_til_prompt, gb_capture_output_multi_page, \
+           GN_PYTHON_BUG_LOCK_TIMEOUT
     gb_capture_output_til_prompt = b_wait_for_prompt
     gb_capture_output_multi_page = b_multi_page
-    g_capture_output_event.wait()
+    g_capture_output_event.wait(GN_PYTHON_BUG_LOCK_TIMEOUT)
     output = gs_captured_output
     gs_captured_output = ""
     gb_capture_output = False

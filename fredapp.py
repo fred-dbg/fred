@@ -347,6 +347,7 @@ def fred_setup():
         fredutil.fred_assert(g_debugger.personality_name() == "gdb")
         n_inf_pid = int(g_debugger.evaluate_expression("getpid()"))
         fredmanager.set_pid(n_inf_pid)
+    g_debugger.set_debugger_pid(fredio.get_child_pid())
 
 def fred_setup_as_module(l_cmd, s_dmtcp_port, b_debug):
     """Perform setup for FReD when being used as a module, return g_debugger.
@@ -385,7 +386,7 @@ def verify_critical_files_present():
                             "Please edit fredmanager.py and change "
                             "GS_FREDHIJACK_PATH to point to the directory "
                             "containing fredhijack.so."%
-                            GS_FREDHIJACK_PATH)
+                            fredmanager.get_fredhijack_path())
 
 def main_io_loop(b_skip_prompt=False):
     """Main I/O loop to get and handle user commands."""
@@ -406,7 +407,8 @@ def main_io_loop(b_skip_prompt=False):
             dispatch_command(s_command)
             s_last_command = s_command
         except KeyboardInterrupt:
-            fredio.signal_child(signal.SIGINT)
+            g_debugger.interrupt_inferior()
+            fredio.wait_for_prompt()
 
 def main():
     """Program execution starts here."""
