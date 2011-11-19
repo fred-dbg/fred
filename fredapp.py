@@ -410,9 +410,16 @@ def main_io_loop(b_skip_prompt=False):
             g_debugger.interrupt_inferior()
             fredio.wait_for_prompt()
 
+def setup_critical_files():
+    """Set up paths to critical files."""
+    s_cwd = os.getcwd()
+    fredutil.fred_debug("Got current working directory: '%s'." % s_cwd)
+    fredmanager.set_fredhijack_path(os.path.join(s_cwd, "record-replay"))
+
 def main():
     """Program execution starts here."""
     global gs_resume_dir_path
+    setup_critical_files()
     # Don't do anything if we can't find DMTCP.
     verify_critical_files_present()
     fred_setup()

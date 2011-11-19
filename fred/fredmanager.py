@@ -26,8 +26,7 @@ import os
 import re
 
 GS_FREDHIJACK_NAME = "fredhijack.so"
-GS_FREDHIJACK_PATH = os.path.join(os.environ["HOME"],
-                                  "pthread-wrappers/fred/record-replay")
+GS_FREDHIJACK_PATH = ""
 
 g_child_subprocess = None
 g_pid = -1
@@ -49,6 +48,11 @@ def get_fredhijack_path():
     global GS_FREDHIJACK_PATH, GS_FREDHIJACK_NAME
     return os.path.join(GS_FREDHIJACK_PATH, GS_FREDHIJACK_NAME)
 
+def set_fredhijack_path(s_path):
+    """Sets the path to fredhijack.so."""
+    global GS_FREDHIJACK_PATH
+    GS_FREDHIJACK_PATH = s_path
+    
 def _execute_fred_command(s_cmd, s_arg=None):
     """Execute the given fred_command command and return its output."""
     global g_child_subprocess
