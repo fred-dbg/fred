@@ -1,0 +1,2 @@
+REPOSITORY = 'fred'
+REVIEWBOARD_URL = "http://bsn89k1.ccs.neu.edu"
