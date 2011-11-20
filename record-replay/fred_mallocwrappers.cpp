@@ -242,48 +242,38 @@ static void my_free_hook (void *ptr, const void *caller)
 #define MALLOC_FAMILY_WRAPPER_HEADER(name, ...)                             \
   MALLOC_FAMILY_WRAPPER_HEADER_TYPED(void*, name, __VA_ARGS__)
 
-#define MALLOC_FAMILY_WRAPPER_REPLAY_START(name)                            \
-  WRAPPER_REPLAY_START_TYPED(void*, name);                                  \
-  _real_pthread_mutex_lock(&allocation_lock);
+#define MALLOC_FAMILY_WRAPPER_REPLAY_START(name) \
+  unsigned waitRet = waitForAllocTurn(&my_entry, &name##_turn_check);
 
-#define MALLOC_FAMILY_WRAPPER_REPLAY_END(name)                              \
-  _real_pthread_mutex_unlock(&allocation_lock);                             \
-  WRAPPER_REPLAY_END(name);
+#define MALLOC_FAMILY_WRAPPER_REPLAY_END(name) \
+  WRAPPER_REPLAY_END(name)
 
-/* XXX Possible race here. It is not safe to call
- * MALLOC_FAMILY_WRAPPER_REPLAY_END before calling _real_XXX. The replay end
- * macro calls getNextLogEntry(), which we should not do before we have called
- * the _real_XXX function. We will need to fix this eventually. */
 #define MALLOC_FAMILY_BASIC_SYNC_WRAPPER(ret_type, name, ...)               \
   MALLOC_FAMILY_WRAPPER_HEADER_TYPED(ret_type, name, __VA_ARGS__);          \
   do {                                                                      \
     if (SYNC_IS_REPLAY) {                                                   \
-      MALLOC_FAMILY_WRAPPER_REPLAY_START(name);                             \
-      void *savedRetval = GET_COMMON(my_entry, retval);                     \
-      /* We have to end it immediately because there may be an mmap. */     \
-      MALLOC_FAMILY_WRAPPER_REPLAY_END(name);                               \
-      _real_pthread_mutex_lock(&allocation_lock);                           \
-      retval = _real_ ## name(__VA_ARGS__);                                 \
-      if (retval != savedRetval) {                                          \
+      MALLOC_FAMILY_WRAPPER_REPLAY_START(name);                         \
+      retval = _real_ ## name(__VA_ARGS__);                             \
+      if (waitRet) {                                                    \
+        /* We found the optional event; now wait for the main event. */ \
+        MALLOC_FAMILY_WRAPPER_REPLAY_START(name);                       \
+      }                                                                 \
+      void *savedRetval = GET_COMMON(my_entry, retval);                 \
+      if (retval != savedRetval) {                                      \
         JTRACE ( #name " returned wrong address on replay" )                \
-          ( retval ) ( savedRetval )                                        \
-          (global_log.currentEntryIndex());                                 \
-    while (1);                                                              \
+          ( retval ) ( savedRetval ) (global_log.currentEntryIndex());  \
+        while (1);                                                      \
       }                                                                     \
-      _real_pthread_mutex_unlock(&allocation_lock);                         \
+      MALLOC_FAMILY_WRAPPER_REPLAY_END(name);                           \
     } else if (SYNC_IS_RECORD) {                                            \
       _real_pthread_mutex_lock(&allocation_lock);                           \
-      /* We write the *alloc entry before calling _real_XXX because         \
-	 they may be internally promoted to mmap by libc. This way,         \
-	 the malloc entry appears before the mmap entry in the log and      \
-	 replay can proceed as normal. On replay, _real_alloc will be       \
-	 called again, and it will again be promoted to mmap. */            \
-      WRAPPER_LOG_WRITE_ENTRY(my_entry);                                    \
+      bool savedIsOptionalEvent = isOptionalEvent;                      \
+      isOptionalEvent = true;                                               \
       retval = _real_ ## name(__VA_ARGS__);                                 \
+      isOptionalEvent = savedIsOptionalEvent;                           \
       SET_COMMON2(my_entry, retval, (void *)retval);			    \
       SET_COMMON2(my_entry, my_errno, errno);				    \
-      /* Patch in the real return value. */				    \
-      WRAPPER_LOG_UPDATE_ENTRY(my_entry);                                   \
+      WRAPPER_LOG_WRITE_ENTRY(my_entry);                                    \
       _real_pthread_mutex_unlock(&allocation_lock);                         \
     }                                                                       \
   } while(0)
@@ -471,10 +461,10 @@ extern "C" int munmap(void *addr, size_t length)
   MALLOC_FAMILY_WRAPPER_HEADER_TYPED(int, munmap, addr, length);
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_START(munmap);
-    _real_pthread_mutex_lock(&allocation_lock);
+    _real_pthread_mutex_lock(&mmap_lock);
     retval = _real_munmap (addr, length);
     JASSERT (retval == (int)(unsigned long)GET_COMMON(my_entry, retval));
-    _real_pthread_mutex_unlock(&allocation_lock);
+    _real_pthread_mutex_unlock(&mmap_lock);
     WRAPPER_REPLAY_END(munmap);
   } else if (SYNC_IS_RECORD) {
     _real_pthread_mutex_lock(&mmap_lock);
@@ -499,12 +489,14 @@ extern "C" void *mremap(void *old_address, size_t old_size,
   MALLOC_FAMILY_WRAPPER_HEADER(mremap, old_address, old_size, new_size, flags,
                                new_address);
   if (SYNC_IS_REPLAY) {
-    MALLOC_FAMILY_WRAPPER_REPLAY_START(mremap);
+    WRAPPER_REPLAY_START_TYPED(void *, mremap);
+    _real_pthread_mutex_lock(&mmap_lock);
     void *addr = GET_COMMON(my_entry, retval);
     flags |= (MREMAP_MAYMOVE | MREMAP_FIXED);
     retval = _real_mremap (old_address, old_size, new_size, flags, addr);
     JASSERT ( retval == GET_COMMON(my_entry, retval) );
-    MALLOC_FAMILY_WRAPPER_REPLAY_END(mremap);
+    _real_pthread_mutex_unlock(&mmap_lock);
+    WRAPPER_REPLAY_END(mremap);
   } else if (SYNC_IS_RECORD) {
     _real_pthread_mutex_lock(&mmap_lock);
     retval = _real_mremap (old_address, old_size, new_size, flags, new_address);

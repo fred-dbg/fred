@@ -127,6 +127,17 @@ def gdb_record_replay(n_count=1):
             print GS_FAILED_STRING
         end_session()
 
+def gdb_record_replay_mmap(n_count=1):
+    """Run a record/replay test on malloc->mmap promotion program.."""
+    global GS_TEST_PROGRAMS_DIRECTORY
+    l_cmd = ["gdb", GS_TEST_PROGRAMS_DIRECTORY + "/malloc-to-mmap"]
+    for i in range(0, n_count):
+        print_test_name("gdb record/replay mmap %d" % i)
+        start_session(l_cmd)
+        execute_commands(["b main", "r", "fred-ckpt", "c", "fred-restart", "c"])
+        print GS_PASSED_STRING
+        end_session()
+
 def gdb_record_replay_past_end(n_count=1):
     """Run a record/prelay test on test_list linked list example,
     where we replay past the end of the program."""
@@ -363,6 +374,7 @@ def gdb_reverse_finish(n_count=1):
 def run_integration_tests(n_iters):
     """Run all available integration tests."""
     gdb_record_replay(n_iters)
+    gdb_record_replay_mmap(n_iters)
     gdb_record_replay_past_end(n_iters)
     gdb_record_replay_pthread_cond(n_iters)
     gdb_record_replay_time(n_iters)
@@ -454,6 +466,7 @@ def initialize_tests():
     global gd_tests
     # When you add a new test, update this map from test name -> test fnc.
     gd_tests = { "gdb-record-replay" : gdb_record_replay,
+                 "gdb-record-replay-mmap" : gdb_record_replay_mmap,
                  "gdb-record-replay-past-end" : gdb_record_replay_past_end,
                  "gdb-record-replay-time" : gdb_record_replay_time,
                  "gdb-multiple-checkpoints-record-st" :

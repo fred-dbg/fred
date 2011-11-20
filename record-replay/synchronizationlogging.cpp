@@ -3026,6 +3026,9 @@ static inline bool is_optional_event_for(event_code_t event,
   case fwrite_event:
   case fread_event:
   case getc_event:
+  case malloc_event:
+  case calloc_event:
+  case realloc_event:
     return query || opt_event == mmap_event;
   case fdopen_event:
     return query || opt_event == mmap_event || opt_event == malloc_event;
@@ -3125,6 +3128,41 @@ void waitForTurn(log_entry_t *my_entry, turn_pred_t pred)
   }
 
   global_log.getCurrentEntry(*my_entry);
+}
+
+/* Special 'wait for' function used for malloc, calloc, etc. If a registered
+   optional event shows up in the log, return 1. Else, wait for the main event
+   and return 0.
+
+   This function should be used for any functions for which we make the
+   _real_XXX call on replay, which for right now is only the *alloc()
+   functions.*/
+unsigned waitForAllocTurn(log_entry_t *my_entry, turn_pred_t pred)
+{
+  log_entry_t temp_entry = EMPTY_LOG_ENTRY;
+  memfence();
+
+  while (1) {
+    global_log.getCurrentEntry(temp_entry);
+    if ((*pred)(&temp_entry, my_entry))
+      break;
+    /* Also check for an optional event for this clone_id. */
+    if (GET_COMMON(temp_entry, clone_id) == my_clone_id &&
+        GET_COMMON(temp_entry, isOptional) == 1) {
+      if (!is_optional_event_for((event_code_t)GET_COMMON_PTR(my_entry, event),
+                                 (event_code_t)GET_COMMON(temp_entry, event),
+                                 false)) {
+        JASSERT(false);
+      }
+      return 1;
+    }
+
+    memfence();
+    usleep(1);
+  }
+
+  global_log.getCurrentEntry(*my_entry);
+  return 0;
 }
 
 void waitForExecBarrier()
