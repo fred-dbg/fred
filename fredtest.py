@@ -40,7 +40,7 @@ import fred.fredio
 GS_PASSED_STRING = "Passed"
 GS_FAILED_STRING = "Failed"
 # XXX this path shouldn't be hardcoded.
-GS_TEST_PROGRAMS_DIRECTORY = "fredtest/test-programs"
+GS_TEST_PROGRAMS_DIRECTORY = "test"
 
 # Used for storing variable values between runs.
 gd_stored_variables = {}

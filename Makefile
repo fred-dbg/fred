@@ -1,13 +1,13 @@
 # Path to fred packages.
 PYTHONPATH=.
 # Path to fredtest directory
-FREDTEST=fredtest
+FREDTEST=test
 
-all: ${FREDTEST}/test-programs
-	cd ${FREDTEST}/test-programs && $(MAKE) $(MAKEFLAGS) all
+all: ${FREDTEST}
+	cd ${FREDTEST} && $(MAKE) $(MAKEFLAGS) all
 
 clean:
-	cd ${FREDTEST}/test-programs && $(MAKE) $(MAKEFLAGS) clean
+	cd ${FREDTEST} && $(MAKE) $(MAKEFLAGS) clean
 
 check: all fredtest.py
 	PYTHONPATH=$(PYTHONPATH) ./fredtest.py
