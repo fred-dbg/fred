@@ -47,6 +47,7 @@ gd_stored_variables = {}
 g_debugger = None
 gs_dmtcp_port = ""
 gb_fred_debug = False
+gn_num_iters = 1
 gd_tests = {}
 gn_coordinator_port = -1
 
@@ -359,23 +360,23 @@ def gdb_reverse_finish(n_count=1):
             print GS_FAILED_STRING
         end_session()
 
-def run_integration_tests():
+def run_integration_tests(n_iters):
     """Run all available integration tests."""
-    gdb_record_replay()
-    gdb_record_replay_past_end()
-    gdb_record_replay_pthread_cond()
-    gdb_record_replay_time()
-    gdb_multiple_checkpoints_record_st()
-    gdb_multiple_checkpoints_replay_st()
-    gdb_syscall_tester()
-    gdb_reverse_watch()
-    gdb_reverse_next()
-    gdb_reverse_step()
-    gdb_reverse_continue()
-    gdb_reverse_finish()
-    gdb_reverse_watch_mt()
-    gdb_reverse_watch_mt_priv()
-    gdb_reverse_watch_no_log()
+    gdb_record_replay(n_iters)
+    gdb_record_replay_past_end(n_iters)
+    gdb_record_replay_pthread_cond(n_iters)
+    gdb_record_replay_time(n_iters)
+    gdb_multiple_checkpoints_record_st(n_iters)
+    gdb_multiple_checkpoints_replay_st(n_iters)
+    gdb_syscall_tester(n_iters)
+    gdb_reverse_watch(n_iters)
+    gdb_reverse_next(n_iters)
+    gdb_reverse_step(n_iters)
+    gdb_reverse_continue(n_iters)
+    gdb_reverse_finish(n_iters)
+    gdb_reverse_watch_mt(n_iters)
+    gdb_reverse_watch_mt_priv(n_iters)
+    gdb_reverse_watch_no_log(n_iters)
     
 def run_unit_tests():
     """Run all available unit tests."""
@@ -383,18 +384,18 @@ def run_unit_tests():
 
 def run_tests(ls_test_list):
     """Run given list of tests, or all tests if None."""
-    global gd_tests
+    global gd_tests, gn_num_iters
     print "%-40s | %-15s" % ("Test name", "Result")
     print "-" * 41 + "+" + "-" * 15
     # TODO: This is hackish. Used to hide fred_info() messages.
     fred.fredio.gb_hide_output = True
     if ls_test_list == None:
-        run_integration_tests()
+        run_integration_tests(gn_num_iters)
         run_unit_tests()
     else:
         for t in ls_test_list:
             try:
-                gd_tests[t]()
+                gd_tests[t](gn_num_iters)
             except KeyError:
                 # If you've added a new test and are seeing this error message,
                 # you probably forgot to update gd_tests in initialize_tests().
@@ -404,7 +405,7 @@ def run_tests(ls_test_list):
 def parse_fredtest_args():
     """Parse command line args, and return list of tests to run.
     Then set up fredapp module accordingly."""
-    global gs_dmtcp_port, gb_fred_debug, gn_coordinator_port
+    global gs_dmtcp_port, gb_fred_debug, gn_coordinator_port, gn_num_iters
     parser = OptionParser()
     parser.disable_interspersed_args()
     # Note that '-h' and '--help' are supported automatically.
@@ -420,6 +421,9 @@ def parse_fredtest_args():
                       help="List available tests and exit.")
     parser.add_option("-t", "--tests", dest="test_list",
                       help="Comma delimited list of tests to run.")
+    parser.add_option("-i", "--iters", dest="num_iters", default=1,
+                      metavar="N",
+                      help="Run each test N times.")
     (options, l_args) = parser.parse_args()
     if options.list_tests:
         list_tests()
@@ -433,6 +437,8 @@ def parse_fredtest_args():
     else:
         gs_dmtcp_port = str(options.dmtcp_port)
     gb_fred_debug = options.debug
+    if options.num_iters:
+        gn_num_iters = int(options.num_iters)
     return options.test_list.split(",") if options.test_list != None else None
 
 def list_tests():
