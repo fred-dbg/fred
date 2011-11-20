@@ -1,6 +1,7 @@
 Prerequisites:
 =============
-1. DMTCP sources must be present in order to compile the module. They are not needed to use the module.
+1. DMTCP sources must be present in order to compile the module. They are not
+   needed to use the module.
 2. Rev 454+ require DMTCP revision 1290+.
 
 Build:
@@ -14,7 +15,8 @@ Run:
 To use thie module with DMTCP, provide the _absolute_ path to fredhijack.so on
 the dmtcp_checkpoint command line as follows:
 
-./bin/dmtcp_checkpoint --with-module /path/to/fredhijack.so gdb ../pthread-wrappers/test-programs/pthread-test
+./bin/dmtcp_checkpoint --with-module /path/to/fredhijack.so \
+  gdb ../pthread-wrappers/test-programs/pthread-test
 
 This module should be the first one in DMTCP module sequence provided by
 --with-module (or equivalent) in order to assure proper record/replay.
