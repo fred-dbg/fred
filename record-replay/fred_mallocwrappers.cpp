@@ -363,6 +363,28 @@ extern "C" void *realloc(void *ptr, size_t size)
   return retval;
 }
 
+static bool isPartOfAddrRangeAlreadyMmapped(void *addr, size_t length)
+{
+  int mapsFd = -1;
+  dmtcp::Util::ProcMapsArea area;
+  char *startAddr = (char*) addr;
+  char *endAddr = startAddr + length;
+
+  if ((mapsFd = _real_open("/proc/self/maps", O_RDONLY, S_IRUSR)) == -1) {
+    perror("open");
+    exit(1);
+  }
+
+  while (dmtcp::Util::readProcMapsLine(mapsFd, &area)) {
+    if ((startAddr >= area.addr && startAddr < area.endAddr) ||
+        (endAddr > area.addr && endAddr <= area.endAddr)) {
+      return (area.prot & PROT_EXEC) != 0;
+    }
+  }
+  _real_close(mapsFd);
+  return false;
+}
+
 /* mmap/mmap64
  * TODO: Remove the PROT_WRITE flag on REPLAY phase if it was not part of
  *       original flags.
@@ -391,6 +413,7 @@ extern "C" void *mmap(void *addr, size_t length, int prot, int flags,
       mmap_read_from_readlog = true;
     }
     flags |= MAP_FIXED;
+    JASSERT(!isPartOfAddrRangeAlreadyMmapped(addr, length));
     retval = _real_mmap (addr, length, prot | PROT_WRITE, flags, fd, offset);
     if (retval != GET_COMMON(my_entry, retval)) sleep(20);
     JASSERT ( retval == GET_COMMON(my_entry, retval) ) (retval)
@@ -436,6 +459,7 @@ extern "C" void *mmap64 (void *addr, size_t length, int prot, int flags,
       mmap_read_from_readlog = true;
     }
     flags |= MAP_FIXED;
+    JASSERT(!isPartOfAddrRangeAlreadyMmapped(addr, length));
     retval = _real_mmap64 (addr, length, prot | PROT_WRITE, flags, fd, offset);
     JASSERT ( retval == GET_COMMON(my_entry, retval) );
     if (mmap_read_from_readlog) {
@@ -493,6 +517,7 @@ extern "C" void *mremap(void *old_address, size_t old_size,
     _real_pthread_mutex_lock(&mmap_lock);
     void *addr = GET_COMMON(my_entry, retval);
     flags |= (MREMAP_MAYMOVE | MREMAP_FIXED);
+    JASSERT(!isPartOfAddrRangeAlreadyMmapped(addr, new_size));
     retval = _real_mremap (old_address, old_size, new_size, flags, addr);
     JASSERT ( retval == GET_COMMON(my_entry, retval) );
     _real_pthread_mutex_unlock(&mmap_lock);
@@ -516,6 +541,7 @@ extern "C" void *mremap(void *old_address, size_t old_size,
     MALLOC_FAMILY_WRAPPER_REPLAY_START(mremap);
     void *addr = GET_COMMON(my_entry, retval);
     flags |= MREMAP_MAYMOVE;
+    JASSERT(!isPartOfAddrRangeAlreadyMmapped(addr, new_size));
     retval = _real_mremap (old_address, old_size, new_size, flags, addr);
     JASSERT ( retval == GET_COMMON(my_entry, retval) );
     MALLOC_FAMILY_WRAPPER_REPLAY_END(mremap);
