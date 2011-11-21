@@ -110,9 +110,11 @@ def fred_timer_stop(s_timer_name):
     global GB_ENABLE_TIMINGS, gd_timers
     if GB_ENABLE_TIMINGS:
 	n_stop_time = time.time()
+        n_duration = n_stop_time - gd_timers[s_timer_name]
         fred_info("'%s' took %.3f seconds." % \
-		  (s_timer_name, n_stop_time - gd_timers[s_timer_name]))
+		  (s_timer_name, n_duration))
         del gd_timers[s_timer_name]
+        return n_duration
 
 def getRE(str, idx=0):
     """Return a regular expression string matching the given string with a

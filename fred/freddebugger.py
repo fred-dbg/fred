@@ -69,6 +69,15 @@ import debugger
 
 # ------------------------------------------------------- Global variables
 GS_FRED_MASTER_BRANCH_NAME = "MASTER"
+
+# Some statistics for reverse-watch:
+gn_time_checkpointing = 0.0
+gn_time_restarting = 0.0
+gn_time_evaluating = 0.0
+gn_total_checkpoints = 0
+gn_total_restarts = 0
+gn_total_evaluations = 0
+
 # ------------------------------------------------------- End global variables
 
 class ReversibleDebugger(debugger.Debugger):
@@ -141,7 +150,12 @@ class ReversibleDebugger(debugger.Debugger):
 
     def do_checkpoint(self):
         """Perform a new checkpoint, returning the index of the new ckpt."""
-        return self.branch.do_checkpoint()
+        global gn_time_checkpointing, gn_total_checkpoints
+        fredutil.fred_timer_start("checkpoint")
+        n_index = self.branch.do_checkpoint()
+        gn_time_checkpointing += fredutil.fred_timer_stop("checkpoint")
+        gn_total_checkpoints += 1
+        return n_index
 
     def reset_on_restart(self):
         """Perform any reset functions that should happen on restart."""
@@ -152,6 +166,8 @@ class ReversibleDebugger(debugger.Debugger):
     def do_restart(self, n_index=-1, b_clear_history=False):
         """Restart from the current or specified checkpoint.
         n_index defaults to -1, which means restart from current checkpoint."""
+        global gn_time_restarting, gn_total_restarts
+        fredutil.fred_timer_start("restart")
         self.branch.do_restart(n_index, b_clear_history, self.reset_on_restart)
         gn_time_restarting += fredutil.fred_timer_stop("restart")
         gn_total_restarts += 1
@@ -464,9 +480,13 @@ class ReversibleDebugger(debugger.Debugger):
     #  does:  return self.evaluate_expression(s_expr) == s_expr_val
     #  Also, is compare_expressions a better name than test_expression ?
     def test_expression(self, s_expr, s_expr_val):
+        global gn_time_evaluating, gn_total_evaluations
         ls_truths = ["1", "true"]
         ls_falsehoods = ["0", "false"]
+        fredutil.fred_timer_start("evaluation")
         s_result = self.evaluate_expression(s_expr)
+        gn_time_evaluating += fredutil.fred_timer_stop("evaluation")
+        gn_total_evaluations += 1
         if s_result in ls_truths and s_expr_val in ls_truths:
             return True
         elif s_result in ls_falsehoods and s_expr_val in ls_falsehoods:
@@ -480,6 +500,26 @@ class ReversibleDebugger(debugger.Debugger):
         s_val = self._p.sanitize_print_result(s_val)
         return s_val.strip()
 
+    def report_timing_statistics(self):
+        """Report any gathered timing statistics."""
+        global gn_time_checkpointing, gn_time_restarting, \
+               gn_time_evaluating, gn_total_checkpoints, \
+               gn_total_restarts, gn_total_evaluations
+        fredutil.fred_debug("Timing statistics:")
+        s = "\n"
+        s += "Total time checkpointing:   %.3f s\n" % gn_time_checkpointing
+        s += "Total time restarting:      %.3f s\n" % gn_time_restarting
+        s += "Total time evaluating expr: %.3f s\n" % gn_time_evaluating
+        s += "Total checkpoints:          %d\n"     % gn_total_checkpoints
+        s += "Total restarts:             %d\n"     % gn_total_restarts
+        s += "Total evaluations of expr:  %d\n"     % gn_total_evaluations
+        s += "Average checkpoint time:    %.3f s\n" % (gn_time_checkpointing /
+                                                       gn_total_checkpoints)
+        s += "Average restart time:       %.3f s\n" % (gn_time_restarting /
+                                                       gn_total_restarts)
+        s += "Average evaluation time:    %.3f s\n" % (gn_time_evaluating /
+                                                       gn_total_evaluations)
+        fredutil.fred_debug(s)
 
 class FredCommand():
     """Represents one user command sent to the debugger.

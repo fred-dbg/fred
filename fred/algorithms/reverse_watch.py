@@ -87,6 +87,7 @@ def _reverse_watch_round_robin(dbg, testIfTooFar):
 def reverse_watch_for_mt(dbg, s_expr):
     """Perform 'reverse-watch' command on expression, with support for
     an expression changing in a thread which is not the main thread."""
+    fredutil.fred_timer_start("reverse-watch")
     if dbg.branch.get_num_checkpoints() == 0:
         fredutil.fred_error("No checkpoints found for reverse-watch.")
         return
@@ -135,6 +136,8 @@ def reverse_watch_for_mt(dbg, s_expr):
     dbg.update_state()
     fredutil.fred_assert(not testIfTooFar())
     fredutil.fred_debug("Reverse watch finished.")
+    fredutil.fred_timer_stop("reverse-watch")
+    dbg.report_timing_statistics()
     return
 
 def reverse_watch(dbg, s_expr):
