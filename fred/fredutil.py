@@ -38,6 +38,9 @@ GB_DEBUG = False
 GB_ENABLE_TIMINGS = True
 gd_timers = {}
 
+class PromptTimeoutException(Exception):
+    pass
+
 def last_n(s, source, n):
     """ Return the last n characters of the concatenation of s+source.
     This is used by the output loop to keep track of the last n characters read

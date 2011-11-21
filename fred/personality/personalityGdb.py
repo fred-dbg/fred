@@ -45,6 +45,7 @@ class PersonalityGdb(personality.Personality):
         self.GS_BREAKPOINT = "break"
         self.GS_WHERE = "where"
         self.GS_INFO_BREAKPOINTS = "info breakpoints"
+        self.GS_INFO_THREADS = "info threads"
         self.GS_PRINT = "print"
         self.GS_FINISH = "finish"
         self.GS_CURRENT_POS = "where 1"
@@ -73,6 +74,8 @@ class PersonalityGdb(personality.Personality):
                               + fredutil.GS_FILE_PATH_RE + \
                               "):(\d+)\s+(?:breakpoint already hit " \
                               "(\d+) time)?"
+        # Matches gdb thread ids from "info threads":
+        self.gre_thread = "^(\*?)\s*(\d+)\s*Thread"
         # List of regexes that match debugger prompts for user input
         self.ls_needs_user_input = \
         [ "---Type <return> to continue, or q <return> to quit---",
@@ -109,19 +112,24 @@ class PersonalityGdb(personality.Personality):
         exp = "\$[0-9]+ = (.+)"
         m = re.search(exp, s_printed)
         if m == None:
+            no_symbol_exp = "No symbol.+"
+            if re.search(no_symbol_exp, s_printed) != None:
+                fredutil.fred_assert(False)
             return s_printed
         else:
             return m.group(1)
 
-    def do_step(self, n):
+    def do_step(self, n, b_timeout_prompt=False):
         """Override generic do_step() from personality.py so we can avoid
         stepping into libc, etc."""
         # If the 'step' results in an address of something that is outside of
         # the user's code, execute a 'finish', and replace the 'step' in
         # history with a 'next', so on replay only the next is executed.
-        output = self.execute_command(self.GS_STEP + " " + str(n))
+        output = self.execute_command(self.GS_STEP + " " + str(n),
+                                      b_timeout=b_timeout_prompt)
         if not self.within_user_code():
-            self.execute_command(self.GS_FINISH)
+            self.execute_command(self.GS_FINISH,
+                                 b_timeout=b_timeout_prompt)
             # TODO: Think of more portable way to do this:
             return "DO-NOT-STEP"
         return output
@@ -137,6 +145,13 @@ class PersonalityGdb(personality.Personality):
         frame.s_file      = match_obj[4]
         frame.n_line      = int(match_obj[5])
         return frame
+
+    def _parse_one_thread(self, match_obj):
+        """Return a 2-tuple: (b_active, tid) from the given re Match object.
+        The Match object should be a tuple (the result of gre_thread).
+        b_active is True if the tid is the current active thread."""
+        b_active = (match_obj[0] != "")
+        return (b_active, int(match_obj[1]))
 
     def _parse_one_breakpoint(self, match_obj):
         """Return a Breakpoint from the given re Match object.
@@ -196,6 +211,14 @@ class PersonalityGdb(personality.Personality):
         """Set gdb scheduler locking to b_value."""
         s_value = "on" if b_value else "off"
         self.execute_command("set scheduler-locking %s" % s_value)
+
+    def enable_sigstop(self):
+        """Enable passing of SIGSTOP to inferior."""
+        self.execute_command("handle SIGSTOP stop noignore")
+
+    def disable_sigstop(self):
+        """Disable passing of SIGSTOP to inferior."""
+        self.execute_command("handle SIGSTOP nostop ignore")
 
     def parse_address(self, s_addr):
         """Parse the given address string from gdb and return a number."""

@@ -166,7 +166,7 @@ def handle_fred_command(s_command):
         n_index = fredutil.to_int(s_command_args, 0)
         g_debugger.do_restart(n_index, b_clear_history=True)
     elif s_command_name in ["reverse-watch", "rw"]:
-        reverse_watch.reverse_watch_with_log_support(g_debugger, s_command_args)
+        reverse_watch.reverse_watch_for_mt(g_debugger, s_command_args)
         #reverse_watch.reverse_watch(g_debugger, s_command_args)
     elif s_command_name == "source":
         source_from_file(s_command_args)
@@ -318,6 +318,8 @@ def interactive_debugger_setup():
     if g_debugger.personality_name() == "gdb":
         # Special case for gdb: record name of executable.
         g_debugger._p.set_inferior_name()
+        # Ignore SIGUSR2 (DMTCP checkpoint signal)
+        g_debugger._p.execute_command("handle SIGUSR2 pass nostop")
     # If the user gave a source script file, execute it now.
     if g_source_script != None:
         source_from_file(g_source_script)
@@ -359,6 +361,7 @@ def fred_setup_as_module(l_cmd, s_dmtcp_port, b_debug):
     setup_fredio(l_cmd, True)
     # Since modules won't use the main_io_loop, we perform the debugger setup
     # requiring a debugger prompt here.
+    g_debugger.set_debugger_pid(fredio.get_child_pid())
     fredio.wait_for_prompt()
     interactive_debugger_setup()
     return g_debugger

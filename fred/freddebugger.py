@@ -140,8 +140,8 @@ class ReversibleDebugger(debugger.Debugger):
         self.update_state()
 
     def do_checkpoint(self):
-        """Perform a new checkpoint."""
-        self.branch.do_checkpoint()
+        """Perform a new checkpoint, returning the index of the new ckpt."""
+        return self.branch.do_checkpoint()
 
     def reset_on_restart(self):
         """Perform any reset functions that should happen on restart."""
@@ -153,6 +153,12 @@ class ReversibleDebugger(debugger.Debugger):
         """Restart from the current or specified checkpoint.
         n_index defaults to -1, which means restart from current checkpoint."""
         self.branch.do_restart(n_index, b_clear_history, self.reset_on_restart)
+        gn_time_restarting += fredutil.fred_timer_stop("restart")
+        gn_total_restarts += 1
+        # XXX Figure out a way to do this without fredio.
+        import fredio
+        self.set_debugger_pid(fredio.get_child_pid())
+        del fredio
         self.update_state()
 
     def do_restart_previous(self):
@@ -199,7 +205,7 @@ class ReversibleDebugger(debugger.Debugger):
         else:
             fredutil.fred_assert(cmd.s_native != "")
             self._p.execute_command(cmd.s_native + " " + cmd.s_args + "\n",
-                                    cmd.b_wait_for_prompt)
+                                    b_prompt=cmd.b_wait_for_prompt)
         if b_update:
             self.update_state()
 
@@ -213,7 +219,27 @@ class ReversibleDebugger(debugger.Debugger):
         output = self._next(n)
         self.update_state()
         return output
-        
+
+    def do_next_no_deadlock(self, n=1):
+        """Perform 'next' command, avoiding a deadlock. Returns the 2-tuple
+        (b_deadlock, output) where b_deadlock is true if the command timed
+        out."""
+        # Make sure we can interrupt inferior with SIGSTOP:
+        self.enable_sigstop()
+        output = ""
+        try:
+            cmd = fred_next_cmd()
+            cmd.set_native(self._p.get_native(cmd))
+            cmd.set_count_cmd(self._p.b_has_count_commands)
+            cmd.set_count(n)
+            self.log_fred_command(cmd)
+            output = self._next(n, b_timeout=True)
+            self.update_state()
+        except fredutil.PromptTimeoutException:
+            fredutil.fred_debug("'next' command timed out (probably a deadlock).")
+            return (True, output)
+        return (False, output)
+    
     def do_step(self, n=1):
         """Perform n 'step' commands. Returns output."""
         cmd = fred_step_cmd()
@@ -232,6 +258,35 @@ class ReversibleDebugger(debugger.Debugger):
         self.log_fred_command(cmd)
         self.update_state()
         return output
+
+    def do_step_no_deadlock(self, n=1):
+        """Perform 'step' command, avoiding a deadlock. Returns the 2-tuple
+        (b_deadlock, output) where b_deadlock is true if the command timed
+        out."""
+        # Make sure we can interrupt inferior with SIGSTOP:
+        self.enable_sigstop()
+        output = ""
+        try:
+            cmd = fred_step_cmd()
+            cmd.set_native(self._p.get_native(cmd))
+            cmd.set_count_cmd(self._p.b_has_count_commands)
+            cmd.set_count(n)
+            # TODO: Special case for gdb so we don't step into libc. Think of
+            # more portable way to do this.
+            output = self._step(n, b_timeout=True)
+            if output == "DO-NOT-STEP":
+                # Log a next instead of step so we don't step into libc again.
+                cmd = fred_next_cmd()
+                cmd.set_native(self._p.get_native(cmd))
+                cmd.set_count_cmd(self._p.b_has_count_commands)
+                cmd.set_count(1)
+            self.log_fred_command(cmd)
+            self.update_state()
+        except fredutil.PromptTimeoutException:
+            fredutil.fred_debug("'step' command timed out (probably a deadlock).")
+            return (True, output)
+
+        return (False, output)
 
     def append_step_over_libc(self, l_history):
 	"""Append fred_step_cmd() to l_history.  if this would enter glibc
@@ -287,7 +342,7 @@ class ReversibleDebugger(debugger.Debugger):
         cmd.s_args = str(n_tid)
         self.log_fred_command(cmd)
         self._switch_to_thread(n_tid)
-
+        
     def set_log_breakpoint(self, n_log_index):
         """Set a log breakpoint on the given log entry index."""
         cmd = fred_log_breakpoint_cmd()
@@ -302,6 +357,7 @@ class ReversibleDebugger(debugger.Debugger):
         # Calling debugger _continue() will let the inferior run, but
         # we have set a log breakpoint, so it will only replay to that
         # point.
+        self.enable_sigstop()
         self._continue(b_wait_for_prompt=False)
         self.log_fred_command(fred_log_continue_cmd())
         fredmanager.wait_on_fred_breakpoint()
@@ -408,10 +464,12 @@ class ReversibleDebugger(debugger.Debugger):
     #  does:  return self.evaluate_expression(s_expr) == s_expr_val
     #  Also, is compare_expressions a better name than test_expression ?
     def test_expression(self, s_expr, s_expr_val):
+        ls_truths = ["1", "true"]
+        ls_falsehoods = ["0", "false"]
         s_result = self.evaluate_expression(s_expr)
-        if s_result == "1" and s_expr_val == "true":
+        if s_result in ls_truths and s_expr_val in ls_truths:
             return True
-        elif s_result == "0" and s_expr_val == "false":
+        elif s_result in ls_falsehoods and s_expr_val in ls_falsehoods:
             return True
         else:
             return s_result == s_expr_val
@@ -536,6 +594,7 @@ class Branch():
         dmtcpmanager.checkpoint()
         fredutil.fred_info("Created checkpoint #%d." %
                            self.get_last_checkpoint().get_index())
+        return self.get_last_checkpoint().get_index()
 
     def do_restart(self, n_index, b_clear_history, reset_fnc):
         """Restart from the specified checkpoint, calling the provided
@@ -547,8 +606,8 @@ class Branch():
             reset_fnc()
         if n_index == -1:
             fredutil.fred_debug("Restarting from checkpoint index %d." % \
-                                self.get_last_checkpoint().get_index())
-            dmtcpmanager.restart(self.get_last_checkpoint().get_index())
+                                self.get_current_checkpoint().get_index())
+            dmtcpmanager.restart(self.get_current_checkpoint().get_index())
         else:
             if n_index > self.get_num_checkpoints() - 1:
                 fredutil.fred_error("No such checkpoint index %d." % n_index)

@@ -43,6 +43,8 @@ GS_FRED_DEMO_UNHIDE_PREFIX = ['next', 'step']
 
 # Maximum length of a prompt string (from any debugger)
 GN_MAX_PROMPT_LENGTH = 32
+# Timeout (in seconds) for waiting for the prompt to appear
+GN_PROMPT_WAIT_TIMEOUT = 10.0
 
 # Due to a Python "feature" we need to include a very high timeout for
 # all lock acquisitions in order to handle ^C correctly. The low-level
@@ -115,10 +117,10 @@ class ThreadedOutput(threading.Thread):
                             _send_child_input("\n")
                     if gb_capture_output_til_prompt:
                         if g_find_prompt_function(gs_last_printed):
-                            gs_last_printed = ""
+                            _reset_last_printed()
                             g_capture_output_event.set()
                     else:
-                        gs_last_printed = ""
+                        _reset_last_printed()
                         g_capture_output_event.set()
                 if not gb_hide_output:
                     # Always remove prompt from output so we can print it:
@@ -191,29 +193,38 @@ def _start_output_capture(wait_for_prompt):
     to be saved."""
     global gb_capture_output, gs_captured_output, g_capture_output_event, \
            gb_capture_output_til_prompt
+    g_capture_output_event.clear()
     _reset_last_printed()
     gb_capture_output_til_prompt = wait_for_prompt
     gb_capture_output = True
-    g_capture_output_event.clear()
 
-def _wait_for_captured_output(b_wait_for_prompt, b_multi_page):
+def _wait_for_captured_output(b_wait_for_prompt, b_timeout,
+                              b_multi_page, b_hide_reset):
     """Wait until output capture is done, and return captured output.
     The actual output capture is done by the output thread, and placed into
     global gs_captured_output. This function resets that global string when
     finished."""
     global gb_capture_output, gs_captured_output, g_capture_output_event, \
            gb_capture_output_til_prompt, gb_capture_output_multi_page, \
-           GN_PYTHON_BUG_LOCK_TIMEOUT
+           gb_hide_output, GN_PROMPT_WAIT_TIMEOUT, GN_PYTHON_BUG_LOCK_TIMEOUT
     gb_capture_output_til_prompt = b_wait_for_prompt
     gb_capture_output_multi_page = b_multi_page
-    g_capture_output_event.wait(GN_PYTHON_BUG_LOCK_TIMEOUT)
+    if b_timeout:
+        g_capture_output_event.wait(GN_PROMPT_WAIT_TIMEOUT)
+        if not g_capture_output_event.is_set():
+            gb_hide_output = b_hide_reset
+            gs_captured_output = ""
+            gb_capture_output = False
+            raise fredutil.PromptTimeoutException
+    else:
+        g_capture_output_event.wait(GN_PYTHON_BUG_LOCK_TIMEOUT)
     output = gs_captured_output
     gs_captured_output = ""
     gb_capture_output = False
     return output
 
-def get_child_response(s_input, hide=True, b_wait_for_prompt=False,
-                       b_multi_page=True):
+def get_child_response(s_input, b_timeout=False, hide=True,
+                       b_wait_for_prompt=False, b_multi_page=True):
     """Sends requested input to child, and returns any response made.
     If hide flag is True (default), suppresses echoing from child.  If
     wait_for_prompt flag is True, collects output until the debugger prompt is
@@ -232,7 +243,8 @@ def get_child_response(s_input, hide=True, b_wait_for_prompt=False,
     gb_hide_output = hide
     _start_output_capture(b_wait_for_prompt)
     _send_child_input(s_input)
-    response = _wait_for_captured_output(b_wait_for_prompt, b_multi_page)
+    response = _wait_for_captured_output(b_wait_for_prompt, b_timeout,
+                                         b_multi_page, b_orig_hide_state)
     gb_hide_output = b_orig_hide_state
     return response
 
@@ -316,9 +328,9 @@ def send_command_nonblocking(command):
 def send_command(command):
     """Send a command to the child process and wait for the prompt."""
     global g_prompt_ready_event, gb_need_user_input
-    _send_child_input(command+'\n')
     g_prompt_ready_event.clear()
     gb_need_user_input = False
+    _send_child_input(command+'\n')
     wait_for_prompt()
     
 def reexec(argv):

@@ -36,6 +36,7 @@ class Personality:
         self.GS_BREAKPOINT = None
         self.GS_WHERE = None
         self.GS_INFO_BREAKPOINTS = None
+        self.GS_INFO_THREADS = None
         self.GS_PRINT = None
         self.GS_FINISH = None
         self.GS_CURRENT_POS = None
@@ -50,6 +51,7 @@ class Personality:
         self.gre_prompt = None
         self.gre_backtrace_frame = None
         self.gre_breakpoint = None
+        self.gre_thread = None
         # List of regexes that match debugger prompts for user input:
         self.ls_needs_user_input = []
         # Things like 'next 5' are allowed:
@@ -82,6 +84,27 @@ class Personality:
             l_breakpoints.append(self._parse_one_breakpoint(m))
         return l_breakpoints
 
+    def get_threads(self):
+        """Return a list of 2-tuples (b_active, integer) where b_active is True
+        for the currently active thread, and the integer is the gdb thread id
+        (NOT system tid)."""
+        return self._parse_thread_ids(self.do_info_threads())
+
+    def _parse_thread_ids(self, s_threads):
+        """Return a list of 2-tuples (b_active, integer) where b_active is True
+        for the currently active thread, and the integer is the gdb thread id
+        (NOT system tid) parsed from output of 'info threads' cmd."""
+        l_threads = []
+        l_matches = re.findall(self.gre_thread, s_threads, re.MULTILINE)
+        for i in range(0, len(l_matches)):
+            l_threads.append(self._parse_one_thread(l_matches[i]))
+        return l_threads
+
+    def _parse_one_thread(self, match_obj):
+        """Return a thread id from the given re Match object.
+        The Match object should be a tuple (the result of gre_thread)."""
+        fredutil.fred_assert(False, "Must be implemented in subclass.")
+
     def _parse_one_breakpoint(self, match_obj):
         """Return a Breakpoint from the given re Match object.
         The Match object should be a tuple (the result of gre_breakpoint)."""
@@ -105,23 +128,27 @@ class Personality:
         The Match object should be a tuple (result of gre_backtrace_frame.)"""
         fredutil.fred_assert(False, "Must be implemented in subclass.")
         
-    def execute_command(self, s_cmd, b_prompt=True):
+    def execute_command(self, s_cmd, b_timeout=False, b_prompt=True):
         """Send the given string to debugger and return its output."""
         # Ensure it has strictly one newline:
         s_cmd = s_cmd.strip() + "\n"
-        return fredio.get_child_response(s_cmd, b_wait_for_prompt=b_prompt)
+        return fredio.get_child_response(s_cmd, b_timeout=b_timeout,
+                                         b_wait_for_prompt=b_prompt)
 
-    def do_next(self, n):
+    def do_next(self, n, b_timeout_prompt):
         """Perform n 'next' commands. Returns output."""
-        return self.execute_command(self.GS_NEXT + " " + str(n))
+        return self.execute_command(self.GS_NEXT + " " + str(n),
+                                    b_timeout=b_timeout_prompt)
         
-    def do_step(self, n):
+    def do_step(self, n, b_timeout_prompt):
         """Perform n 'step' commands. Returns output."""
-        return self.execute_command(self.GS_STEP + " " + str(n))
+        return self.execute_command(self.GS_STEP + " " + str(n),
+                                    b_timeout=b_timeout_prompt)
         
     def do_continue(self, b_wait_for_prompt):
         """Perform 'continue' command. Returns output."""
-        return self.execute_command(self.GS_CONTINUE, b_wait_for_prompt)
+        return self.execute_command(self.GS_CONTINUE,
+                                    b_prompt=b_wait_for_prompt)
         
     def do_breakpoint(self, expr):
         """Perform 'break expr' command. Returns output."""
@@ -138,6 +165,10 @@ class Personality:
     def do_info_breakpoints(self):
         """Perform 'info_breakpoints' command. Returns output."""
         return self.execute_command(self.GS_INFO_BREAKPOINTS)
+
+    def do_info_threads(self):
+        """Perform 'info threads' command. Returns output."""
+        return self.execute_command(self.GS_INFO_THREADS)
 
     def do_print(self, expr):
         """Perform 'print expr' command. Returns output."""

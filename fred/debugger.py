@@ -31,13 +31,13 @@ class Debugger():
         """Set the pid of the debugger process."""
         self._n_pid = n_pid
 
-    def _next(self, n):
+    def _next(self, n, b_timeout=False):
         """Perform n 'next' commands. Returns output."""
-        return self._p.do_next(n)
+        return self._p.do_next(n, b_timeout_prompt=b_timeout)
         
-    def _step(self, n):
+    def _step(self, n, b_timeout=False):
         """Perform n 'step' commands. Returns output."""
-        return self._p.do_step(n)
+        return self._p.do_step(n, b_timeout_prompt=b_timeout)
         
     def _continue(self, b_wait_for_prompt):
         """Perform 'continue' command. Returns output."""
@@ -77,7 +77,29 @@ class Debugger():
         self._continue(True)
         self._finish()
         self._switch_to_thread(n_tid)
+
+    def set_scheduler_locking(self, n_on):
+        fredutil.fred_assert(self.personality_name() == "gdb")
+        fredutil.fred_debug("Turning scheduler locking to %s" % str(n_on))
+        self._p.set_scheduler_locking(n_on)
         
+    def get_alive_threads(self):
+        """Return a list of debugger tids for all threads currently alive."""
+        l_threads = self._p.get_threads()
+        return [x[1] for x in l_threads]
+
+    def get_current_thread(self):
+        """Return the debugger tid for the currently active thread."""
+        l_threads = self._p.get_threads()
+        for tup in l_threads:
+            if tup[0]:
+                return tup[1]
+            
+    def within_user_code(self):
+        """Return True if the current position is within user code."""
+        fredutil.fred_assert(self.personality_name() == "gdb")
+        return self._p.within_user_code()
+
     def current_position(self):
         """Return a BacktraceFrame representing current debugger position."""
         return self._p.current_position()
@@ -136,7 +158,19 @@ class Debugger():
         n_pid = fredutil.get_inferior_pid(self.get_debugger_pid())
         fredutil.fred_assert(n_pid != -1)
         os.kill(n_pid, signal.SIGSTOP)
+        # XXX: Figure out a way to avoid using fredio.
+        import fredio
         fredio.wait_for_prompt()
+        del fredio
+        self.disable_sigstop()
+
+    def enable_sigstop(self):
+        """Enable passing of SIGSTOP to inferior."""
+        self._p.enable_sigstop()
+
+    def disable_sigstop(self):
+        """Disable passing of SIGSTOP to inferior."""
+        self._p.disable_sigstop()
 
     def interrupt_inferior(self):
         """Sends a ^C to the inferior process."""
