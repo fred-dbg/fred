@@ -120,6 +120,12 @@ static void recordReplayInit()
   char *login_name = getlogin();
   JASSERT(login_name != NULL);
 
+  /* asctime() causes the process to mmap()
+   * /usr/libXX/gconv/gconv-modules.cache into memory. Thus any later calls to
+   * asctime won't result in the mmap.
+   */
+  time_t t = time(NULL);
+  JASSERT(asctime(localtime(&t)) != NULL);
 
   JTRACE ( "Record/replay finished initializing." );
 }
