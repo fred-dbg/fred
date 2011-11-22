@@ -1132,6 +1132,8 @@ void initializeJalib()
   INIT_JALIB_FPTR(fclose);
 
   INIT_JALIB_FPTR(syscall);
+  INIT_JALIB_FPTR(mmap);
+  INIT_JALIB_FPTR(munmap);
 
   INIT_JALIB_FPTR(read);
   INIT_JALIB_FPTR(write);
