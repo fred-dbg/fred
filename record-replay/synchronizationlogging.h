@@ -1775,7 +1775,7 @@ typedef struct {
   socklen_t hostlen;
   char *serv;
   socklen_t servlen;
-  unsigned int flags;
+  int flags;
   char ret_host[NI_MAXHOST];
   char ret_serv[NI_MAXSERV];
 } log_event_getnameinfo_t;
@@ -2331,7 +2331,7 @@ CREATE_ENTRY_FUNC(getaddrinfo, const char *node, const char *service,
 CREATE_ENTRY_FUNC(freeaddrinfo, struct addrinfo *res);
 CREATE_ENTRY_FUNC(getnameinfo, const struct sockaddr *sa, socklen_t salen,
                   char *host, socklen_t hostlen, char *serv, socklen_t servlen,
-                  unsigned int flags);
+                  int flags);
 
 CREATE_ENTRY_FUNC(sendto, int sockfd, const void *buf, size_t len, int flags,
                   const struct sockaddr *dest_addr, socklen_t addrlen);
