@@ -309,8 +309,30 @@ void copyFdSet(fd_set *src, fd_set *dest)
   }
 }
 
+LIB_PRIVATE void initialize_thread()
+{
+  /* Assigning my_clone_id should be the very first thing.*/
+  my_clone_id = global_clone_counter++;
+  JTRACE ( "Thread start initialization." ) ( my_clone_id );
+
+  pid_t clone_id = my_clone_id;
+  pthread_t pthread_id = pthread_self();
+
+  (*clone_id_to_tid_table)[clone_id] = pthread_id;
+  (*tid_to_clone_id_table)[pthread_id] = clone_id;
+
+  if (SYNC_IS_RECORD) {
+    global_log.incrementNumberThreads();
+  }
+
+  JTRACE ( "Thread Initialized" ) ( my_clone_id ) ( pthread_id );
+}
+
 void addNextLogEntry(log_entry_t& e)
 {
+  if (my_clone_id == -1 && dmtcp_is_running_state()) {
+    initialize_thread();
+  }
   if (GET_COMMON(e, log_offset) == INVALID_LOG_OFFSET) {
     global_log.appendEntry(e);
   } else {
