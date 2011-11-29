@@ -309,8 +309,31 @@ void copyFdSet(fd_set *src, fd_set *dest)
   }
 }
 
+LIB_PRIVATE void initialize_thread()
+{
+  /* Assigning my_clone_id should be the very first thing.*/
+  my_clone_id = global_clone_counter++;
+  JTRACE ( "Thread start initialization." ) ( my_clone_id );
+
+  pid_t clone_id = my_clone_id;
+  pthread_t pthread_id = pthread_self();
+
+  (*clone_id_to_tid_table)[clone_id] = pthread_id;
+  (*tid_to_clone_id_table)[pthread_id] = clone_id;
+
+  if (SYNC_IS_RECORD) {
+    global_log.incrementNumberThreads();
+  }
+
+  JTRACE ( "Thread Initialized" ) ( my_clone_id ) ( pthread_id );
+}
+
 void addNextLogEntry(log_entry_t& e)
 {
+  if (my_clone_id == -1) {
+    initialize_thread();
+    SET_COMMON2(e, clone_id, my_clone_id);
+  }
   if (GET_COMMON(e, log_offset) == INVALID_LOG_OFFSET) {
     global_log.appendEntry(e);
   } else {
@@ -320,6 +343,9 @@ void addNextLogEntry(log_entry_t& e)
 
 void getNextLogEntry()
 {
+  if (my_clone_id == -1) {
+    initialize_thread();
+  }
   // If log is empty, don't do anything
   if (global_log.numEntries() == 0) {
     return;
@@ -3108,6 +3134,10 @@ void waitForTurn(log_entry_t *my_entry, turn_pred_t pred)
   log_entry_t temp_entry = EMPTY_LOG_ENTRY;
   memfence();
 
+  if (my_clone_id == -1) {
+    initialize_thread();
+    SET_COMMON_PTR2(my_entry, clone_id, my_clone_id);
+  }
   while (1) {
     global_log.getCurrentEntry(temp_entry);
     if ((*pred)(&temp_entry, my_entry))

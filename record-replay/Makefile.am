@@ -18,13 +18,13 @@ nobase_noinst_HEADERS = constants.h fred_wrappers.h synchronizationlogging.h log
 			$(DMTCP_SRC_PATH)/trampolines.h $(DMTCP_SRC_PATH)/util.h \
 			$(DMTCP_SRC_PATH)/dmtcpmodule.h
 
-libfredinternal_a_SOURCES = synchronizationlogging.cpp log.cpp fred.cpp \
+libfredinternal_a_SOURCES = synchronizationlogging.cpp log.cpp \
 			    fred_trampolines.cpp
 
 fredhijack_so_SOURCES = fred_signalwrappers.cpp fred_epollwrappers.cpp \
 			fred_mallocwrappers.cpp fred_filewrappers.cpp \
 			fred_syscallsreal.c fred_socketwrappers.cpp \
-			pthreadwrappers.cpp netwrappers.cpp
+			pthreadwrappers.cpp netwrappers.cpp fred.cpp
 
 fredhijack_so_LDFLAGS   = -shared -module
 fredhijack_so_LDADD     = libfredinternal.a -ldl -lpthread

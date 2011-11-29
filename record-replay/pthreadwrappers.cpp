@@ -118,6 +118,9 @@ static void remove_reaped_thread(pthread_t thd)
 
 static void *start_wrapper(void *arg)
 {
+  if (my_clone_id == -1) {
+    initialize_thread();
+  }
   /*
    This start function calls the user's start function. We need this so that we
    gain control immediately after the user's start function terminates, but

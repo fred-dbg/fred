@@ -40,7 +40,6 @@
 
 static inline void memfence() {  asm volatile ("mfence" ::: "memory"); }
 void fred_setup_trampolines();
-static void initialize_thread();
 
 static int sync_mode_pre_ckpt = SYNC_NOOP;
 
@@ -209,45 +208,6 @@ void fred_reset_on_fork()
   initializeLogNames();
 }
 
-static void initialize_thread()
-{
-  /* Assigning my_clone_id should be the very first thing.*/
-  my_clone_id = global_clone_counter++;
-  JTRACE ( "Thread start initialization." ) ( my_clone_id );
-
-  pid_t clone_id = my_clone_id;
-  pthread_t pthread_id = pthread_self();
-
-  (*clone_id_to_tid_table)[clone_id] = pthread_id;
-  (*tid_to_clone_id_table)[pthread_id] = clone_id;
-
-  if (SYNC_IS_RECORD) {
-    global_log.incrementNumberThreads();
-  }
-
-  JTRACE ( "Thread Initialized" ) ( my_clone_id ) ( pthread_id );
-}
-
-/* This event happens as the *first* task in a new thread. Specifically, this
-   event is called by the new thread, before the user's thread function
-   starts. */
-void fred_thread_start()
-{
-  if (dmtcp_is_running_state()) {
-    initialize_thread();
-  } else {
-    JASSERT ( my_clone_id != 0 );
-  }
-}
-
-/* This event happens just after the user's thread function returns, but before
-   the thread actually dies. */
-void fred_thread_exit()
-{
-  /* User function returns; reap the thread. */
-  reapThisThread();
-}
-
 EXTERNC void dmtcp_process_event(DmtcpEvent_t event, void* data)
 {
   switch (event) {
@@ -265,12 +225,6 @@ EXTERNC void dmtcp_process_event(DmtcpEvent_t event, void* data)
       break;
     case DMTCP_EVENT_POST_RESTART_RESUME:
       fred_post_restart_resume();
-      break;
-    case DMTCP_EVENT_THREAD_START:
-      fred_thread_start();
-      break;
-    case DMTCP_EVENT_THREAD_EXIT:
-      fred_thread_exit();
       break;
     case DMTCP_EVENT_PRE_EXIT:
     case DMTCP_EVENT_PRE_CHECKPOINT:
