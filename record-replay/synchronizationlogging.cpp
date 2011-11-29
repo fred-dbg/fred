@@ -1674,7 +1674,7 @@ log_entry_t create_getnameinfo_entry(clone_id_t clone_id, event_code_t event,
                                      const struct sockaddr *sa, socklen_t salen,
                                      char *host, socklen_t hostlen,
                                      char *serv, socklen_t servlen,
-                                     unsigned int flags)
+                                     int flags)
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);

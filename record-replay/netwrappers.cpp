@@ -388,7 +388,7 @@ extern "C" void freeaddrinfo(struct addrinfo *res)
 
 extern "C" int getnameinfo(const struct sockaddr *sa, socklen_t salen,
                            char *host, socklen_t hostlen,
-                           char *serv, socklen_t servlen, unsigned int flags)
+                           char *serv, socklen_t servlen, int flags)
 {
   WRAPPER_HEADER(int, getnameinfo, _real_getnameinfo, sa, salen, host, hostlen,
                  serv, servlen, flags);
