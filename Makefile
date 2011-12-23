@@ -2,9 +2,11 @@
 PYTHONPATH=.
 # Path to fredtest directory
 FREDTEST=test
+RECORD_REPLAY=record-replay
 
-all: ${FREDTEST}
+all: ${FREDTEST} ${RECORD_REPLAY}
 	cd ${FREDTEST} && $(MAKE) $(MAKEFLAGS) all
+	cd ${RECORD_REPLAY} && $(MAKE) $(MAKEFLAGS) all
 
 clean:
 	cd ${FREDTEST} && $(MAKE) $(MAKEFLAGS) clean
