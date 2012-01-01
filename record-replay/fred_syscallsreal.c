@@ -927,6 +927,11 @@ ssize_t _real_getline(char **lineptr, size_t *n, FILE *stream) {
 }
 
 LIB_PRIVATE
+ssize_t _real_getdelim(char **lineptr, size_t *n, int delim, FILE *stream) {
+  REAL_FUNC_PASSTHROUGH_TYPED ( ssize_t, getdelim ) ( lineptr, n, delim, stream );
+}
+
+LIB_PRIVATE
 int _real_link(const char *oldpath, const char *newpath) {
   REAL_FUNC_PASSTHROUGH_TYPED ( int, link ) ( oldpath, newpath );
 }
@@ -1103,6 +1108,11 @@ FILE * _real_tmpfile(void) {
 LIB_PRIVATE
 int _real_truncate(const char *path, off_t length) {
   REAL_FUNC_PASSTHROUGH_TYPED ( int,truncate ) ( path, length );
+}
+
+LIB_PRIVATE
+int _real_ftruncate(int fd, off_t length) {
+  REAL_FUNC_PASSTHROUGH_TYPED ( int,ftruncate ) ( fd, length );
 }
 
 LIB_PRIVATE

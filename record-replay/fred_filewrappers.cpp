@@ -197,6 +197,37 @@ extern "C" int closedir(DIR *dirp)
   return retval;
 }
 
+extern "C" ssize_t __getdelim(char **lineptr, size_t *n, int delim, FILE *stream)
+{
+  WRAPPER_HEADER(ssize_t, getdelim, _real_getdelim, lineptr, n, delim, stream);
+  if (SYNC_IS_REPLAY) {
+    WRAPPER_REPLAY_START_TYPED(ssize_t, getdelim);
+    if (retval != -1) {
+      *lineptr = GET_FIELD(my_entry, getdelim, new_lineptr);
+      *n       = GET_FIELD(my_entry, getdelim, new_n);
+      WRAPPER_REPLAY_READ_FROM_READ_LOG(getdelim, *lineptr, *n);
+    }
+    WRAPPER_REPLAY_END(getdelim);
+  } else if (SYNC_IS_RECORD) {
+    isOptionalEvent = true;
+    retval = _real_getdelim(lineptr, n, delim, stream);
+    isOptionalEvent = false;
+    if (retval != -1) {
+      SET_FIELD2(my_entry, getdelim, new_lineptr, *lineptr);
+      SET_FIELD2(my_entry, getdelim, new_n, *n);
+      WRAPPER_LOG_WRITE_INTO_READ_LOG(getdelim, *lineptr, *n);
+    }
+    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+  }
+  return retval;
+}
+
+extern "C" ssize_t getdelim(char **lineptr, size_t *n, int delim, FILE *stream)
+{
+  ok_to_log_next_func = true;
+  return __getdelim(lineptr, n, delim, stream);
+}
+
 // WARNING:  Early versions of glibc (e.g. glibc 2.3) define this
 //  function in stdio.h as inline.  This wrapper won't work in that case.
 # if __GLIBC_PREREQ (2,4)
@@ -705,6 +736,11 @@ extern "C" void rewind(FILE *stream)
 extern "C" int truncate(const char *path, off_t length)
 {
   BASIC_SYNC_WRAPPER(int, truncate, _real_truncate, path, length);
+}
+
+extern "C" int ftruncate(int fd, off_t length)
+{
+  BASIC_SYNC_WRAPPER(int, ftruncate, _real_ftruncate, fd, length);
 }
 
 extern "C" long ftell(FILE *stream)

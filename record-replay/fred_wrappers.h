@@ -239,6 +239,7 @@ LIB_PRIVATE extern __thread int thread_performing_dlopen_dlsym;
   MACRO(time)                                 \
   MACRO(tmpfile)                              \
   MACRO(truncate)                             \
+  MACRO(ftruncate)                            \
   MACRO(getsockname)                          \
   MACRO(getpeername)                          \
   MACRO(fcntl)                                \
@@ -278,6 +279,7 @@ LIB_PRIVATE extern __thread int thread_performing_dlopen_dlsym;
   MACRO(fgetc)                                \
   MACRO(ungetc)                               \
   MACRO(getline)                              \
+  MACRO(getdelim)                             \
   MACRO(rename)                               \
   MACRO(rewind)                               \
   MACRO(rmdir)                                \
@@ -544,6 +546,7 @@ LIB_PRIVATE extern __thread int thread_performing_dlopen_dlsym;
   int _real_fflush(FILE *stream);
   int _real_setvbuf(FILE *stream, char *buf, int mode, size_t size);
   ssize_t _real_getline(char **lineptr, size_t *n, FILE *stream);
+  ssize_t _real_getdelim(char **lineptr, size_t *n, int delim, FILE *stream);
   int _real_getc(FILE *stream);
   char * _real_getcwd(char *buf, size_t size);
   int _real_gettimeofday(struct timeval *tv, struct timezone *tz);
@@ -588,6 +591,7 @@ LIB_PRIVATE extern __thread int thread_performing_dlopen_dlsym;
   time_t _real_time(time_t *tloc);
   FILE * _real_tmpfile(void);
   int _real_truncate(const char *path, off_t length);
+  int _real_ftruncate(int fd, off_t length);
   ssize_t _real_pread(int fd, void *buf, size_t count, off_t offset);
   ssize_t _real_pwrite(int fd, const void *buf, size_t count, off_t offset);
 

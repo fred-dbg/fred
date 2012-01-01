@@ -834,6 +834,19 @@ log_entry_t create_getline_entry(clone_id_t clone_id, event_code_t event, char *
   return e;
 }
 
+log_entry_t create_getdelim_entry(clone_id_t clone_id, event_code_t event,
+                                  char **lineptr, size_t *n, int delim,
+                                  FILE *stream)
+{
+  log_entry_t e = EMPTY_LOG_ENTRY;
+  setupCommonFields(&e, clone_id, event);
+  SET_FIELD2(e, getdelim, lineptr, *lineptr);
+  SET_FIELD2(e, getdelim, n, *n);
+  SET_FIELD2(e, getdelim, delim, delim);
+  SET_FIELD2(e, getdelim, stream, stream);
+  return e;
+}
+
 log_entry_t create_getpeername_entry(clone_id_t clone_id, event_code_t event, int sockfd,
                                      struct sockaddr *addr, socklen_t *addrlen)
 {
@@ -1532,6 +1545,16 @@ log_entry_t create_truncate_entry(clone_id_t clone_id, event_code_t event,
   return e;
 }
 
+log_entry_t create_ftruncate_entry(clone_id_t clone_id, event_code_t event,
+                                   int fd, off_t length)
+{
+  log_entry_t e = EMPTY_LOG_ENTRY;
+  setupCommonFields(&e, clone_id, event);
+  SET_FIELD2(e, ftruncate, fd, fd);
+  SET_FIELD(e, ftruncate, length);
+  return e;
+}
+
 log_entry_t create_unlink_entry(clone_id_t clone_id, event_code_t event,
      const char *pathname)
 {
@@ -2112,6 +2135,13 @@ TURN_CHECK_P(truncate_turn_check)
       GET_FIELD_PTR(e2, truncate, length);
 }
 
+TURN_CHECK_P(ftruncate_turn_check)
+{
+  return base_turn_check(e1, e2) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, ftruncate, fd) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, ftruncate, length);
+}
+
 TURN_CHECK_P(accept_turn_check)
 {
   return base_turn_check(e1, e2) &&
@@ -2374,6 +2404,16 @@ TURN_CHECK_P(getline_turn_check)
       GET_FIELD_PTR(e2, getline, lineptr) &&
     GET_FIELD_PTR(e1, getline, stream) ==
       GET_FIELD_PTR(e2, getline, stream);
+}
+
+TURN_CHECK_P(getdelim_turn_check)
+{
+  /* We don't check for n because it might change, in case lineptr gets
+     reallocated. */
+  return base_turn_check(e1,e2) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, getdelim, lineptr) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, getdelim, delim) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, getdelim, stream);
 }
 
 TURN_CHECK_P(fopen_turn_check)
@@ -3078,6 +3118,9 @@ static inline bool is_optional_event_for(event_code_t event,
       opt_event == free_event || opt_event == calloc_event ||
       opt_event == mmap_event || opt_event == ftell_event ||
       opt_event == fopen_event || opt_event == fclose_event;
+  case getdelim_event:
+    return query || opt_event == malloc_event || opt_event == realloc_event ||
+      opt_event == mmap_event;
   default:
      return false;
   }

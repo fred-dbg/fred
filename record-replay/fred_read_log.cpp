@@ -869,6 +869,13 @@ void print_log_entry_truncate(int idx, log_entry_t *entry) {
          GET_FIELD_PTR(entry, truncate, length));
 }
 
+void print_log_entry_ftruncate(int idx, log_entry_t *entry) {
+  print_log_entry_common(idx, entry);
+  printf(", fd=%d, length=%zu\n",
+         GET_FIELD_PTR(entry, ftruncate, fd),
+         GET_FIELD_PTR(entry, ftruncate, length));
+}
+
 void print_log_entry_user(int idx, log_entry_t *entry) {
   print_log_entry_common(idx, entry);
   printf("\n");
@@ -893,9 +900,18 @@ void print_log_entry_writev(int idx, log_entry_t *entry) {
 void print_log_entry_getline(int idx, log_entry_t *entry) {
   print_log_entry_common(idx, entry);
   printf(", lineptr=%d, n=%Zu, stream=%p\n",
-         *(GET_FIELD_PTR(entry, getline, lineptr)),
+         (GET_FIELD_PTR(entry, getline, lineptr)),
          GET_FIELD_PTR(entry, getline, n),
          GET_FIELD_PTR(entry, getline, stream));
+}
+
+void print_log_entry_getdelim(int idx, log_entry_t *entry) {
+  print_log_entry_common(idx, entry);
+  printf(", lineptr=%d, n=%Zu, delim=%d, stream=%p\n",
+         (GET_FIELD_PTR(entry, getdelim, lineptr)),
+         GET_FIELD_PTR(entry, getdelim, n),
+         GET_FIELD_PTR(entry, getdelim, delim),
+         GET_FIELD_PTR(entry, getdelim, stream));
 }
 
 void print_log_entry_fscanf(int idx, log_entry_t *entry) {

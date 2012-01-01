@@ -384,6 +384,7 @@ static inline bool isProcessGDB() {
     MACRO(fgetc, __VA_ARGS__);                                                 \
     MACRO(ungetc, __VA_ARGS__);                                                \
     MACRO(getline, __VA_ARGS__);                                               \
+    MACRO(getdelim, __VA_ARGS__);                                              \
     MACRO(getpeername, __VA_ARGS__);                                           \
     MACRO(getsockname, __VA_ARGS__);                                           \
     MACRO(ioctl, __VA_ARGS__);                                                 \
@@ -439,7 +440,7 @@ static inline bool isProcessGDB() {
     MACRO(rewind, __VA_ARGS__);                                                \
     MACRO(rmdir, __VA_ARGS__);                                                 \
     MACRO(select, __VA_ARGS__);                                                \
-    MACRO(ppoll, __VA_ARGS__);                                                \
+    MACRO(ppoll, __VA_ARGS__);                                                 \
     MACRO(signal_handler, __VA_ARGS__);                                        \
     MACRO(sigwait, __VA_ARGS__);                                               \
     MACRO(setsockopt, __VA_ARGS__);                                            \
@@ -449,6 +450,7 @@ static inline bool isProcessGDB() {
     MACRO(time, __VA_ARGS__);                                                  \
     MACRO(tmpfile, __VA_ARGS__);                                               \
     MACRO(truncate, __VA_ARGS__);                                              \
+    MACRO(ftruncate, __VA_ARGS__);                                             \
     MACRO(unlink, __VA_ARGS__);                                                \
     MACRO(write, __VA_ARGS__);                                                 \
     MACRO(writev, __VA_ARGS__);                                                \
@@ -473,7 +475,7 @@ static inline bool isProcessGDB() {
     MACRO(recvmsg, __VA_ARGS__);                                               \
                                                                                \
     MACRO(wait4, __VA_ARGS__);                                                 \
-    MACRO(waitid, __VA_ARGS__);                                               \
+    MACRO(waitid, __VA_ARGS__);                                                \
   } while(0)
 
 /* Event codes: */
@@ -528,6 +530,7 @@ typedef enum {
   fgetc_event,
   ungetc_event,
   getline_event,
+  getdelim_event,
   getpeername_event,
   getsockname_event,
   getsockopt_event,
@@ -593,6 +596,7 @@ typedef enum {
   time_event,
   tmpfile_event,
   truncate_event,
+  ftruncate_event,
   unlink_event,
   user_event,
   write_event,
@@ -1215,6 +1219,19 @@ typedef struct {
 static const int log_event_getline_size = sizeof(log_event_getline_t);
 
 typedef struct {
+  // For getdelim():
+  char *lineptr;
+  char *new_lineptr;
+  size_t n;
+  size_t new_n;
+  int delim;
+  FILE *stream;
+  off_t data_offset;
+} log_event_getdelim_t;
+
+static const int log_event_getdelim_size = sizeof(log_event_getdelim_t);
+
+typedef struct {
   // For link():
   char *oldpath;
   char *newpath;
@@ -1611,6 +1628,14 @@ typedef struct {
 static const int log_event_truncate_size = sizeof(log_event_truncate_t);
 
 typedef struct {
+  // For ftruncate():
+  int fd;
+  off_t length;
+} log_event_ftruncate_t;
+
+static const int log_event_ftruncate_size = sizeof(log_event_ftruncate_t);
+
+typedef struct {
   // For srand():
   unsigned int seed;
 } log_event_srand_t;
@@ -1939,6 +1964,7 @@ typedef struct {
     log_event_fgetc_t                            log_event_fgetc;
     log_event_ungetc_t                           log_event_ungetc;
     log_event_getline_t                          log_event_getline;
+    log_event_getdelim_t                         log_event_getdelim;
     log_event_open_t                             log_event_open;
     log_event_open64_t                           log_event_open64;
     log_event_openat_t                           log_event_openat;
@@ -1982,6 +2008,7 @@ typedef struct {
     log_event_time_t                             log_event_time;
     log_event_tmpfile_t                          log_event_tmpfile;
     log_event_truncate_t                         log_event_truncate;
+    log_event_ftruncate_t                        log_event_ftruncate;
     log_event_unlink_t                           log_event_unlink;
     log_event_user_t                             log_event_user;
     log_event_srand_t                            log_event_srand;
@@ -2223,6 +2250,7 @@ CREATE_ENTRY_FUNC(gettimeofday, struct timeval *tv, struct timezone *tz);
 CREATE_ENTRY_FUNC(fgetc, FILE *stream);
 CREATE_ENTRY_FUNC(ungetc, int c, FILE *stream);
 CREATE_ENTRY_FUNC(getline, char **lineptr, size_t *n, FILE *stream);
+CREATE_ENTRY_FUNC(getdelim, char **lineptr, size_t *n, int delim, FILE *stream);
 CREATE_ENTRY_FUNC(getpeername, int sockfd,
                   struct sockaddr *addr, socklen_t *addrlen);
 CREATE_ENTRY_FUNC(getsockname, int sockfd,
@@ -2310,6 +2338,7 @@ CREATE_ENTRY_FUNC(xstat64, int vers, const char *path, struct stat64 *buf);
 CREATE_ENTRY_FUNC(time, time_t *tloc);
 CREATE_ENTRY_FUNC(tmpfile);
 CREATE_ENTRY_FUNC(truncate, const char *path, off_t length);
+CREATE_ENTRY_FUNC(ftruncate, int fd, off_t length);
 CREATE_ENTRY_FUNC(unlink, const char *pathname);
 CREATE_ENTRY_FUNC(write, int fd, const void* buf_addr, size_t count);
 CREATE_ENTRY_FUNC(writev, int fd, const struct iovec *iov, int iovcnt);
