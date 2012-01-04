@@ -25,10 +25,10 @@
  * So, we declare the POSIX variant here, and play macro tricks to remove
  *   the potentially non-POSIX variant in netdb.h
  */
-extern int getnameinfo (__const struct sockaddr *__restrict __sa,
-                        socklen_t __salen, char *__restrict __host,
-                        socklen_t __hostlen, char *__restrict __serv,
-                        socklen_t __servlen, int __flags);
+#include <unistd.h>
+extern "C" int getnameinfo(const struct sockaddr *sa, socklen_t salen,
+                           char *host, socklen_t hostlen,
+                           char *serv, socklen_t servlen, int flags);
 #define getnameinfo(arg1,arg2,arg3,arg4,arg5,arg6,arg7) \
   dmtcp_getnameinfo_not_used(arg1,arg2,arg3,arg4,arg5,arg6,arg7)
 
