@@ -53,6 +53,13 @@ else
 		It is not necessary to first build DMTCP.])
 fi
 
+test -r "$dmtcp_root/config.log" && \
+  grep -q '\$ .* --with-record-replay' $dmtcp_root/config.log || \
+    AC_MSG_WARN([$dmtcp_root/config.log missing or not showing
+                 --with-record-replay.  Make sure to use this module
+                 with a DMTCP configured with:
+                 [  ./configure --with-record-replay]])
+
 AM_CONDITIONAL(HAS_I486,
   [test `uname -m` == i686 -o  `uname -m` == i586 -o `uname -m` == i486])
 
