@@ -19,6 +19,19 @@
  * along with FReD.  If not, see <http://www.gnu.org/licenses/>.            *
  ****************************************************************************/
 
+/* Ubuntu 11.10 and some other distros have a non-POSIX declaration of
+ *   getnameinfo in /usr/include/netdb.h ("unsigned int flags").
+ *   The netdb.h differs from 'man getnameinfo', which has the POSIX variant.
+ * So, we declare the POSIX variant here, and play macro tricks to remove
+ *   the potentially non-POSIX variant in netdb.h
+ */
+extern int getnameinfo (__const struct sockaddr *__restrict __sa,
+                        socklen_t __salen, char *__restrict __host,
+                        socklen_t __hostlen, char *__restrict __serv,
+                        socklen_t __servlen, int __flags);
+#define getnameinfo(arg1,arg2,arg3,arg4,arg5,arg6,arg7) \
+  dmtcp_getnameinfo_not_used(arg1,arg2,arg3,arg4,arg5,arg6,arg7)
+
 #include <stdarg.h>
 #include <stdlib.h>
 #include <vector>
@@ -44,6 +57,10 @@
 #include "synchronizationlogging.h"
 #include <sys/mman.h>
 #include <sys/syscall.h>
+
+/* We're done.  Now stop expanding getnameinfo. */
+#undef getnameinfo
+
 
 extern "C" int getsockname(int sockfd, struct sockaddr *addr,
                            socklen_t *addrlen)
