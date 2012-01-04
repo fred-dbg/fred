@@ -2052,20 +2052,24 @@ typedef struct {
    sizeof(void *))          /* retval */
 
 
-#define GET_FIELD(entry, event, field)     entry.event_data.log_event_##event.field
-#define GET_FIELD_PTR(entry, event, field) entry->event_data.log_event_##event.field
-#define ARE_FIELDS_EQUAL_PTR(e1, e2, event, field) (GET_FIELD_PTR(e1, event, field) == \
-                                                      GET_FIELD_PTR(e2, event, field))
+#define GET_FIELD(entry, event, field) \
+  (entry.event_data.log_event_##event.field)
+#define GET_FIELD_PTR(entry, event, field) \
+  (entry->event_data.log_event_##event.field)
+#define ARE_FIELDS_EQUAL_PTR(e1, e2, event, field) \
+  (GET_FIELD_PTR(e1, event, field) == GET_FIELD_PTR(e2, event, field))
 
-#define SET_FIELD2(entry,event,field,field2) GET_FIELD(entry, event, field) = field2
+#define SET_FIELD2(entry,event,field,field2) \
+  GET_FIELD(entry, event, field) = field2
 
-#define SET_FIELD(entry, event, field) SET_FIELD2(entry, event, field, field)
+#define SET_FIELD(entry, event, field) \
+  SET_FIELD2(entry, event, field, field)
 
 #define SET_FIELD_FROM(entry, event, field, source) \
   GET_FIELD(entry, event, field) = GET_FIELD(source, event, field)
 
-#define GET_COMMON(entry, field) entry.header.field
-#define GET_COMMON_PTR(entry, field) entry->header.field
+#define GET_COMMON(entry, field) (entry.header.field)
+#define GET_COMMON_PTR(entry, field) (entry->header.field)
 
 #define SET_COMMON_PTR(entry, field) GET_COMMON_PTR(entry, field) = field
 #define SET_COMMON_PTR2(entry, field, field2) \

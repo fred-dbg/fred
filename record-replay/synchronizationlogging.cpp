@@ -3155,7 +3155,7 @@ static void execute_optional_event(int opt_event_num)
     char *name = GET_FIELD(temp_entry, fopen, name);
     char *mode = GET_FIELD(temp_entry, fopen, mode);
     ok_to_log_next_func = true;
-    fopen(name, mode);
+    FILE *fp = fopen(name, mode);
   } else if (opt_event_num == fclose_event) {
     FILE *fp = GET_FIELD(temp_entry, fclose, fp);
     ok_to_log_next_func = true;
@@ -3163,7 +3163,8 @@ static void execute_optional_event(int opt_event_num)
   } else if (opt_event_num == ftell_event) {
     FILE *fp = GET_FIELD(temp_entry, ftell, stream);
     ok_to_log_next_func = true;
-    ftell(fp);
+    // No need to execute ftell().  It has no side effects.
+    long int offset = ftell(fp);
   } else {
     JASSERT (false)(opt_event_num).Text("No action known for optional event.");
   }
