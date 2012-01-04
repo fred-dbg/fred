@@ -17,6 +17,12 @@
  *
  ***************************************************************/
 
+/* NOTE: This file has been modified from the copyrighted original
+ *   in minor ways to employ the C99 format specifiers (%p, %zu, etc.)
+ *   for printf.  For other non-primitive types, using a best portable guess.
+ *   This eliminates many compiler warnings on recent compilers.
+ */
+
 /* This is the System Call Tester program. It tests supported system calls
    in a fairly robust way and spits out the output in a perl readable format.
    The tests were designed with incremental testing in mind. For instance,
@@ -438,7 +444,7 @@ FILE* freopen_test(char *file, char *type, FILE *stream)
   int save_errno;
   int passed;
 
-  printf("freopen(): file=%s, type=%s, stream=0x%x\n", STR(file), STR(type),
+  printf("freopen(): file=%s, type=%s, stream=0x%p\n", STR(file), STR(type),
 	 stream);
   fflush(NULL);
 
@@ -447,16 +453,16 @@ FILE* freopen_test(char *file, char *type, FILE *stream)
 
   switch(passed) {
   case FAILURE:
-    printf("\tFailed Phase 1: returned 0x%x, expected 0x%x\n",
+    printf("\tFailed Phase 1: returned 0x%p, expected 0x%pn",
 	   newfp, stream);
     fflush(NULL);
     break;
   case SUCCESS:
-    printf("\t\tnewfp =  0x%x\n", newfp);
+    printf("\t\tnewfp =  0x%p\n", newfp);
     fflush(NULL);
 
     if (newfp != stream) {
-      printf("\tFailed Phase 1: returned 0x%x, expected 0x%x\n",
+      printf("\tFailed Phase 1: returned 0x%p, expected 0x%p\n",
 	     newfp, stream);
       fflush(NULL);
     } else {
@@ -465,7 +471,7 @@ FILE* freopen_test(char *file, char *type, FILE *stream)
     }
     break;
   case UNDEFINED:
-    printf("\tFailed Phase 1: undefined return code 0x%x\n",
+    printf("\tFailed Phase 1: undefined return code 0x%p\n",
 	   newfp);
     fflush(NULL);
     break;
@@ -1170,7 +1176,7 @@ int fstat_test(int fd, struct stat *buf)
   int ret, save_errno;
   int passed;
 
-  printf("fstat(): fd=%d, buf=0x%x\n", fd, buf);
+  printf("fstat(): fd=%d, buf=0x%p\n", fd, buf);
   fflush(NULL);
 
   passed = handle_zng(ret = fstat(fd, buf));
@@ -1266,7 +1272,7 @@ int getgroups_test(int ngroups, gid_t *grouplist)
   int passed;
   int i;
 
-  printf("getgroups(): ngroups=%d, grouplist=0x%x\n", ngroups, grouplist);
+  printf("getgroups(): ngroups=%d, grouplist=0x%p\n", ngroups, grouplist);
   fflush(NULL);
 
   passed = handle_gez(ret = getgroups(ngroups, grouplist));
@@ -1320,7 +1326,7 @@ int getrlimit_test(struct rlimit *rlp)
   int ret, save_errno;
   int passed;
 
-  printf("getrlimit(): rlimit=0x%x\n",  rlp);
+  printf("getrlimit(): rlimit=0x%p\n",  rlp);
   fflush(NULL);
 
   passed = handle_zng(ret = getrlimit(RLIMIT_CORE, rlp));
@@ -1566,7 +1572,7 @@ int getdomainname_test(char *name, int namelen)
   int ret, save_errno;
   int passed;
 
-  printf("getdomainname(): name=0x%x, namelen=%d\n", name, namelen);
+  printf("getdomainname(): name=0x%p, namelen=%d\n", name, namelen);
   fflush(NULL);
 
   passed = handle_zng(ret = getdomainname(name, namelen));
@@ -1602,7 +1608,7 @@ int gettimeofday_test(struct timeval *tv, struct timezone *tz)
   int ret, save_errno;
   int passed;
 
-  printf("gettimeofday(): tv=0x%x, tz=0x%x\n", tv, tz);
+  printf("gettimeofday(): tv=0x%p, tz=0x%p\n", tv, tz);
   fflush(NULL);
 
   passed = handle_zng(ret = gettimeofday(tv, tz));
@@ -1622,7 +1628,7 @@ int gettimeofday_test(struct timeval *tv, struct timezone *tz)
     printf("\t\ttv_sec = %u\n", tv->tv_sec);
     printf("\t\ttv_usec = %ld\n", tv->tv_usec);
     printf("\t\ttz_minuteswest = %d\n", tz->tz_minuteswest);
-    printf("\t\ttz_dsttime = %ld\n", tz->tz_dsttime);
+    printf("\t\ttz_dsttime = %d\n", tz->tz_dsttime);
     printf("\tSucceeded Phase 1\n");
     fflush(NULL);
     break;
@@ -1768,7 +1774,7 @@ int fseek_test(FILE *fp, int off, int whence)
   int ret, save_errno;
   int passed;
 
-  printf("fseek(): fp=0x%x, off=%d\n", fp, off);
+  printf("fseek(): fp=0x%p, off=%d\n", fp, off);
   fflush(NULL);
 
   passed = handle_zng(ret = fseek(fp, off, whence));
@@ -1904,7 +1910,7 @@ char *getcwd_test(char *buf, size_t size)
   int save_errno;
   int passed;
 
-  printf("getcwd(): buf=0x%x, size=%u\n", buf, size);
+  printf("getcwd(): buf=0x%p, size=%zu\n", buf, size);
   fflush(NULL);
 
   passed = handle_ptr(ret = getcwd(buf, size));
@@ -1924,7 +1930,7 @@ char *getcwd_test(char *buf, size_t size)
     break;
   case UNDEFINED:
     printf("\tFailed Phase 1: returned undefined value! "
-	   "ret = %d\n", ret);
+	   "ret = %p\n", ret);
     fflush(NULL);
     break;
   default:
@@ -2058,13 +2064,13 @@ FILE* fopen_test(char *file, char *mode)
 #endif
     /* FALL THROUGH */
   case SUCCESS:
-    printf("\t\tfp = 0x%x\n", fp);
+    printf("\t\tfp = 0x%p\n", fp);
     printf("\tSucceeded Phase 1\n");
     fflush(NULL);
     break;
   case UNDEFINED:
     printf("\tFailed Phase 1: returned undefined value! "
-	   "fp = 0x%x\n", fp);
+	   "fp = 0x%p\n", fp);
     fflush(NULL);
     break;
     break;
@@ -2083,7 +2089,7 @@ int utimes_test(char *filename, struct timeval tvp[2])
   int ret, save_errno;
   int passed;
 
-  printf("utimes(): filename=%s, tvp=0x%x\n", STR(filename), tvp);
+  printf("utimes(): filename=%s, tvp=0x%p\n", STR(filename), tvp);
   fflush(NULL);
 
   passed = handle_zng(ret = utimes(filename, tvp));
@@ -2130,7 +2136,7 @@ int fclose_test(FILE *fp)
   int ret, save_errno;
   int passed;
 
-  printf("fclose(): fp=0x%x\n", fp);
+  printf("fclose(): fp=0x%p\n", fp);
   fflush(NULL);
 
   passed = handle_eof(ret = fclose(fp));
@@ -2169,7 +2175,7 @@ int read_test(int fd, char *buf, size_t len)
   int ret, save_errno;
   int passed;
 
-  printf("read(): fd=%d, buf=0x%x, len=%d\n", fd, buf, len);
+  printf("read(): fd=%d, buf=0x%p, len=%zu\n", fd, buf, len);
   fflush(NULL);
 
   /* This looks like a read() for this purpose */
@@ -2211,7 +2217,7 @@ int fread_test(void *ptr, size_t size, size_t nitems, FILE *stream)
   int ret, save_errno;
   int passed;
 
-  printf("fread(): ptr=0x%x, size=%u, nitmes=%u, stream=0x%x\n",ptr,size,
+  printf("fread(): ptr=0x%p, size=%zu, nitmes=%u, stream=0x%p\n",ptr,size,
 	 nitems, stream);
   fflush(NULL);
 
@@ -2262,7 +2268,7 @@ long ftell_test(FILE *fp)
   int save_errno;
   int passed;
 
-  printf("ftell(): fp=0x%x\n", fp);
+  printf("ftell(): fp=0x%p\n", fp);
   fflush(NULL);
 
   passed = handle_lng(ret = ftell(fp));
@@ -2275,13 +2281,13 @@ long ftell_test(FILE *fp)
 #endif
     /* FALL THROUGH */
   case SUCCESS:
-    printf("\t\tret = %d\n", ret);
+    printf("\t\tret = %ld\n", ret);
     printf("\tSucceeded Phase 1\n");
     fflush(NULL);
     break;
   case UNDEFINED:
     printf("\tFailed Phase 1: returned undefined value! "
-	   "ret = %d\n", ret);
+	   "ret = %ld\n", ret);
     fflush(NULL);
     break;
   default:
@@ -2299,7 +2305,7 @@ int readlink_test(char *path, char *buf, size_t bufsiz)
   int ret, save_errno;
   int passed;
 
-  printf("readlink(): path=%s, buf=0x%x, bufsiz=%u\n",STR(path),buf,bufsiz);
+  printf("readlink(): path=%s, buf=0x%p, bufsiz=%zu\n",STR(path),buf,bufsiz);
   fflush(NULL);
 
   /* do not assume buf will be null terminated */
@@ -2346,7 +2352,7 @@ int readv_test(int fd, struct iovec *iov, int iovcnt)
   int ret, save_errno;
   int passed;
 
-  printf("readv(): fd=%d, iov=0x%x, iovcnt=%d\n", fd, iov, iovcnt);
+  printf("readv(): fd=%d, iov=0x%p, iovcnt=%d\n", fd, iov, iovcnt);
   fflush(NULL);
 
   passed = handle_gez(ret = readv(fd, iov, iovcnt));
@@ -2510,7 +2516,7 @@ int setrlimit_test(struct rlimit *rlp)
   int ret, save_errno;
   int passed;
 
-  printf("setrlimit(): rlp=0x%x\n", rlp);
+  printf("setrlimit(): rlp=0x%p\n", rlp);
   printf("\t\trlim_cur = %u\n", rlp->rlim_cur);
   printf("\t\trlim_max = %u\n", rlp->rlim_max);
   fflush(NULL);
@@ -2550,7 +2556,7 @@ int stat_test(char *path, struct stat *buf)
   int ret, save_errno;
   int passed;
 
-  printf("stat(): path=%s, buf=0x%x\n", STR(path), buf);
+  printf("stat(): path=%s, buf=0x%p\n", STR(path), buf);
   fflush(NULL);
 
   passed = handle_zng(ret = stat(path, buf));
@@ -2646,7 +2652,7 @@ int truncate_test(char *file, size_t size)
   int ret, save_errno;
   int passed;
 
-  printf("truncate(): file=%s, size=%d\n", STR(file), size);
+  printf("truncate(): file=%s, size=%zu\n", STR(file), size);
   fflush(NULL);
 
   passed = handle_zng(ret = truncate(file, size));
@@ -2686,7 +2692,7 @@ int ftruncate_test(int fd, size_t size)
   int ret, save_errno;
   int passed;
 
-  printf("ftruncate(): fd=%d, size=%d\n", fd, size);
+  printf("ftruncate(): fd=%d, size=%zu\n", fd, size);
   fflush(NULL);
 
   passed = handle_zng(ret = ftruncate(fd, size));
@@ -2781,7 +2787,7 @@ int gethostname_test(char *name, size_t len)
   int ret, save_errno;
   int passed;
 
-  printf("gethostname(): name=0x%x, len=%u\n", name, len);
+  printf("gethostname(): name=0x%p, len=%zu\n", name, len);
   fflush(NULL);
 
   passed = handle_zng(ret = gethostname(name, len));
@@ -2823,7 +2829,7 @@ int utime_test(char *file, struct utimbuf *times)
   int ret, save_errno;
   int passed;
 
-  printf("utime(): file=%s, times=0x%x\n", STR(file), times);
+  printf("utime(): file=%s, times=0x%p\n", STR(file), times);
   fflush(NULL);
 
   passed = handle_zng(ret = utime(file, times));
@@ -2867,7 +2873,7 @@ int utime_test(char *file, struct utimbuf *times)
    must check the semantics of rewind to see if it actually worked. */
 int rewind_test(FILE *stream)
 {
-  printf("rewind(): stream=0x%x\n", stream);
+  printf("rewind(): stream=0x%p\n", stream);
   fflush(NULL);
 
   rewind(stream);
@@ -2883,7 +2889,7 @@ int uname_test(struct utsname *name)
   int ret, save_errno;
   int passed;
 
-  printf("uname(): name=0x%x\n", name);
+  printf("uname(): name=0x%p\n", name);
   fflush(NULL);
 
   passed = handle_gez(ret = uname(name));
@@ -2929,7 +2935,7 @@ int write_test(int fd, char *buf, size_t count)
   int ret, save_errno;
   int passed;
 
-  printf("write(): fd=%d, buf=[%.31s...], count=%d\n",
+  printf("write(): fd=%d, buf=[%.31s...], count=%zu\n",
 	 fd, buf, count);
   fflush(NULL);
 
@@ -2973,7 +2979,7 @@ int fwrite_test(char *ptr, size_t size, size_t nitems, FILE *stream)
   int ret, save_errno;
   int passed;
 
-  printf("fwrite(): ptr=[%.31s...], fp=0x%x\n", (char*)ptr, stream);
+  printf("fwrite(): ptr=[%.31s...], fp=0x%p\n", (char*)ptr, stream);
   fflush(NULL);
 
   /* You may treat this as a normal fwrite */
@@ -3036,13 +3042,13 @@ FILE *tmpfile_test(void)
 #endif
       /* FALL THROUGH */
     case SUCCESS:
-      printf("\tret = 0x%x\n", ret);
+      printf("\tret = 0x%p\n", ret);
       printf("\tSucceeded Phase 1\n");
       fflush(NULL);
       break;
     case UNDEFINED:
       printf("\tFailed Phase 1: returned undefined value! "
-	     "ret = 0x%x\n", ret);
+	     "ret = 0x%p\n", ret);
       fflush(NULL);
       break;
     default:
@@ -3060,7 +3066,7 @@ int writev_test(int fd, struct iovec *iov, int iovcnt)
   int ret, save_errno;
   int passed;
 
-  printf("writev(): fd=%d, iov=0x%x, iovcnt=%d\n", fd, iov, iovcnt);
+  printf("writev(): fd=%d, iov=0x%p, iovcnt=%d\n", fd, iov, iovcnt);
   fflush(NULL);
 
   passed = handle_gez(ret = writev(fd, iov, iovcnt));
@@ -3179,7 +3185,7 @@ int expect_off(off_t expected, off_t ret)
    normal int */
 int expect_val(long expected, long ret)
 {
-  printf("\tVAL Expected %d, Got %d\n", expected, ret);
+  printf("\tVAL Expected %ld, Got %ld\n", expected, ret);
   fflush(NULL);
 
   if (ret == expected) {
@@ -3205,7 +3211,7 @@ int expect_vao(off_t expected, off_t ret)
 /* this is for when I'm expecting a particular pointer value */
 int expect_vap(void *expected, void *ret)
 {
-  printf("\tVAP Expected 0x%x, Got 0x%x\n", expected, ret);
+  printf("\tVAP Expected 0x%p, Got 0x%p\n", expected, ret);
   fflush(NULL);
 
   if (ret == expected) {
@@ -4586,7 +4592,7 @@ int main(int argc, char **argv)
 
   printf("Condor System Call Tester $Revision: 1.5 $\n\n");
 
-  printf("The length of the string:\n'%s'\nIs: %d\n\n",
+  printf("The length of the string:\n'%s'\nIs: %zu\n\n",
 	 STR(passage), strlen(passage));
 
   /* perform all of the tests in the order given */

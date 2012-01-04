@@ -1,5 +1,6 @@
 #include<stdlib.h>
 #include<stdio.h>
+#define LIST_LEN 20
 
 struct list_el {
   int val;
@@ -21,14 +22,14 @@ int main() {
   head = newItem(1);
   tail = head;
   printf(" NODE VAL: %d\n", tail->val);
-  for(i=2;i<=20;i++) {
+  for(i=2;i<=LIST_LEN;i++) {
     tail->next = newItem(i);
     tail = tail->next;
     printf(" NODE VAL: %d\n", tail->val);
   }
   printf("Linked list length is now: %d\n", list_len(head));
-  printf ("Ok we crossed the limit."
-          "  Let's go back to just before the list had size 10.\n");
+  printf("Ok we crossed the limit."
+         "  Let's go back to just before the list had size %d.\n", LIST_LEN);
   return 0;
 }
 

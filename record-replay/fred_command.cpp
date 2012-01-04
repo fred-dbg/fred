@@ -64,14 +64,14 @@ static void print_usage(char *name)
 
 static void handle_info_command(fred_interface_info_t *info)
 {
-  printf("Total number of log entries = %Zu\n", info->total_entries);
-  printf("Total number of threads = %Zu\n", info->total_threads);
+  printf("Total number of log entries = %zu\n", info->total_entries);
+  printf("Total number of threads = %zu\n", info->total_threads);
 }
 
 static void handle_status_command(fred_interface_info_t *info)
 {
   printf("Current clone id = %ld\n", info->current_clone_id);
-  printf("Current entry index = %Zu\n", info->current_log_entry_index);
+  printf("Current entry index = %zu\n", info->current_log_entry_index);
 }
 
 static void handle_breakpoint_command(fred_interface_info_t *info,
