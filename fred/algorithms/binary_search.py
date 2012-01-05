@@ -63,7 +63,7 @@ def binary_search_log_events(dbg, testIfTooFar):
     # leaving this assertion until we test. -Tyler
     fredutil.fred_assert(dbg.personality_name() == "gdb")
 
-    n_min = 0
+    n_min = fredmanager.get_current_entry_index()
     n_count = n_max = fredmanager.get_total_entries()
     fredutil.fred_assert(n_max != None)
 

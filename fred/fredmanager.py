@@ -86,7 +86,7 @@ def wait_on_fred_breakpoint():
     """Blocking wait until a FReD internal breakpoint is hit."""
     global g_child_subprocess
     fredutil.fred_assert(g_child_subprocess != None)
-    g_child_subprocess.wait()
+    g_child_subprocess.communicate()
     g_child_subprocess = None
 
 def send_fred_continue():

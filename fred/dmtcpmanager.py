@@ -62,7 +62,7 @@ def get_num_checkpoints():
     """Return the number of checkpoints DMTCP manager has made."""
     global gn_index_suffix
     # Indexing starts from zero, so add one.
-    return gn_index_suffix + 1
+    return gn_index_suffix
 
 def get_num_peers():
     """Return NUM_PEERS from 'dmtcp_command s' as an integer."""
@@ -338,6 +338,7 @@ def reset_checkpoint_indexing():
         n_max_index = max([int(re.search(s_checkpoint_re, x).group(1)) \
                            for x in l_files])
         gn_index_suffix = n_max_index + 1
+    fredutil.fred_debug("Reset ckpt index to %d" % gn_index_suffix)
     
 def resume(s_fred_tmpdir, s_resume_dir):
     """Set up tmpdir structure from a given path."""
@@ -350,11 +351,13 @@ def resume(s_fred_tmpdir, s_resume_dir):
     fredutil.fred_info("Copying files for session resume. This could take a "
                        "few minutes if the checkpoint images are large.")
     shutil.copytree(s_resume_dir,
-                    os.environ["DMTCP_TMPDIR"] + "." + str(gn_index_suffix))
-    os.symlink(os.environ["DMTCP_TMPDIR"] + "." + str(gn_index_suffix),
+                    os.environ["DMTCP_TMPDIR"] + "-MASTER")
+    os.symlink(os.environ["DMTCP_TMPDIR"] + "-MASTER",
                os.environ["DMTCP_TMPDIR"])
     fredutil.fred_info("Resuming session.")
-    restart(gn_index_suffix)
+    reset_checkpoint_indexing()
+    restart(0)
+    
 
 def manager_teardown():
     global gn_index_suffix

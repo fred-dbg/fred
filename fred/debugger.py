@@ -166,10 +166,12 @@ class Debugger():
 
     def enable_sigstop(self):
         """Enable passing of SIGSTOP to inferior."""
+        fredutil.fred_debug("Enabling SIGSTOP.")
         self._p.enable_sigstop()
 
     def disable_sigstop(self):
         """Disable passing of SIGSTOP to inferior."""
+        fredutil.fred_debug("Disabling SIGSTOP.")
         self._p.disable_sigstop()
 
     def interrupt_inferior(self):

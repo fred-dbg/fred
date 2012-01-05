@@ -141,7 +141,7 @@ class ReversibleDebugger(debugger.Debugger):
     def setup_from_resume(self):
         """Set up data structures from a resume."""
         global GS_FRED_MASTER_BRANCH_NAME
-        fredutil.fred_assert(False, "Resume not yet implemented with branches.")
+        #fredutil.fred_assert(False, "Resume not yet implemented with branches.")
         self.branch = Branch(GS_FRED_MASTER_BRANCH_NAME)
         for i in range(0, dmtcpmanager.get_num_checkpoints()):
             self.branch.add_checkpoint(Checkpoint(i))
@@ -374,9 +374,12 @@ class ReversibleDebugger(debugger.Debugger):
         # we have set a log breakpoint, so it will only replay to that
         # point.
         self.enable_sigstop()
+        fredutil.fred_debug("Sending FReD log-based 'continue'")
         self._continue(b_wait_for_prompt=False)
+        fredutil.fred_debug("Debugger 'continue' issued -- waiting on bkpt.")
         self.log_fred_command(fred_log_continue_cmd())
         fredmanager.wait_on_fred_breakpoint()
+        fredutil.fred_debug("Hit log-based breakpoint.")
         # Interrupt inferior to bring back the debugger prompt.
         self.stop_inferior()
         # Remove the log breakpoint that got us here (only support one
@@ -632,6 +635,8 @@ class Branch():
         self.add_checkpoint(new_ckpt)
         self.set_current_checkpoint(new_ckpt)
         dmtcpmanager.checkpoint()
+        fredutil.fred_debug("!! Sleeping after checkpoint (ptrace instability hack)")
+        time.sleep(1)
         fredutil.fred_info("Created checkpoint #%d." %
                            self.get_last_checkpoint().get_index())
         return self.get_last_checkpoint().get_index()
@@ -659,6 +664,8 @@ class Branch():
             self.set_current_checkpoint(self.get_checkpoint(n_index))
         if b_clear_history:
             self.get_current_checkpoint().clear_history()
+        fredutil.fred_debug("!! Sleeping after restart (ptrace instability hack)")
+        time.sleep(1)
         
     def add_checkpoint(self, ckpt):
         """Append the given Checkpoint object to list of checkpoints."""

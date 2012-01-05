@@ -44,7 +44,7 @@ GS_FRED_DEMO_UNHIDE_PREFIX = ['next', 'step']
 # Maximum length of a prompt string (from any debugger)
 GN_MAX_PROMPT_LENGTH = 32
 # Timeout (in seconds) for waiting for the prompt to appear
-GN_PROMPT_WAIT_TIMEOUT = 10.0
+GN_PROMPT_WAIT_TIMEOUT = 20.0
 
 # Due to a Python "feature" we need to include a very high timeout for
 # all lock acquisitions in order to handle ^C correctly. The low-level
