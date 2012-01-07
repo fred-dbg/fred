@@ -1,7 +1,7 @@
-all: pthread-test pthread-test-thread-private test-list test-list-no-malloc syscall-tester pthread-cond-var time many-threads malloc-to-mmap
+all: pthread-test pthread-test-thread-private test-list test-list-no-malloc syscall-tester pthread-cond-var time many-threads malloc-to-mmap reader
 
 clean:
-	rm -f pthread-test test-list test-list-no-malloc syscall-tester time many-threads malloc-to-mmap
+	rm -f pthread-test test-list test-list-no-malloc syscall-tester time many-threads malloc-to-mmap reader
 
 pthread-test: pthread-test.c
 	gcc -o pthread-test pthread-test.c -g -O0 -lpthread
@@ -29,3 +29,6 @@ many-threads: many-threads.c
 
 malloc-to-mmap: malloc-to-mmap.c
 	gcc -o malloc-to-mmap malloc-to-mmap.c -g -O0 -lpthread
+
+reader: reader.c
+	gcc -o reader reader.c -g -O0

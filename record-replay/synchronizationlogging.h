@@ -203,12 +203,16 @@ static inline bool isProcessGDB() {
     }                                                               \
   } while (0)
 
-#define WRAPPER_REPLAY_READ_FROM_READ_LOG(name, ptr, len)           \
-  do {                                                              \
-    JASSERT ( read_data_fd != -1 );                                 \
-    lseek(read_data_fd,                                             \
-          GET_FIELD(my_entry, name, data_offset), SEEK_SET);        \
-    dmtcp::Util::readAll(read_data_fd, ptr, len);                   \
+#define WRAPPER_REPLAY_READ_FROM_READ_LOG(name, ptr, len)               \
+  do {                                                                  \
+    JASSERT ( read_data_fd != -1 );                                     \
+    lseek(read_data_fd,                                                 \
+          GET_FIELD(my_entry, name, data_offset), SEEK_SET);            \
+    ssize_t dmtcp_retval = dmtcp::Util::readAll(read_data_fd, ptr, len); \
+    /* Hackish. Instead of JASSERTing here, enter infinite loop.        \
+       This is for the benefit of fredtest.py, which cannot currently   \
+       detect if a program exited normally or abnormally. */            \
+    if ( dmtcp_retval != len ) while (1);                               \
   } while (0)
 
 #define WRAPPER_LOG_WRITE_INTO_READ_LOG(name, ptr, len)             \
@@ -2185,6 +2189,7 @@ LIB_PRIVATE void   userSynchronizedEventEnd();
 LIB_PRIVATE ssize_t writeAll(int fd, const void *buf, size_t count);
 LIB_PRIVATE bool validAddress(void *addr);
 LIB_PRIVATE void initialize_thread();
+LIB_PRIVATE void close_read_log();
 
 /* These 'create_XXX_entry' functions are used library-wide by their
    respective wrapper functions. Their usages are hidden by the

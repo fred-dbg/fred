@@ -150,6 +150,7 @@ void fred_post_suspend ()
   log_all_allocs = 0;
 
   global_log.destroy(sync_mode_pre_ckpt);
+  close_read_log();
 
   // Remove the threads which aren't alive anymore.
   {

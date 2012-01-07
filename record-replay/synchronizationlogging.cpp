@@ -181,6 +181,7 @@ void initLogsForRecordReplay()
     }
     JASSERT(fd != -1);
     read_data_fd = _real_dup2(fd, dmtcp_get_readlog_fd());
+    JASSERT(read_data_fd != -1);
     _real_close(fd);
   }
 }
@@ -326,6 +327,13 @@ LIB_PRIVATE void initialize_thread()
   }
 
   JTRACE ( "Thread Initialized" ) ( my_clone_id ) ( pthread_id );
+}
+
+/* Close the "read log", which is done before a checkpoint is taken. */
+void close_read_log()
+{
+  _real_close(read_data_fd);
+  read_data_fd = -1;
 }
 
 void addNextLogEntry(log_entry_t& e)

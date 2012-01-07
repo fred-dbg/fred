@@ -180,6 +180,19 @@ def gdb_record_replay_time(n_count=1):
         print GS_PASSED_STRING
         end_session()
 
+def gdb_reader(n_count=1):
+    """Run a test on a multiple checkpoint reader."""
+    global GS_TEST_PROGRAMS_DIRECTORY
+    l_cmd = ["gdb", GS_TEST_PROGRAMS_DIRECTORY + "/reader"]
+    for i in range(0, n_count):
+        print_test_name("gdb reader %d" % i)
+        start_session(l_cmd)
+        execute_commands(["b main", "r", "fred-ckpt", "c",
+                          "fred-restart", "b checkpoint_now",
+                          "c", "fred-ckpt", "c", "fred-restart 1", "c"])
+        print GS_PASSED_STRING
+        end_session()
+
 def gdb_multiple_checkpoints_record_st(n_count=1):
     """Run a single-threaded test for multiple checkpoints during RECORD."""
     global GS_TEST_PROGRAMS_DIRECTORY
@@ -378,6 +391,7 @@ def run_integration_tests(n_iters):
     gdb_record_replay_past_end(n_iters)
     gdb_record_replay_pthread_cond(n_iters)
     gdb_record_replay_time(n_iters)
+    gdb_reader(n_iters)
     gdb_multiple_checkpoints_record_st(n_iters)
     gdb_multiple_checkpoints_replay_st(n_iters)
     gdb_syscall_tester(n_iters)
@@ -469,6 +483,7 @@ def initialize_tests():
                  "gdb-record-replay-mmap" : gdb_record_replay_mmap,
                  "gdb-record-replay-past-end" : gdb_record_replay_past_end,
                  "gdb-record-replay-time" : gdb_record_replay_time,
+                 "gdb-reader" : gdb_reader,
                  "gdb-multiple-checkpoints-record-st" :
                      gdb_multiple_checkpoints_record_st,
                  "gdb-multiple-checkpoints-replay-st" :
