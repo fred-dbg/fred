@@ -176,7 +176,10 @@ class ReversibleDebugger(debugger.Debugger):
         self.set_debugger_pid(fredio.get_child_pid())
         del fredio
         self.update_state()
-
+        # Reset inferior pid.
+        n_inf_pid = fredutil.get_inferior_pid(self.get_debugger_pid())
+        fredmanager.set_inferior_pid(n_inf_pid)
+            
     def do_restart_previous(self):
         """Restart from the previous checkpoint."""
         self.do_restart(self.current_checkpoint().get_index() - 1)
@@ -197,6 +200,16 @@ class ReversibleDebugger(debugger.Debugger):
     def log_command(self, s_command):
         """Convert given command to FredCommand instance and add to current
         history."""
+        # XXX: Figure out a more elegant way to do this. We can't set the
+        # inferior pid until we know the inferior is alive, so we keep trying
+        # to update it with every command issued until it succeeds.
+        if fredmanager.get_inferior_pid() == -1:
+            n_inf_pid = fredutil.get_inferior_pid(self.get_debugger_pid())
+            if n_inf_pid != -1:
+                fredmanager.set_inferior_pid(n_inf_pid)
+        if fredmanager.get_initial_inferior_pid() == -1:
+            fredmanager.set_initial_inferior_pid(fredmanager.get_inferior_pid())
+
         if self.current_checkpoint() != None:
             # identify_command() sets native representation
             cmd = self._p.identify_command(s_command)

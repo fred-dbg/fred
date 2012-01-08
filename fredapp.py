@@ -193,13 +193,6 @@ def dispatch_command(s_command, b_wait=False):
     if is_fred_command(s_command):
         handle_fred_command(s_command)
     else:
-        # XXX: Figure out a more elegant way to do this. We can't set the
-        # inferior pid until we know the inferior is alive, so we keep trying
-        # to update it with every command issued until it succeeds.
-        if fredmanager.get_pid() == -1:
-            n_inf_pid = fredutil.get_inferior_pid(fredio.get_child_pid())
-            fredmanager.set_pid(n_inf_pid)
-
         fredio.send_command(s_command)
         g_debugger.log_command(s_command)
         if b_wait:
@@ -348,7 +341,7 @@ def fred_setup():
         # virtualized pid.
         fredutil.fred_assert(g_debugger.personality_name() == "gdb")
         n_inf_pid = int(g_debugger.evaluate_expression("getpid()"))
-        fredmanager.set_pid(n_inf_pid)
+        fredmanager.set_inferior_pid(n_inf_pid)
     g_debugger.set_debugger_pid(fredio.get_child_pid())
 
 def fred_setup_as_module(l_cmd, s_dmtcp_port, b_debug):

@@ -24,20 +24,47 @@ import dmtcpmanager
 
 import os
 import re
+import signal
 
 GS_FREDHIJACK_NAME = "fredhijack.so"
 GS_FREDHIJACK_PATH = ""
 
 g_child_subprocess = None
-g_pid = -1
+gn_pid = -1
+gn_initial_inf_pid = -1
 
-def set_pid(n_pid):
-    global g_pid
-    g_pid = n_pid
+def set_inferior_pid(n_pid):
+    """Set the pid of the inferior process."""
+    global gn_pid
+    fredutil.fred_debug("Setting inferior pid to %d." % n_pid)
+    gn_pid = n_pid
 
-def get_pid():
-    global g_pid
-    return g_pid
+def get_inferior_pid():
+    """Return the pid of the inferior process."""
+    global gn_pid
+    return gn_pid
+
+def set_initial_inferior_pid(n_pid):
+    """Set the initial (i.e. virtualized) pid of the inferior."""
+    global gn_initial_inf_pid
+    fredutil.fred_debug("Setting initial inferior pid to %d." % n_pid)
+    gn_initial_inf_pid = n_pid
+
+def get_initial_inferior_pid():
+    """Return the initial (i.e. virtualized) pid of the inferior."""
+    global gn_initial_inf_pid
+    return gn_initial_inf_pid
+    
+def kill_inferior():
+    """Kill the inferior process, if it exists."""
+    n_pid = get_inferior_pid()
+    if n_pid == -1:
+        return
+    try:
+        os.kill(n_pid, signal.SIGKILL)
+        os.waitpid(n_pid, 0)
+    except OSError:
+        pass
 
 def is_fredhijack_found():
     """Return True if fredhijack.so library is in a known location."""
@@ -58,8 +85,9 @@ def _execute_fred_command(s_cmd, s_arg=None):
     global g_child_subprocess
     fredutil.fred_assert(s_cmd in ["status", "info", "break", "continue"])
     l_cmd = ["%s/fred_command" % GS_FREDHIJACK_PATH]
-    fredutil.fred_assert(get_pid() != -1)
-    s_path = "%s/fred-shm.%d" % (os.environ["DMTCP_TMPDIR"], get_pid())
+    fredutil.fred_assert(get_initial_inferior_pid() != -1)
+    s_path = "%s/fred-shm.%d" % (os.environ["DMTCP_TMPDIR"],
+                                 get_initial_inferior_pid())
     l_cmd.append("--%s" % s_cmd)
     if s_arg != None:
         l_cmd.append(s_arg)
@@ -76,7 +104,8 @@ def _execute_fred_command(s_cmd, s_arg=None):
 def destroy():
     """Perform any cleanup associated with the fred manager."""
     g_child_subprocess = None
-    set_pid(-1)
+    set_inferior_pid(-1)
+    set_initial_inferior_pid(-1)
 
 def set_fred_breakpoint(n_index):
     """Set a FReD internal breakpoint on entry index n_index."""

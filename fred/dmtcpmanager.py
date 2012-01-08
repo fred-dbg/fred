@@ -21,6 +21,7 @@
 
 import fredio
 import fredutil
+import fredmanager
 
 import os
 import pdb
@@ -222,6 +223,8 @@ def restart(n_index):
     """Restart from the given index."""
     kill_peers()
     fredio.kill_child()
+    fredmanager.kill_inferior()
+    
     # Wait until the peers are really gone
     while get_num_peers() != 0:
         time.sleep(0.01)
