@@ -208,7 +208,7 @@ static bool shouldLogArea(char *area_name)
 
   if (dmtcp::Util::strEndsWith(area_name, "dmtcphijack.so") ||
       dmtcp::Util::strEndsWith(area_name, "ptracehijack.so") ||
-      dmtcp::Util::strEndsWith(area_name, "libmtcp.so") ||
+      dmtcp::Util::strEndsWith(area_name, "libmtcp.so.1.0.0") ||
       dmtcp::Util::strEndsWith(area_name, "fredhijack.so")) {
     return false;
   }
