@@ -735,6 +735,7 @@ LIB_PRIVATE void reapThisThread()
 extern "C" int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
     void *(*start_routine)(void*), void *arg)
 {
+  static bool ckptThreadBeingCreated = true;
   /* Here I've split apart WRAPPER_HEADER_RAW because we need to create the
    * reaper thread even if the current mode is SYNC_IS_NOOP. */
   void *return_addr = GET_RETURN_ADDRESS();
@@ -745,7 +746,12 @@ extern "C" int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
   }
   /* Create the reaper thread always, even if we are not in SYNC_RECORD mode
    * yet. */
-  create_reaper_thread();
+  if (ckptThreadBeingCreated) {
+    ckptThreadBeingCreated = false;
+  } else {
+    create_reaper_thread();
+  }
+
   int retval;
   if (SYNC_IS_NOOP) {
     retval = _real_pthread_create(thread, attr, start_routine, arg);
