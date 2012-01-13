@@ -206,10 +206,10 @@ static bool shouldLogArea(char *area_name)
 {
   int n = sizeof(logLibraryBlacklistPattern) / sizeof(char*);
 
-  if (dmtcp::Util::strEndsWith(area_name, "dmtcphijack.so") ||
+  if (dmtcp::Util::strEndsWith(area_name, "dmtcphijack.so")  ||
       dmtcp::Util::strEndsWith(area_name, "ptracehijack.so") ||
-      dmtcp::Util::strEndsWith(area_name, "libmtcp.so.1.0.0") ||
-      dmtcp::Util::strEndsWith(area_name, "fredhijack.so")) {
+      dmtcp::Util::strEndsWith(area_name, "fredhijack.so")   ||
+      strstr(area_name, "libmtcp.so.1") != NULL) {
     return false;
   }
 
