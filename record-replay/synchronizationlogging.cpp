@@ -958,6 +958,36 @@ log_entry_t create_localtime_entry(clone_id_t clone_id, event_code_t event,
   return e;
 }
 
+log_entry_t create_clock_getres_entry(clone_id_t clone_id, event_code_t event,
+                                      clockid_t clk_id, struct timespec *res)
+{
+  log_entry_t e = EMPTY_LOG_ENTRY;
+  setupCommonFields(&e, clone_id, event);
+  SET_FIELD(e, clock_getres, clk_id);
+  SET_FIELD(e, clock_getres, res);
+  return e;
+}
+
+log_entry_t create_clock_gettime_entry(clone_id_t clone_id, event_code_t event,
+                                       clockid_t clk_id, struct timespec *tp)
+{
+  log_entry_t e = EMPTY_LOG_ENTRY;
+  setupCommonFields(&e, clone_id, event);
+  SET_FIELD(e, clock_gettime, clk_id);
+  SET_FIELD(e, clock_gettime, tp);
+  return e;
+}
+
+log_entry_t create_clock_settime_entry(clone_id_t clone_id, event_code_t event,
+                                       clockid_t clk_id, const struct timespec *tp)
+{
+  log_entry_t e = EMPTY_LOG_ENTRY;
+  setupCommonFields(&e, clone_id, event);
+  SET_FIELD(e, clock_settime, clk_id);
+  SET_FIELD2(e, clock_settime, tp, (struct timespec*) tp);
+  return e;
+}
+
 log_entry_t create_lxstat_entry(clone_id_t clone_id, event_code_t event, int vers,
     const char *path, struct stat *buf)
 {
@@ -2583,6 +2613,27 @@ TURN_CHECK_P(localtime_turn_check)
   return base_turn_check(e1,e2) &&
     GET_FIELD_PTR(e1, localtime, timep) ==
       GET_FIELD_PTR(e2, localtime, timep);
+}
+
+TURN_CHECK_P(clock_getres_turn_check)
+{
+  return base_turn_check(e1,e2) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, clock_getres, clk_id) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, clock_getres, res);
+}
+
+TURN_CHECK_P(clock_gettime_turn_check)
+{
+  return base_turn_check(e1,e2) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, clock_gettime, clk_id) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, clock_gettime, tp);
+}
+
+TURN_CHECK_P(clock_settime_turn_check)
+{
+  return base_turn_check(e1,e2) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, clock_settime, clk_id) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, clock_settime, tp);
 }
 
 TURN_CHECK_P(lxstat_turn_check)

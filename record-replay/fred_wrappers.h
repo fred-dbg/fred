@@ -133,6 +133,9 @@ LIB_PRIVATE extern __thread int thread_performing_dlopen_dlsym;
   MACRO(bind)                               \
   MACRO(listen)                             \
   MACRO(localtime)                          \
+  MACRO(clock_getres)                       \
+  MACRO(clock_gettime)                      \
+  MACRO(clock_settime)                      \
   MACRO(accept)                             \
   MACRO(accept4)                            \
   MACRO(setsockopt)                         \
@@ -343,6 +346,9 @@ LIB_PRIVATE extern __thread int thread_performing_dlopen_dlsym;
                    socklen_t addrlen );
   int _real_listen ( int sockfd, int backlog );
   struct tm * _real_localtime ( const time_t *timep );
+  int _real_clock_getres(clockid_t clk_id, struct timespec *res);
+  int _real_clock_gettime(clockid_t clk_id, struct timespec *tp);
+  int _real_clock_settime(clockid_t clk_id, const struct timespec *tp);
   int _real_accept ( int sockfd, struct sockaddr *addr, socklen_t *addrlen );
   int _real_accept4 ( int sockfd, struct sockaddr *addr, socklen_t *addrlen,
                       int flags );

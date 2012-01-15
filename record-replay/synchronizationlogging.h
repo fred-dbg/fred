@@ -400,6 +400,9 @@ static inline bool isProcessGDB() {
     MACRO(symlink, __VA_ARGS__);                                               \
     MACRO(listen, __VA_ARGS__);                                                \
     MACRO(localtime, __VA_ARGS__);                                             \
+    MACRO(clock_getres, __VA_ARGS__);                                          \
+    MACRO(clock_gettime, __VA_ARGS__);                                         \
+    MACRO(clock_settime, __VA_ARGS__);                                         \
     MACRO(lxstat, __VA_ARGS__);                                                \
     MACRO(lxstat64, __VA_ARGS__);                                              \
     MACRO(malloc, __VA_ARGS__);                                                \
@@ -543,6 +546,9 @@ typedef enum {
   symlink_event,
   listen_event,
   localtime_event,
+  clock_getres_event,
+  clock_gettime_event,
+  clock_settime_event,
   lseek_event,
   lseek64_event,
   llseek_event,
@@ -1268,6 +1274,32 @@ typedef struct {
 static const int log_event_localtime_size = sizeof(log_event_localtime_t);
 
 typedef struct {
+  // For clock_getres():
+  clockid_t clk_id;
+  struct timespec *res;
+  struct timespec ret_res;
+} log_event_clock_getres_t;
+
+static const int log_event_clock_getres_size = sizeof(log_event_clock_getres_t);
+
+typedef struct {
+  // For clock_gettime():
+  clockid_t clk_id;
+  struct timespec *tp;
+  struct timespec ret_tp;
+} log_event_clock_gettime_t;
+
+static const int log_event_clock_gettime_size = sizeof(log_event_clock_gettime_t);
+
+typedef struct {
+  // For clock_settime():
+  clockid_t clk_id;
+  struct timespec *tp;
+} log_event_clock_settime_t;
+
+static const int log_event_clock_settime_size = sizeof(log_event_clock_settime_t);
+
+typedef struct {
   // For lseek():
   int fd;
   off_t offset;
@@ -1986,6 +2018,9 @@ typedef struct {
     log_event_symlink_t                          log_event_symlink;
     log_event_listen_t                           log_event_listen;
     log_event_localtime_t                        log_event_localtime;
+    log_event_clock_getres_t                     log_event_clock_getres;
+    log_event_clock_gettime_t                    log_event_clock_gettime;
+    log_event_clock_settime_t                    log_event_clock_settime;
     log_event_lseek_t                            log_event_lseek;
     log_event_lseek64_t                          log_event_lseek64;
     log_event_llseek_t                           log_event_llseek;
@@ -2269,6 +2304,9 @@ CREATE_ENTRY_FUNC(link, const char *oldpath, const char *newpath);
 CREATE_ENTRY_FUNC(symlink, const char *oldpath, const char *newpath);
 CREATE_ENTRY_FUNC(listen, int sockfd, int backlog);
 CREATE_ENTRY_FUNC(localtime, const time_t *timep);
+CREATE_ENTRY_FUNC(clock_getres, clockid_t clk_id, struct timespec *res);
+CREATE_ENTRY_FUNC(clock_gettime, clockid_t clk_id, struct timespec *tp);
+CREATE_ENTRY_FUNC(clock_settime, clockid_t clk_id, const struct timespec *tp);
 CREATE_ENTRY_FUNC(lseek, int fd, off_t offset, int whence);
 CREATE_ENTRY_FUNC(lseek64, int fd, off64_t offset, int whence);
 CREATE_ENTRY_FUNC(llseek, int fd, loff_t offset, int whence);
