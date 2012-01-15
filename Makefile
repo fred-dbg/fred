@@ -7,11 +7,11 @@ RECORD_REPLAY=record-replay
 DMTCPPATH=
 
 all: ${FREDTEST} ${RECORD_REPLAY}
-	cd ${FREDTEST} && $(MAKE) $(MAKEFLAGS) all
-	cd ${RECORD_REPLAY} && $(MAKE) $(MAKEFLAGS) all
+	cd ${FREDTEST} && $(MAKE) all
+	cd ${RECORD_REPLAY} && $(MAKE) all
 
 clean:
-	cd ${FREDTEST} && $(MAKE) $(MAKEFLAGS) clean
+	cd ${FREDTEST} && $(MAKE) clean
 
 check: all fredtest.py
 	if test -n "${DMTCPPATH}"; then PATH=${DMTCPPATH}:$$PATH; fi; \

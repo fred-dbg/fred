@@ -378,7 +378,7 @@ def gdb_reverse_finish(n_count=1):
         execute_commands(["b main", "r", "fred-ckpt", "step",
                           "fred-reverse-finish"])
         current_backtrace_frame = g_debugger.current_position()
-        if current_backtrace_frame.line() == 21:
+        if current_backtrace_frame.line() == 22:
             print GS_PASSED_STRING
         else:
             print GS_FAILED_STRING
@@ -389,12 +389,12 @@ def gdb_reverse_finish_2(n_count=1):
     global GS_TEST_PROGRAMS_DIRECTORY
     l_cmd = ["gdb", GS_TEST_PROGRAMS_DIRECTORY + "/test-list"]
     for i in range(0, n_count):
-        print_test_name("gdb reverse finish %d" % i)
+        print_test_name("gdb reverse finish-2 %d" % i)
         start_session(l_cmd)
         execute_commands(["b main", "r", "fred-ckpt", "step", "next", "next",
                           "fred-reverse-finish"])
         current_backtrace_frame = g_debugger.current_position()
-        if current_backtrace_frame.line() == 21:
+        if current_backtrace_frame.line() == 22:
             print GS_PASSED_STRING
         else:
             print GS_FAILED_STRING
@@ -515,7 +515,8 @@ def initialize_tests():
                  "gdb-reverse-next"  : gdb_reverse_next,
                  "gdb-reverse-step"  : gdb_reverse_step,
                  "gdb-reverse-continue"  : gdb_reverse_continue,
-                 "gdb-reverse-finish"  : gdb_reverse_finish }
+                 "gdb-reverse-finish"  : gdb_reverse_finish,
+                 "gdb-reverse-finish-2"  : gdb_reverse_finish_2 }
 
 def main():
     """Program execution starts here."""
