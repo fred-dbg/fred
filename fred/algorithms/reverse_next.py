@@ -9,7 +9,7 @@ import reverse_finish
 # .* 'n' at_bkpt -> .* 's' 'n'* at_bkpt  if 'n' changes level, and recurse
 # .* 'c' at_bkpt -> .* 's' 'n'* at_bkpt  and recurse to cases above
 # .* 'n' -> reverse_finish(.*)   if 'n' returns to shallower stack level
-def NEW_reverse_next(dbg, n=1):
+def reverse_next(dbg, n=1):
     """Perform n 'reverse-next' commands."""
     if dbg.branch.get_num_checkpoints() == 0:
         fredutil.fred_error("No checkpoints found for reverse-next.")
@@ -75,42 +75,5 @@ def NEW_reverse_next(dbg, n=1):
     dbg.current_checkpoint().set_history(l_history)
     dbg.do_restart()
     dbg.replay_history(l_history)
-    dbg.update_state()
-    fredutil.fred_debug("Reverse next finished.")
-
-
-def reverse_next(dbg, n=1):
-    """Perform n 'reverse-next' commands."""
-    while n > 0:
-        n -= 1
-        dbg.update_state()
-        orig_state = dbg.state().copy()
-        debug_loop_counter = 0
-        while True:
-            debug_loop_counter += 1
-            fredutil.fred_debug("RN: LOOP ITERATION %d" % debug_loop_counter)
-            if dbg.state().level() > orig_state.level():
-                fredutil.fred_debug("RN: DEEPER")
-                dbg.do_next()
-            elif dbg.state().level() < orig_state.level():
-                fredutil.fred_debug("RN: SHALLOWER")
-                dbg.do_step()
-            else:
-                fredutil.fred_debug("RN: SAME")
-                if dbg.state() == orig_state:
-                    fredutil.fred_debug("RN: AT ORIG STATE")
-                    if dbg.current_checkpoint().last_command_non_ignore().is_next() or \
-                            dbg.current_checkpoint().last_command_non_ignore().is_step():
-                        fredutil.fred_debug("RN: AFTER NEXT OR STEP")
-                        # Gene - n_lvl is apparently never used.
-                        n_lvl = dbg.state().level()
-                        undo.undo(dbg)
-                        break
-                    else:
-                        fredutil.fred_debug("RN: NOT AFTER NEXT OR STEP")
-                    undo.undo(dbg)
-                else:
-                    fredutil.fred_debug("RN: NOT AT ORIG STATE")
-                    dbg.do_next()
     dbg.update_state()
     fredutil.fred_debug("Reverse next finished.")

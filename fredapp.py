@@ -150,7 +150,7 @@ def handle_fred_command(s_command):
         undo.undo(g_debugger, n_count)
     elif s_command_name in ["reverse-next", "rn"]:
         # iF THIS DOESN'T WORK FOR YOU, CHANGE IT BACK TO reverse_next().
-        reverse_next.NEW_reverse_next(g_debugger, n_count)
+        reverse_next.reverse_next(g_debugger, n_count)
     elif s_command_name in ["reverse-step", "rs"]:
         # iF THIS DOESN'T WORK FOR YOU, CHANGE IT BACK TO reverse_step().
         reverse_step.NEW_reverse_step(g_debugger, n_count)
