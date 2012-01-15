@@ -875,57 +875,6 @@ extern "C" int chown(const char *path, uid_t owner, gid_t group)
   BASIC_SYNC_WRAPPER(int, chown, _real_chown, path, owner, group);
 }
 
-static int _fcntl(int fd, int cmd, long arg_3_l, struct flock *arg_3_f)
-{
-  if (arg_3_l == -1 && arg_3_f == NULL) {
-    return _real_fcntl(fd, cmd);
-  } else if (arg_3_l == -1) {
-    return _real_fcntl(fd, cmd, arg_3_f);
-  } else {
-    return _real_fcntl(fd, cmd, arg_3_l);
-  }
-}
-
-extern "C" int fcntl(int fd, int cmd, ...)
-{
-  va_list ap;
-  // Handling the variable number of arguments
-  long arg_3_l = -1;
-  struct flock *arg_3_f = NULL;
-  va_start( ap, cmd );
-  switch (cmd) {
-  case F_DUPFD:
-  //case F_DUP_FD_CLOEXEC:
-  case F_SETFD:
-  case F_SETFL:
-  case F_SETOWN:
-  case F_SETSIG:
-  case F_SETLEASE:
-  case F_NOTIFY:
-    arg_3_l = va_arg ( ap, long );
-    va_end ( ap );
-    break;
-  case F_GETFD:
-  case F_GETFL:
-  case F_GETOWN:
-  case F_GETSIG:
-  case F_GETLEASE:
-    va_end ( ap );
-    break;
-  case F_SETLK:
-  case F_SETLKW:
-  case F_GETLK:
-    arg_3_f = va_arg ( ap, struct flock *);
-    va_end ( ap );
-    break;
-  default:
-    break;
-  }
-
-  BASIC_SYNC_WRAPPER(int, fcntl, _fcntl, fd, cmd, arg_3_l, arg_3_f);
-}
-
-
 #define _XSTAT_COMMON_SYNC_WRAPPER(name, ...)                               \
   do {                                                                      \
     if (SYNC_IS_REPLAY) {                                                   \
@@ -1447,6 +1396,74 @@ extern "C" int setvbuf(FILE *stream, char *buf, int mode, size_t size)
   }
   return retval;
 }
+
+static int _fcntl(int fd, int cmd, long arg_3_l, struct flock *flock_ptr)
+{
+  if (arg_3_l == -1 && flock_ptr == NULL) {
+    return _real_fcntl(fd, cmd);
+  } else if (arg_3_l == -1) {
+    return _real_fcntl(fd, cmd, flock_ptr);
+  } else {
+    return _real_fcntl(fd, cmd, arg_3_l);
+  }
+}
+
+extern "C" int fcntl(int fd, int cmd, ...)
+{
+  va_list ap;
+  // Handling the variable number of arguments
+  long arg_3_l = -1;
+  struct flock *flock_ptr = NULL;
+  va_start( ap, cmd );
+  switch (cmd) {
+    case F_DUPFD:
+      //case F_DUP_FD_CLOEXEC:
+    case F_SETFD:
+    case F_SETFL:
+    case F_SETOWN:
+    case F_SETSIG:
+    case F_SETLEASE:
+    case F_NOTIFY:
+      arg_3_l = va_arg ( ap, long );
+      va_end ( ap );
+      break;
+    case F_GETFD:
+    case F_GETFL:
+    case F_GETOWN:
+    case F_GETSIG:
+    case F_GETLEASE:
+      va_end ( ap );
+      break;
+    case F_SETLK:
+    case F_SETLKW:
+    case F_GETLK:
+      flock_ptr = va_arg ( ap, struct flock *);
+      va_end ( ap );
+      break;
+    // TODO:Handle F_GETOWN_EX
+    default:
+      break;
+  }
+
+  WRAPPER_HEADER(int, fcntl, _fcntl, fd, cmd, arg_3_l, flock_ptr);
+
+  if (SYNC_IS_REPLAY) {
+    WRAPPER_REPLAY_START(fcntl);
+    if (cmd == F_GETLK && retval != -1 && flock_ptr != NULL) {
+      *flock_ptr = GET_FIELD(my_entry, fcntl, ret_flock);
+    }
+    WRAPPER_REPLAY_END(fcntl);
+  } else if (SYNC_IS_RECORD) {
+    retval = _fcntl(fd, cmd, arg_3_l, flock_ptr);
+    if (cmd == F_GETLK && retval != -1 && flock_ptr != NULL) {
+      SET_FIELD2(my_entry, fcntl, ret_flock, *flock_ptr);
+    }
+    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+  }
+
+  return retval;
+}
+
 
 // FIXME: Ask Ana to write this wrapper.
 #if 0

@@ -1023,6 +1023,7 @@ typedef struct {
   int cmd;
   long arg_3_l;
   struct flock *arg_3_f;
+  struct flock ret_flock;
 } log_event_fcntl_t;
 
 static const int log_event_fcntl_size = sizeof(log_event_fcntl_t);
