@@ -384,6 +384,22 @@ def gdb_reverse_finish(n_count=1):
             print GS_FAILED_STRING
         end_session()
 
+def gdb_reverse_finish_2(n_count=1):
+    """Run a reverse-finish test on test-list."""
+    global GS_TEST_PROGRAMS_DIRECTORY
+    l_cmd = ["gdb", GS_TEST_PROGRAMS_DIRECTORY + "/test-list"]
+    for i in range(0, n_count):
+        print_test_name("gdb reverse finish %d" % i)
+        start_session(l_cmd)
+        execute_commands(["b main", "r", "fred-ckpt", "step", "next", "next",
+                          "fred-reverse-finish"])
+        current_backtrace_frame = g_debugger.current_position()
+        if current_backtrace_frame.line() == 21:
+            print GS_PASSED_STRING
+        else:
+            print GS_FAILED_STRING
+        end_session()
+
 def run_integration_tests(n_iters):
     """Run all available integration tests."""
     gdb_record_replay(n_iters)
@@ -400,6 +416,7 @@ def run_integration_tests(n_iters):
     gdb_reverse_step(n_iters)
     gdb_reverse_continue(n_iters)
     gdb_reverse_finish(n_iters)
+    gdb_reverse_finish_2(n_iters)
     gdb_reverse_watch_mt(n_iters)
     gdb_reverse_watch_mt_priv(n_iters)
     gdb_reverse_watch_no_log(n_iters)

@@ -13,6 +13,9 @@ def reverse_finish(dbg, n=1):
         orig_state = dbg.state().copy()
         l_history = dbg.copy_current_checkpoint_history()
         level = dbg.state().level()
+	if level == 1:
+            fredutil.fred_error(
+             "reverse_finish: already at top level, can't go to higher level.")
         while dbg.state().level() >= level:
             # Trimming ignore commands. TODO: This could delete commands
             # with side effects like "p var++".
