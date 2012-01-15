@@ -31,7 +31,7 @@ def NEW_reverse_finish(dbg, n=1):
                     not l_history[-1].is_continue():
                 del l_history[-1]
             if len(l_history) == 0:
-                fred_util.fred_warning("Reverse-finish:" +
+                fredutil.fred_warning("Reverse-finish:" +
                                        "  can't reverse past last checkpoint")
             if l_history[-1].is_continue():
                 # expand 'c' and continue to other cases
