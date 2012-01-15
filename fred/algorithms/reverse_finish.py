@@ -3,15 +3,6 @@ import binary_search
 import reverse_next
 
 def reverse_finish(dbg, n=1):
-    """Perform 'reverse-finish' command."""
-    dbg.update_state()
-    orig_state = dbg.state().copy()
-    while dbg.state().level() >= orig_state.level():
-        reverse_next.reverse_next(dbg)
-    dbg.update_state()
-    fredutil.fred_debug("Reverse finish finished.")
-
-def NEW_reverse_finish(dbg, n=1):
     """Perform n 'reverse-finish' commands."""
     if dbg.branch.get_num_checkpoints() == 0:
         fredutil.fred_error("No checkpoints found for reverse-finish.")

@@ -153,8 +153,7 @@ def handle_fred_command(s_command):
     elif s_command_name in ["reverse-step", "rs"]:
         reverse_step.reverse_step(g_debugger, n_count)
     elif s_command_name in ["reverse-finish", "rf"]:
-        # iF THIS DOESN'T WORK FOR YOU, CHANGE IT BACK TO reverse_step().
-        reverse_finish.NEW_reverse_finish(g_debugger, n_count)
+        reverse_finish.reverse_finish(g_debugger, n_count)
     elif s_command_name in ["reverse-continue", "rc"]:
         reverse_continue.reverse_continue(g_debugger)
     elif s_command_name in ["checkpoint", "ckpt"]:
