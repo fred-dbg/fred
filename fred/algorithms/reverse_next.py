@@ -44,7 +44,7 @@ def reverse_next(dbg, n=1):
                 elif dbg.state().level() == level+1:
                     # The last 'n' returned from fnc; go to before fnc call
                     dbg.current_checkpoint().set_history(l_history)
-                    reverse_finish.NEW_reverse_finish(dbg)
+                    reverse_finish.reverse_finish(dbg)
                     break
                 else:
                     # The last 'n' entered fnc or exited program
