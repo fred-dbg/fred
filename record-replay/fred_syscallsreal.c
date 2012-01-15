@@ -239,6 +239,24 @@ struct tm * _real_localtime ( const time_t *timep )
 }
 
 LIB_PRIVATE
+int _real_clock_getres(clockid_t clk_id, struct timespec *res)
+{
+  REAL_FUNC_PASSTHROUGH(clock_getres) (clk_id, res);
+}
+
+LIB_PRIVATE
+int _real_clock_gettime(clockid_t clk_id, struct timespec *tp)
+{
+  REAL_FUNC_PASSTHROUGH(clock_gettime) (clk_id, tp);
+}
+
+LIB_PRIVATE
+int _real_clock_settime(clockid_t clk_id, const struct timespec *tp)
+{
+  REAL_FUNC_PASSTHROUGH(clock_settime) (clk_id, tp);
+}
+
+LIB_PRIVATE
 int _real_accept ( int sockfd, struct sockaddr *addr, socklen_t *addrlen )
 {
   REAL_FUNC_PASSTHROUGH ( accept ) ( sockfd,addr,addrlen );

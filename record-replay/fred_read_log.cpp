@@ -426,6 +426,27 @@ void print_log_entry_localtime(int idx, log_entry_t *entry) {
          GET_FIELD_PTR(entry, localtime, timep));
 }
 
+void print_log_entry_clock_getres(int idx, log_entry_t *entry) {
+  print_log_entry_common(idx, entry);
+  printf(", clk_id=%d, res:%p\n",
+         GET_FIELD_PTR(entry, clock_getres, clk_id),
+         GET_FIELD_PTR(entry, clock_getres, res));
+}
+
+void print_log_entry_clock_gettime(int idx, log_entry_t *entry) {
+  print_log_entry_common(idx, entry);
+  printf(", clk_id=%d, res:%p\n",
+         GET_FIELD_PTR(entry, clock_gettime, clk_id),
+         GET_FIELD_PTR(entry, clock_gettime, tp));
+}
+
+void print_log_entry_clock_settime(int idx, log_entry_t *entry) {
+  print_log_entry_common(idx, entry);
+  printf(", clk_id=%d, res:%p\n",
+         GET_FIELD_PTR(entry, clock_settime, clk_id),
+         GET_FIELD_PTR(entry, clock_settime, tp));
+}
+
 void print_log_entry_lxstat(int idx, log_entry_t *entry) {
   print_log_entry_common(idx, entry);
   printf(", vers=%d, path=%p\n",

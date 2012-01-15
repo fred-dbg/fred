@@ -1006,4 +1006,49 @@ extern "C" struct tm *localtime(const time_t *timep)
   }
   return retval;
 }
+
+extern "C" int clock_getres(clockid_t clk_id, struct timespec *res)
+{
+  WRAPPER_HEADER(int, clock_getres, _real_clock_getres, clk_id, res);
+  if (SYNC_IS_REPLAY) {
+    WRAPPER_REPLAY_START(clock_getres);
+    if (retval == 0 && res != NULL) {
+      *res = GET_FIELD(my_entry, clock_getres, ret_res);
+    }
+    WRAPPER_REPLAY_END(clock_getres);
+  } else if (SYNC_IS_RECORD) {
+    retval = _real_clock_getres(clk_id, res);
+    if (retval == 0 && res != NULL) {
+      SET_FIELD2(my_entry, clock_getres, ret_res, *res);
+    }
+    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+  }
+  return retval;
+}
+
+extern "C" int clock_gettime(clockid_t clk_id, struct timespec *tp)
+{
+  WRAPPER_HEADER(int, clock_gettime, _real_clock_gettime, clk_id, tp);
+  if (SYNC_IS_REPLAY) {
+    WRAPPER_REPLAY_START(clock_gettime);
+    if (retval == 0 && tp != NULL) {
+      *tp = GET_FIELD(my_entry, clock_gettime, ret_tp);
+    }
+    WRAPPER_REPLAY_END(clock_gettime);
+  } else if (SYNC_IS_RECORD) {
+    retval = _real_clock_gettime(clk_id, tp);
+    if (retval == 0 && tp != NULL) {
+      SET_FIELD2(my_entry, clock_gettime, ret_tp, *tp);
+    }
+    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+  }
+  return retval;
+}
+
+
+extern "C" int clock_settime(clockid_t clk_id, const struct timespec *tp)
+{
+  BASIC_SYNC_WRAPPER(int, clock_settime, _real_clock_settime, clk_id, tp);
+}
+
 /* End wrapper code */
