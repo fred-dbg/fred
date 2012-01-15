@@ -15,7 +15,7 @@ import undo
 #       [ instead of repeating rule, could 
 # .* 'n' at_bkpt -> NOT YET IMPLEMENTED; MUST DO AS WITH reverse_next
 # .* 's' -> .*
-def NEW_reverse_step(dbg, n=1):
+def reverse_step(dbg, n=1):
     """Perform n 'reverse-step' commands."""
     while n > 0:
         n -= 1
@@ -69,48 +69,5 @@ def NEW_reverse_step(dbg, n=1):
     dbg.current_checkpoint().set_history(l_history)
     dbg.do_restart()
     dbg.replay_history()
-    dbg.update_state()
-    fredutil.fred_debug("Reverse step finished.")
-
-def reverse_step(dbg, n=1):
-    """Perform n 'reverse-step' commands."""
-    while n > 0:
-        n -= 1
-        dbg.update_state()
-        orig_state = dbg.state().copy()
-        debug_loop_counter = 0
-        while True:
-            debug_loop_counter += 1
-            fredutil.fred_debug("RS: LOOP ITERATION %d" % debug_loop_counter)
-            if dbg.state().level() > orig_state.level():
-                fredutil.fred_debug("RS: DEEPER")
-                dbg.do_next()
-                if dbg.state() == orig_state:
-                    undo.undo(dbg)
-                    break
-            elif dbg.state().level() < orig_state.level():
-                fredutil.fred_debug("RS: SHALLOWER")
-                dbg.do_step()
-            else:
-                fredutil.fred_debug("RS: SAME")
-                if dbg.state() == orig_state:
-                    fredutil.fred_debug("RS: AT ORIG STATE")
-                    if dbg.current_checkpoint().last_command_non_ignore().is_step():
-                        fredutil.fred_debug("RS: AFTER STEP")
-                        undo.undo(dbg)
-                        break
-                    else:
-                        fredutil.fred_debug("RS: NOT AFTER STEP")
-                        undo.undo(dbg)
-                        dbg.do_step()
-                else:
-                    fredutil.fred_debug("RS: NOT AT ORIG STATE")
-                    # TODO: This is a very inefficient implementation.
-                    dbg.do_step()
-                    if dbg.state() == orig_state:
-                        continue
-                    undo.undo(dbg)
-                    dbg.do_next()
-                    
     dbg.update_state()
     fredutil.fred_debug("Reverse step finished.")

@@ -149,11 +149,9 @@ def handle_fred_command(s_command):
     elif s_command_name == "undo":
         undo.undo(g_debugger, n_count)
     elif s_command_name in ["reverse-next", "rn"]:
-        # iF THIS DOESN'T WORK FOR YOU, CHANGE IT BACK TO reverse_next().
         reverse_next.reverse_next(g_debugger, n_count)
     elif s_command_name in ["reverse-step", "rs"]:
-        # iF THIS DOESN'T WORK FOR YOU, CHANGE IT BACK TO reverse_step().
-        reverse_step.NEW_reverse_step(g_debugger, n_count)
+        reverse_step.reverse_step(g_debugger, n_count)
     elif s_command_name in ["reverse-finish", "rf"]:
         # iF THIS DOESN'T WORK FOR YOU, CHANGE IT BACK TO reverse_step().
         reverse_finish.NEW_reverse_finish(g_debugger, n_count)
