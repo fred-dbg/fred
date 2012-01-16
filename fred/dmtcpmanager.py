@@ -301,6 +301,18 @@ def load_dmtcp_tmpdir(s_name):
     os.symlink(s_path, os.environ["DMTCP_TMPDIR"])
     fredutil.fred_debug("Symlinked DMTCP_TMPDIR to: %s" % s_path)
 
+def remove_checkpoint_files_of_index(n_index):
+    """Remove the checkpoint image in the current DMTCP_TMPDIR with
+    the specified index."""
+    s_path = os.environ["DMTCP_TMPDIR"]
+    s_checkpoint_re = "ckpt_.+\.dmtcp.*"
+    l_files = [os.path.join(os.environ["DMTCP_TMPDIR"], x) \
+               for x in os.listdir(os.environ["DMTCP_TMPDIR"]) \
+               if re.search(s_checkpoint_re, x) != None and \
+                  x.endswith(".%d" % n_index)]
+    fredutil.fred_debug("Removing files: %s" % str(l_files))
+    map(os.remove, l_files)
+
 def remove_checkpoints_except_index(n_index):
     """Remove all checkpoint images in the current DMTCP_TMPDIR except
     the specified index."""

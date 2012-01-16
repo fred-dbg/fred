@@ -20,17 +20,19 @@ def _reverse_watch_main_thread(dbg, s_expr, s_expr_val):
                            "is same at start and end." % s_expr )
     fredutil.fred_assert(not dbg.test_expression(s_expr, s_expr_val))
     # Test to see if the main thread did cause expr to change:
-    dbg.do_checkpoint() # Checkpoint so we can come back easily.
+    n_ckpt_idx = dbg.do_checkpoint() # Checkpoint so we can come back easily.
     dbg.set_scheduler_locking(True)
     (b_deadlock, s_output) = dbg.do_step_no_deadlock()
     if b_deadlock:
         dbg.stop_inferior()
     dbg.set_scheduler_locking(False)
-    b_success = dbg.test_expression(s_expr, s_expr_val)
+    b_main_thread_changed_expr = dbg.test_expression(s_expr, s_expr_val)
     # We're done, one way or another. Back up to before the step.
     dbg.do_restart(b_clear_history=True)
     dbg.update_state()
-    return b_success
+    if b_main_thread_changed_expr:
+        dbg.remove_checkpoint(n_ckpt_idx)
+    return b_main_thread_changed_expr
 
 def _reverse_watch_round_robin(dbg, testIfTooFar):
     """Perform a round-robin reverse-watch on all threads currently

@@ -157,6 +157,11 @@ class ReversibleDebugger(debugger.Debugger):
         gn_total_checkpoints += 1
         return n_index
 
+    def remove_checkpoint(self, n_index):
+        global gn_total_checkpoints
+        if self.branch.remove_checkpoint(n_index):
+            gn_total_checkpoints -= 1
+
     def reset_on_restart(self):
         """Perform any reset functions that should happen on restart."""
         if self.personality_name() == "gdb":
@@ -183,7 +188,7 @@ class ReversibleDebugger(debugger.Debugger):
     def do_restart_previous(self):
         """Restart from the previous checkpoint."""
         self.do_restart(self.current_checkpoint().get_index() - 1)
-        
+
     def print_branches(self):
         """Print the list of branches and checkpoints."""
         for branch in self.l_branches:
@@ -648,7 +653,8 @@ class Branch():
         self.add_checkpoint(new_ckpt)
         self.set_current_checkpoint(new_ckpt)
         dmtcpmanager.checkpoint()
-        fredutil.fred_debug("!! Sleeping after checkpoint (ptrace instability hack)")
+        fredutil.fred_debug(
+            "!! Sleeping after checkpoint (ptrace instability hack)")
         time.sleep(1)
         fredutil.fred_info("Created checkpoint #%d." %
                            self.get_last_checkpoint().get_index())
@@ -687,6 +693,17 @@ class Branch():
         self.n_next_checkpoint += 1
         self.l_checkpoints.append(ckpt)
 
+    def remove_checkpoint(self, n_index):
+        """Remove the checkpoint with the specified index."""
+        if n_index + 1 != self.n_next_checkpoint:
+            fredutil.fred_warning(
+                "Checkpoint is not last one.  Can't remove it.")
+            return False
+        dmtcpmanager.remove_checkpoint_files_of_index(n_index)
+        del self.l_checkpoints[n_index]
+        self.n_next_checkpoint -= 1
+        return True
+        
     def get_checkpoint(self, n_index):
         """Return the Checkpoint object at the given index."""
         return self.l_checkpoints[n_index]
