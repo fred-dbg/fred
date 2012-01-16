@@ -166,7 +166,6 @@ class ReversibleDebugger(debugger.Debugger):
     def reset_on_restart(self):
         """Perform any reset functions that should happen on restart."""
         if self.personality_name() == "gdb":
-            self._p.execute_command("signal SIGKILL")
             self._p.reset_user_code_interval()
 
     def do_restart(self, n_index=-1, b_clear_history=False):

@@ -197,7 +197,7 @@ class PersonalityGdb(personality.Personality):
         if n_addr == -1:
             bt = self.get_backtrace()
             s_cur_func = bt.l_frames[0].s_function
-            n_addr = self.parse_address(self.do_print("&" + s_cur_func))
+            n_addr = self.parse_address(self.do_print("&'%s'" % s_cur_func))
         if gn_user_code_min == 0:
             self.get_user_code_addresses()
         result = n_addr > gn_user_code_min and n_addr < gn_user_code_max
@@ -225,7 +225,9 @@ class PersonalityGdb(personality.Personality):
         # Example input: "$2 = (int (*)(item *)) 0x8048508 <list_len>"
         global gn_user_code_min
         exp = ".+\(.+\) (0x[0-9A-Fa-f]+).+"
-        m = re.search(exp, s_addr)
+        # Use DOTALL mode so the '.' character matches across
+        # newlines, in case the output by gdb spanned multiple lines.
+        m = re.search(exp, s_addr, re.DOTALL)
         if m != None:
             n_addr = int(m.group(1), 16)
             return n_addr
