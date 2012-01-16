@@ -312,6 +312,11 @@ def remove_checkpoint_files_of_index(n_index):
                   x.endswith(".%d" % n_index)]
     fredutil.fred_debug("Removing files: %s" % str(l_files))
     map(os.remove, l_files)
+    # Also remove any symbolic links.  They have same filename without ".%d".
+    for x in l_files:
+        y = x[ 0 : - len(".%d" % n_index) ]  # strip index number at end
+        if os.path.lexists(y):
+            os.remove(y)
 
 def remove_checkpoints_except_index(n_index):
     """Remove all checkpoint images in the current DMTCP_TMPDIR except

@@ -158,6 +158,7 @@ class ReversibleDebugger(debugger.Debugger):
         return n_index
 
     def remove_checkpoint(self, n_index):
+        """Remove the checkpoint with the specified index."""
         global gn_total_checkpoints
         if self.branch.remove_checkpoint(n_index):
             gn_total_checkpoints -= 1
@@ -660,6 +661,18 @@ class Branch():
                            self.get_last_checkpoint().get_index())
         return self.get_last_checkpoint().get_index()
 
+    def remove_checkpoint(self, n_index):
+        """Remove the checkpoint with the specified index."""
+        if n_index + 1 != self.n_next_checkpoint:
+            fredutil.fred_warning(
+                "Checkpoint is not last one.  Can't remove it.")
+            return False
+        dmtcpmanager.remove_checkpoint_files_of_index(n_index)
+        del self.l_checkpoints[n_index]
+        self.n_next_checkpoint -= 1
+        self.set_current_checkpoint(self.get_last_checkpoint())
+        return True
+
     def do_restart(self, n_index, b_clear_history, reset_fnc):
         """Restart from the specified checkpoint, calling the provided
         reset_fnc before restarting, if provided."""
@@ -685,25 +698,14 @@ class Branch():
             self.get_current_checkpoint().clear_history()
         fredutil.fred_debug("!! Sleeping after restart (ptrace instability hack)")
         time.sleep(1)
-        
+    
     def add_checkpoint(self, ckpt):
         """Append the given Checkpoint object to list of checkpoints."""
         if ckpt.get_index() == -1:
             ckpt.set_index(self.n_next_checkpoint)
         self.n_next_checkpoint += 1
         self.l_checkpoints.append(ckpt)
-
-    def remove_checkpoint(self, n_index):
-        """Remove the checkpoint with the specified index."""
-        if n_index + 1 != self.n_next_checkpoint:
-            fredutil.fred_warning(
-                "Checkpoint is not last one.  Can't remove it.")
-            return False
-        dmtcpmanager.remove_checkpoint_files_of_index(n_index)
-        del self.l_checkpoints[n_index]
-        self.n_next_checkpoint -= 1
-        return True
-        
+    
     def get_checkpoint(self, n_index):
         """Return the Checkpoint object at the given index."""
         return self.l_checkpoints[n_index]
