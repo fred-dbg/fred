@@ -555,6 +555,26 @@ extern "C" int pthread_cond_timedwait(pthread_cond_t *cond,
   return retval;
 }
 
+extern "C" int pthread_cond_destroy(pthread_cond_t *cond)
+{
+  WRAPPER_HEADER(int, pthread_cond_destroy, _real_pthread_cond_destroy, cond);
+
+  if (SYNC_IS_REPLAY) {
+    WRAPPER_REPLAY_START(pthread_cond_destroy);
+    if (retval == 0) {
+      *cond = GET_FIELD(my_entry, pthread_cond_destroy, cond);
+    }
+    WRAPPER_REPLAY_END(pthread_cond_destroy);
+  } else if (SYNC_IS_RECORD) {
+    retval = _real_pthread_cond_destroy(cond);
+    if (retval == 0) {
+      SET_FIELD2(my_entry, pthread_cond_destroy, cond, *cond);
+    }
+    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+  }
+  return retval;
+}
+
 extern "C" int pthread_rwlock_unlock(pthread_rwlock_t *rwlock)
 {
   WRAPPER_HEADER(int, pthread_rwlock_unlock, _real_pthread_rwlock_unlock,
@@ -943,6 +963,18 @@ extern "C" void srandom(unsigned int seed)
   BASIC_SYNC_WRAPPER_VOID(srand, _real_srand, seed);
 }
 
+extern "C" int rand_r(unsigned int *seedp)
+{
+  ok_to_log_next_func = true;
+  return rand();
+}
+
+extern "C" int random_r(struct random_data *buf, int32_t *result)
+{
+  ok_to_log_next_func = true;
+  *result = rand();
+  return 0;
+}
 
 extern "C" time_t time(time_t *tloc)
 {
@@ -984,6 +1016,16 @@ extern "C" int gettimeofday(struct timeval *tv, struct timezone *tz)
     WRAPPER_LOG_WRITE_ENTRY(my_entry);
   }
   return retval;
+}
+
+extern "C" int utime(const char *filename, const struct utimbuf *times)
+{
+  BASIC_SYNC_WRAPPER(int, utime, _real_utime, filename, times);
+}
+
+extern "C" int utimes(const char *filename, const struct timeval *times)
+{
+  BASIC_SYNC_WRAPPER(int, utimes, _real_utimes, filename, times);
 }
 
 extern "C" struct tm *localtime(const time_t *timep)

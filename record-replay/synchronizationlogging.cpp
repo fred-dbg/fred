@@ -959,6 +959,46 @@ log_entry_t create_localtime_r_entry(clone_id_t clone_id, event_code_t event,
   return e;
 }
 
+log_entry_t create_utime_entry(clone_id_t clone_id, event_code_t event,
+                               const char *filename, const struct utimbuf *times)
+{
+  log_entry_t e = EMPTY_LOG_ENTRY;
+  setupCommonFields(&e, clone_id, event);
+  SET_FIELD2(e, utime, filename, (char*)filename);
+  SET_FIELD2(e, utime, times, (struct utimbuf *)times);
+  return e;
+}
+
+log_entry_t create_utimes_entry(clone_id_t clone_id, event_code_t event,
+                                const char *filename, const struct timeval times[2])
+{
+  log_entry_t e = EMPTY_LOG_ENTRY;
+  setupCommonFields(&e, clone_id, event);
+  SET_FIELD2(e, utimes, filename, (char*)filename);
+  SET_FIELD2(e, utimes, times, (struct timeval *)times);
+  return e;
+}
+
+log_entry_t create_futimes_entry(clone_id_t clone_id, event_code_t event,
+                                 int fd, const struct timeval times[2])
+{
+  log_entry_t e = EMPTY_LOG_ENTRY;
+  setupCommonFields(&e, clone_id, event);
+  SET_FIELD(e, futimes, fd);
+  SET_FIELD2(e, futimes, times, (struct timeval *)times);
+  return e;
+}
+
+log_entry_t create_lutimes_entry(clone_id_t clone_id, event_code_t event,
+                                 const char *filename, const struct timeval times[2])
+{
+  log_entry_t e = EMPTY_LOG_ENTRY;
+  setupCommonFields(&e, clone_id, event);
+  SET_FIELD2(e, lutimes, filename, (char*)filename);
+  SET_FIELD2(e, lutimes, times, (struct timeval *)times);
+  return e;
+}
+
 log_entry_t create_clock_getres_entry(clone_id_t clone_id, event_code_t event,
                                       clockid_t clk_id, struct timespec *res)
 {
@@ -1222,6 +1262,16 @@ log_entry_t create_pthread_cond_timedwait_entry(clone_id_t clone_id, event_code_
   SET_FIELD2(e, pthread_cond_timedwait, mutex_addr, mutex);
   SET_FIELD2(e, pthread_cond_timedwait, cond_addr, cond_var);
   SET_FIELD2(e, pthread_cond_timedwait, abstime, (struct timespec*) abstime);
+  return e;
+}
+
+log_entry_t create_pthread_cond_destroy_entry(clone_id_t clone_id,
+                                              event_code_t event,
+                                              pthread_cond_t *cond_var)
+{
+  log_entry_t e = EMPTY_LOG_ENTRY;
+  setupCommonFields(&e, clone_id, event);
+  SET_FIELD2(e, pthread_cond_destroy, cond_addr, cond_var);
   return e;
 }
 
@@ -1594,6 +1644,26 @@ log_entry_t create_ftruncate_entry(clone_id_t clone_id, event_code_t event,
   return e;
 }
 
+log_entry_t create_truncate64_entry(clone_id_t clone_id, event_code_t event,
+                                  const char *path, off64_t length)
+{
+  log_entry_t e = EMPTY_LOG_ENTRY;
+  setupCommonFields(&e, clone_id, event);
+  SET_FIELD2(e, truncate64, path, (char *)path);
+  SET_FIELD(e, truncate64, length);
+  return e;
+}
+
+log_entry_t create_ftruncate64_entry(clone_id_t clone_id, event_code_t event,
+                                   int fd, off64_t length)
+{
+  log_entry_t e = EMPTY_LOG_ENTRY;
+  setupCommonFields(&e, clone_id, event);
+  SET_FIELD2(e, ftruncate64, fd, fd);
+  SET_FIELD(e, ftruncate64, length);
+  return e;
+}
+
 log_entry_t create_unlink_entry(clone_id_t clone_id, event_code_t event,
      const char *pathname)
 {
@@ -1854,6 +1924,33 @@ log_entry_t create_wait4_entry(clone_id_t clone_id, event_code_t event,
   return e;
 }
 
+log_entry_t create_flockfile_entry(clone_id_t clone_id, event_code_t event,
+                                   FILE *filehandle)
+{
+  log_entry_t e = EMPTY_LOG_ENTRY;
+  setupCommonFields(&e, clone_id, event);
+  SET_FIELD(e, flockfile, filehandle);
+  return e;
+}
+
+log_entry_t create_ftrylockfile_entry(clone_id_t clone_id, event_code_t event,
+                                      FILE *filehandle)
+{
+  log_entry_t e = EMPTY_LOG_ENTRY;
+  setupCommonFields(&e, clone_id, event);
+  SET_FIELD(e, ftrylockfile, filehandle);
+  return e;
+}
+
+log_entry_t create_funlockfile_entry(clone_id_t clone_id, event_code_t event,
+                                     FILE *filehandle)
+{
+  log_entry_t e = EMPTY_LOG_ENTRY;
+  setupCommonFields(&e, clone_id, event);
+  SET_FIELD(e, funlockfile, filehandle);
+  return e;
+}
+
 
 static TURN_CHECK_P(base_turn_check)
 {
@@ -1915,6 +2012,12 @@ TURN_CHECK_P(pthread_cond_timedwait_turn_check)
       GET_FIELD_PTR(e2, pthread_cond_timedwait, cond_addr) &&
     GET_FIELD_PTR(e1, pthread_cond_timedwait, abstime) ==
       GET_FIELD_PTR(e2, pthread_cond_timedwait, abstime);
+}
+
+TURN_CHECK_P(pthread_cond_destroy_turn_check)
+{
+  return base_turn_check(e1,e2) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, pthread_cond_destroy, cond_addr);
 }
 
 TURN_CHECK_P(pthread_rwlock_unlock_turn_check)
@@ -2168,10 +2271,8 @@ TURN_CHECK_P(tmpfile_turn_check)
 TURN_CHECK_P(truncate_turn_check)
 {
   return base_turn_check(e1, e2) &&
-    GET_FIELD_PTR(e1, truncate, path) ==
-      GET_FIELD_PTR(e2, truncate, path) &&
-    GET_FIELD_PTR(e1, truncate, length) ==
-      GET_FIELD_PTR(e2, truncate, length);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, truncate, path) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, truncate, length);
 }
 
 TURN_CHECK_P(ftruncate_turn_check)
@@ -2179,6 +2280,20 @@ TURN_CHECK_P(ftruncate_turn_check)
   return base_turn_check(e1, e2) &&
     ARE_FIELDS_EQUAL_PTR(e1, e2, ftruncate, fd) &&
     ARE_FIELDS_EQUAL_PTR(e1, e2, ftruncate, length);
+}
+
+TURN_CHECK_P(truncate64_turn_check)
+{
+  return base_turn_check(e1, e2) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, truncate64, path) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, truncate64, length);
+}
+
+TURN_CHECK_P(ftruncate64_turn_check)
+{
+  return base_turn_check(e1, e2) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, ftruncate64, fd) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, ftruncate64, length);
 }
 
 TURN_CHECK_P(accept_turn_check)
@@ -2607,6 +2722,34 @@ TURN_CHECK_P(listen_turn_check)
       GET_FIELD_PTR(e2, listen, sockfd) &&
     GET_FIELD_PTR(e1, listen, backlog) ==
       GET_FIELD_PTR(e2, listen, backlog);
+}
+
+TURN_CHECK_P(utime_turn_check)
+{
+  return base_turn_check(e1,e2) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, utime, filename) &&
+    ARE_FIELDS_EQUAL_PTR(e2, e2, utime, times);
+}
+
+TURN_CHECK_P(utimes_turn_check)
+{
+  return base_turn_check(e1,e2) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, utimes, filename) &&
+    ARE_FIELDS_EQUAL_PTR(e2, e2, utimes, times);
+}
+
+TURN_CHECK_P(futimes_turn_check)
+{
+  return base_turn_check(e1,e2) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, futimes, fd) &&
+    ARE_FIELDS_EQUAL_PTR(e2, e2, futimes, times);
+}
+
+TURN_CHECK_P(lutimes_turn_check)
+{
+  return base_turn_check(e1,e2) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, lutimes, filename) &&
+    ARE_FIELDS_EQUAL_PTR(e2, e2, lutimes, times);
 }
 
 TURN_CHECK_P(localtime_r_turn_check)
@@ -3112,6 +3255,24 @@ TURN_CHECK_P(wait4_turn_check)
     ARE_FIELDS_EQUAL_PTR(e1, e2, wait4, status) &&
     ARE_FIELDS_EQUAL_PTR(e1, e2, wait4, options) &&
     ARE_FIELDS_EQUAL_PTR(e1, e2, wait4, rusage);
+}
+
+TURN_CHECK_P(flockfile_turn_check)
+{
+  return base_turn_check(e1,e2) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, flockfile, filehandle);
+}
+
+TURN_CHECK_P(ftrylockfile_turn_check)
+{
+  return base_turn_check(e1,e2) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, ftrylockfile, filehandle);
+}
+
+TURN_CHECK_P(funlockfile_turn_check)
+{
+  return base_turn_check(e1,e2) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, funlockfile, filehandle);
 }
 
 

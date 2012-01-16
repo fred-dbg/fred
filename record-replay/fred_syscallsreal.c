@@ -238,6 +238,17 @@ struct tm * _real_localtime_r ( const time_t *timep, struct tm *result )
   REAL_FUNC_PASSTHROUGH_TYPED ( struct tm *, localtime_r ) ( timep, result );
 }
 
+int _real_utime ( const char *filename, const struct utimbuf *times )
+{
+  REAL_FUNC_PASSTHROUGH_TYPED ( int, utime ) ( filename, times );
+}
+
+LIB_PRIVATE
+int _real_utimes ( const char *filename, const struct timeval *times )
+{
+  REAL_FUNC_PASSTHROUGH_TYPED ( int, utimes ) ( filename, times );
+}
+
 LIB_PRIVATE
 int _real_clock_getres(clockid_t clk_id, struct timespec *res)
 {
@@ -1070,6 +1081,11 @@ int _real_pthread_cond_timedwait(pthread_cond_t *cond, pthread_mutex_t *mutex,
 }
 
 LIB_PRIVATE
+int _real_pthread_cond_destroy(pthread_cond_t *cond) {
+  REAL_FUNC_PASSTHROUGH_TYPED ( int,pthread_cond_destroy ) ( cond );
+}
+
+LIB_PRIVATE
 void _real_pthread_exit(void *value_ptr) {
   REAL_FUNC_PASSTHROUGH_VOID ( pthread_exit ) ( value_ptr );
 }
@@ -1131,6 +1147,16 @@ int _real_truncate(const char *path, off_t length) {
 LIB_PRIVATE
 int _real_ftruncate(int fd, off_t length) {
   REAL_FUNC_PASSTHROUGH_TYPED ( int,ftruncate ) ( fd, length );
+}
+
+LIB_PRIVATE
+int _real_truncate64(const char *path, off64_t length) {
+  REAL_FUNC_PASSTHROUGH_TYPED ( int,truncate64 ) ( path, length );
+}
+
+LIB_PRIVATE
+int _real_ftruncate64(int fd, off64_t length) {
+  REAL_FUNC_PASSTHROUGH_TYPED ( int,ftruncate64 ) ( fd, length );
 }
 
 LIB_PRIVATE
@@ -1262,4 +1288,20 @@ ssize_t _real_recvfrom(int sockfd, void *buf, size_t len, int flags,
 LIB_PRIVATE
 ssize_t _real_recvmsg(int sockfd, struct msghdr *msg, int flags) {
   REAL_FUNC_PASSTHROUGH_TYPED (ssize_t, recvmsg) (sockfd, msg, flags);
+}
+
+
+LIB_PRIVATE
+void _real_flockfile(FILE *filehandle) {
+  REAL_FUNC_PASSTHROUGH_VOID (flockfile) (filehandle);
+}
+
+LIB_PRIVATE
+int  _real_ftrylockfile(FILE *filehandle) {
+  REAL_FUNC_PASSTHROUGH (ftrylockfile) (filehandle);
+}
+
+LIB_PRIVATE
+void _real_funlockfile(FILE *filehandle) {
+  REAL_FUNC_PASSTHROUGH_VOID (funlockfile) (filehandle);
 }

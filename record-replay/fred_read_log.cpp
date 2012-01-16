@@ -427,6 +427,34 @@ void print_log_entry_localtime_r(int idx, log_entry_t *entry) {
          GET_FIELD_PTR(entry, localtime_r, result));
 }
 
+void print_log_entry_utime(int idx, log_entry_t *entry) {
+  print_log_entry_common(idx, entry);
+  printf(", filename=%p, times=%p\n",
+         GET_FIELD_PTR(entry, utime, filename),
+         GET_FIELD_PTR(entry, utime, times));
+}
+
+void print_log_entry_utimes(int idx, log_entry_t *entry) {
+  print_log_entry_common(idx, entry);
+  printf(", filename=%p, times=%p\n",
+         GET_FIELD_PTR(entry, utimes, filename),
+         GET_FIELD_PTR(entry, utimes, times));
+}
+
+void print_log_entry_futimes(int idx, log_entry_t *entry) {
+  print_log_entry_common(idx, entry);
+  printf(", fd=%d, times=%p\n",
+         GET_FIELD_PTR(entry, futimes, fd),
+         GET_FIELD_PTR(entry, futimes, times));
+}
+
+void print_log_entry_lutimes(int idx, log_entry_t *entry) {
+  print_log_entry_common(idx, entry);
+  printf(", filename=%p, times=%p\n",
+         GET_FIELD_PTR(entry, lutimes, filename),
+         GET_FIELD_PTR(entry, lutimes, times));
+}
+
 void print_log_entry_clock_getres(int idx, log_entry_t *entry) {
   print_log_entry_common(idx, entry);
   printf(", clk_id=%d, res:%p\n",
@@ -649,6 +677,12 @@ void print_log_entry_pthread_cond_timedwait(int idx, log_entry_t *entry) {
          GET_FIELD_PTR(entry, pthread_cond_timedwait, mutex_addr),
          GET_FIELD_PTR(entry, pthread_cond_timedwait, cond_addr),
          GET_FIELD_PTR(entry, pthread_cond_timedwait, abstime));
+}
+
+void print_log_entry_pthread_cond_destroy(int idx, log_entry_t *entry) {
+  print_log_entry_common(idx, entry);
+  printf(", cond_addr=%p\n",
+         GET_FIELD_PTR(entry, pthread_cond_destroy, cond_addr));
 }
 
 void print_log_entry_pthread_exit(int idx, log_entry_t *entry) {
@@ -898,6 +932,20 @@ void print_log_entry_ftruncate(int idx, log_entry_t *entry) {
          GET_FIELD_PTR(entry, ftruncate, length));
 }
 
+void print_log_entry_truncate64(int idx, log_entry_t *entry) {
+  print_log_entry_common(idx, entry);
+  printf(", path=%p, length=%zu\n",
+         GET_FIELD_PTR(entry, truncate64, path),
+         GET_FIELD_PTR(entry, truncate64, length));
+}
+
+void print_log_entry_ftruncate64(int idx, log_entry_t *entry) {
+  print_log_entry_common(idx, entry);
+  printf(", fd=%d, length=%zu\n",
+         GET_FIELD_PTR(entry, ftruncate64, fd),
+         GET_FIELD_PTR(entry, ftruncate64, length));
+}
+
 void print_log_entry_user(int idx, log_entry_t *entry) {
   print_log_entry_common(idx, entry);
   printf("\n");
@@ -1124,6 +1172,23 @@ void print_log_entry_wait4(int idx, log_entry_t *entry) {
          GET_FIELD_PTR(entry, wait4, rusage));
 }
 
+void print_log_entry_flockfile(int idx, log_entry_t *entry) {
+  print_log_entry_common(idx, entry);
+  printf(", filehandle:%p\n",
+         GET_FIELD_PTR(entry, flockfile, filehandle));
+}
+
+void print_log_entry_ftrylockfile(int idx, log_entry_t *entry) {
+  print_log_entry_common(idx, entry);
+  printf(", filehandle:%p\n",
+         GET_FIELD_PTR(entry, ftrylockfile, filehandle));
+}
+
+void print_log_entry_funlockfile(int idx, log_entry_t *entry) {
+  print_log_entry_common(idx, entry);
+  printf(", filehandle:%p\n",
+         GET_FIELD_PTR(entry, funlockfile, filehandle));
+}
 
 void printEntry(int idx, log_entry_t *entry)
 {
