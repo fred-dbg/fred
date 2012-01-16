@@ -949,12 +949,13 @@ log_entry_t create_listen_entry(clone_id_t clone_id, event_code_t event, int soc
   return e;
 }
 
-log_entry_t create_localtime_entry(clone_id_t clone_id, event_code_t event,
-                                   const time_t *timep)
+log_entry_t create_localtime_r_entry(clone_id_t clone_id, event_code_t event,
+                                   const time_t *timep, struct tm *result)
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD2(e, localtime, timep, (time_t *)timep);
+  SET_FIELD2(e, localtime_r, timep, (time_t *)timep);
+  SET_FIELD2(e, localtime_r, result, result);
   return e;
 }
 
@@ -2608,11 +2609,11 @@ TURN_CHECK_P(listen_turn_check)
       GET_FIELD_PTR(e2, listen, backlog);
 }
 
-TURN_CHECK_P(localtime_turn_check)
+TURN_CHECK_P(localtime_r_turn_check)
 {
   return base_turn_check(e1,e2) &&
-    GET_FIELD_PTR(e1, localtime, timep) ==
-      GET_FIELD_PTR(e2, localtime, timep);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, localtime_r, timep) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, localtime_r, result);
 }
 
 TURN_CHECK_P(clock_getres_turn_check)
@@ -3161,7 +3162,7 @@ static inline bool is_optional_event_for(event_code_t event,
   case fopen_event:
   case freopen_event:
   case getsockopt_event:
-  case localtime_event:
+  case localtime_r_event:
   case setsockopt_event:
   case tmpfile_event:
     return query || opt_event == malloc_event ||

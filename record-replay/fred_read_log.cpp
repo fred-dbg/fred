@@ -420,10 +420,11 @@ void print_log_entry_listen(int idx, log_entry_t *entry) {
          GET_FIELD_PTR(entry, listen, backlog));
 }
 
-void print_log_entry_localtime(int idx, log_entry_t *entry) {
+void print_log_entry_localtime_r(int idx, log_entry_t *entry) {
   print_log_entry_common(idx, entry);
-  printf(", timep=%p\n",
-         GET_FIELD_PTR(entry, localtime, timep));
+  printf(", timep=%p, result=%p\n",
+         GET_FIELD_PTR(entry, localtime_r, timep),
+         GET_FIELD_PTR(entry, localtime_r, result));
 }
 
 void print_log_entry_clock_getres(int idx, log_entry_t *entry) {

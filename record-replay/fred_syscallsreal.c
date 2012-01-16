@@ -233,9 +233,9 @@ int _real_listen ( int sockfd, int backlog )
 }
 
 LIB_PRIVATE
-struct tm * _real_localtime ( const time_t *timep )
+struct tm * _real_localtime_r ( const time_t *timep, struct tm *result )
 {
-  REAL_FUNC_PASSTHROUGH_TYPED ( struct tm *, localtime ) ( timep );
+  REAL_FUNC_PASSTHROUGH_TYPED ( struct tm *, localtime_r ) ( timep, result );
 }
 
 LIB_PRIVATE

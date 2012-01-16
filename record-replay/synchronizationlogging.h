@@ -399,7 +399,7 @@ static inline bool isProcessGDB() {
     MACRO(link, __VA_ARGS__);                                                  \
     MACRO(symlink, __VA_ARGS__);                                               \
     MACRO(listen, __VA_ARGS__);                                                \
-    MACRO(localtime, __VA_ARGS__);                                             \
+    MACRO(localtime_r, __VA_ARGS__);                                           \
     MACRO(clock_getres, __VA_ARGS__);                                          \
     MACRO(clock_gettime, __VA_ARGS__);                                         \
     MACRO(clock_settime, __VA_ARGS__);                                         \
@@ -545,7 +545,7 @@ typedef enum {
   link_event,
   symlink_event,
   listen_event,
-  localtime_event,
+  localtime_r_event,
   clock_getres_event,
   clock_gettime_event,
   clock_settime_event,
@@ -1267,12 +1267,13 @@ typedef struct {
 static const int log_event_listen_size = sizeof(log_event_listen_t);
 
 typedef struct {
-  // For localtime():
+  // For localtime_r():
   time_t *timep;
-  struct tm localtime_retval;
-} log_event_localtime_t;
+  struct tm *result;
+  struct tm ret_result;
+} log_event_localtime_r_t;
 
-static const int log_event_localtime_size = sizeof(log_event_localtime_t);
+static const int log_event_localtime_r_size = sizeof(log_event_localtime_r_t);
 
 typedef struct {
   // For clock_getres():
@@ -2018,7 +2019,7 @@ typedef struct {
     log_event_link_t                             log_event_link;
     log_event_symlink_t                          log_event_symlink;
     log_event_listen_t                           log_event_listen;
-    log_event_localtime_t                        log_event_localtime;
+    log_event_localtime_r_t                      log_event_localtime_r;
     log_event_clock_getres_t                     log_event_clock_getres;
     log_event_clock_gettime_t                    log_event_clock_gettime;
     log_event_clock_settime_t                    log_event_clock_settime;
@@ -2304,7 +2305,7 @@ CREATE_ENTRY_FUNC(libc_memalign, size_t boundary, size_t size);
 CREATE_ENTRY_FUNC(link, const char *oldpath, const char *newpath);
 CREATE_ENTRY_FUNC(symlink, const char *oldpath, const char *newpath);
 CREATE_ENTRY_FUNC(listen, int sockfd, int backlog);
-CREATE_ENTRY_FUNC(localtime, const time_t *timep);
+CREATE_ENTRY_FUNC(localtime_r, const time_t *timep, struct tm *result);
 CREATE_ENTRY_FUNC(clock_getres, clockid_t clk_id, struct timespec *res);
 CREATE_ENTRY_FUNC(clock_gettime, clockid_t clk_id, struct timespec *tp);
 CREATE_ENTRY_FUNC(clock_settime, clockid_t clk_id, const struct timespec *tp);

@@ -988,19 +988,29 @@ extern "C" int gettimeofday(struct timeval *tv, struct timezone *tz)
 
 extern "C" struct tm *localtime(const time_t *timep)
 {
-  WRAPPER_HEADER(struct tm *, localtime, _real_localtime, timep);
+  static struct tm result;
+  ok_to_log_next_func = true;
+  return localtime_r(timep, &result);
+}
+
+extern "C" struct tm *localtime_r(const time_t *timep, struct tm *result)
+{
+  WRAPPER_HEADER(struct tm *, localtime_r, _real_localtime_r, timep, result);
   if (SYNC_IS_REPLAY) {
-    WRAPPER_REPLAY_START_TYPED(struct tm *, localtime);
+    WRAPPER_REPLAY_START_TYPED(struct tm *, localtime_r);
     if (retval != NULL) {
-      *retval = GET_FIELD(my_entry, localtime, localtime_retval);
+      *retval = GET_FIELD(my_entry, localtime_r, ret_result);
+      if (result != NULL) {
+        *result = GET_FIELD(my_entry, localtime_r, ret_result);
+      }
     }
-    WRAPPER_REPLAY_END(localtime);
+    WRAPPER_REPLAY_END(localtime_r);
   } else if (SYNC_IS_RECORD) {
     isOptionalEvent = true;
-    retval = _real_localtime(timep);
+    retval = _real_localtime_r(timep, result);
     isOptionalEvent = false;
     if (retval != NULL) {
-      SET_FIELD2(my_entry, localtime, localtime_retval, *retval);
+      SET_FIELD2(my_entry, localtime_r, ret_result, *retval);
     }
     WRAPPER_LOG_WRITE_ENTRY(my_entry);
   }
