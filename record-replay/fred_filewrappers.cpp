@@ -1631,3 +1631,15 @@ extern "C" pid_t wait4(pid_t pid, __WAIT_STATUS status, int options,
   }
   return retval;
 }
+
+extern "C" int shmget(key_t key, size_t size, int shmflg)
+{
+  errno = ENOMEM;
+  return -1;
+}
+
+extern "C" int eventfd(unsigned int initval, int flags)
+{
+  errno = ENODEV;
+  return -1;
+}
