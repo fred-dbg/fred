@@ -31,8 +31,13 @@ from .. import debugger
 from .. import fredio
 from .. import fredutil
 
-gn_user_code_min = 0
-gn_user_code_max = 0
+GL_LIBRARY_BLACKLIST_NAMES = ["dmtcphijack",
+                              "libmtcp",
+                              "fredhijack",
+                              "ptracehijack",
+                              "libc-2",
+                              "libpthread-2"]
+gl_library_blacklist_code_ranges = []
 gs_inferior_name = ""
 
 class PersonalityGdb(personality.Personality):
@@ -90,7 +95,7 @@ class PersonalityGdb(personality.Personality):
         
     def destroy(self):
         """Destroy any state associated with the Personality instance."""
-        global gn_user_code_min, gn_user_code_max, gs_inferior_name
+        global gs_inferior_name
         self.reset_user_code_interval()
         gs_inferior_name = ""
         self.s_inferior_name = ""
@@ -181,14 +186,23 @@ class PersonalityGdb(personality.Personality):
         self.s_inferior_name = match.group(1).strip()
 
     def reset_user_code_interval(self):
-        """Reset gn_user_code_min and gn_user_code_max (for restarts)."""
-        global gn_user_code_min, gn_user_code_max
-        gn_user_code_min = gn_user_code_max = 0
+        """Reset code intervals (for restarts)."""
+        global gl_library_blacklist_code_ranges
+        del gl_library_blacklist_code_ranges[:]
+
+    def is_blacklisted_address(self, n_addr):
+        """Return True if the given address is within some blacklisted address
+        range (i.e. do not step into)."""
+        global gl_library_blacklist_code_ranges
+        for code_range in gl_library_blacklist_code_ranges:
+            if n_addr >= code_range[0] and n_addr < code_range[1]:
+                return True
+        return False
 
     def within_user_code(self, n_addr=-1):
         """Return True if n_addr is within the user program's code segment."""
         # XXX: TODO: Need to check all user libraries too (firefox)
-        global gn_user_code_min, gn_user_code_max, gs_inferior_name
+        global gl_library_blacklist_code_ranges, gs_inferior_name
         if gs_inferior_name == "":
             fredutil.fred_assert(self.s_inferior_name != "",
                                  "Empty inferior name.")
@@ -198,14 +212,17 @@ class PersonalityGdb(personality.Personality):
             bt = self.get_backtrace()
             s_cur_func = bt.l_frames[0].s_function
             n_addr = self.parse_address(self.do_print("&'%s'" % s_cur_func))
-        if gn_user_code_min == 0:
-            self.get_user_code_addresses()
-        result = n_addr > gn_user_code_min and n_addr < gn_user_code_max
-        if result and s_cur_func == "pthread_mutex_lock":
+        if len(gl_library_blacklist_code_ranges) == 0:
+            self.get_code_addresses()
+        result = self.is_blacklisted_address(n_addr)
+        fredutil.fred_debug("Address %d is blacklisted? %s" % (n_addr, str(result)))
+        if not result and s_cur_func == "pthread_mutex_lock":
             # This is a bug that occurs very rarely, so I'm leaving
             # this trace in until I can figure it out. -Tyler
             pdb.set_trace()
-        return result
+        # Return the negation of result because result is True if the address
+        # is blacklisted.
+        return not result
 
     def set_scheduler_locking(self, b_value):
         """Set gdb scheduler locking to b_value."""
@@ -223,7 +240,6 @@ class PersonalityGdb(personality.Personality):
     def parse_address(self, s_addr):
         """Parse the given address string from gdb and return a number."""
         # Example input: "$2 = (int (*)(item *)) 0x8048508 <list_len>"
-        global gn_user_code_min
         exp = ".+\(.+\) (0x[0-9A-Fa-f]+).+"
         # Use DOTALL mode so the '.' character matches across
         # newlines, in case the output by gdb spanned multiple lines.
@@ -233,12 +249,20 @@ class PersonalityGdb(personality.Personality):
             return n_addr
         # TODO: hackish: return an address within the user space to fool whoever
         # is calling this.  need to investigate why m can be None.
-        return gn_user_code_min + 10
+        fredutil.fred_assert(False, "Unimplemented");
 
-    def get_user_code_addresses(self):
-        """Get user code ranges from /proc/pid/maps."""
-        global gn_user_code_min, gn_user_code_max, gs_inferior_name
-        fredutil.fred_assert(gs_inferior_name != "", "Empty inferior name.")
+    def is_blacklisted_library(self, s_maps_line):
+        """Given a line from /proc/pid/maps, return True if the image name is
+        in the blacklist."""
+        global GL_LIBRARY_BLACKLIST_NAMES
+        for blacklisted in GL_LIBRARY_BLACKLIST_NAMES:
+            if re.search(blacklisted, s_maps_line):
+                return True
+        return False
+
+    def get_code_addresses(self):
+        """Get code ranges from /proc/pid/maps."""
+        global gl_library_blacklist_code_ranges
         n_gdb_pid = fredio.get_child_pid()
         n_inferior_pid = fredutil.get_inferior_pid(n_gdb_pid)
         fredutil.fred_assert(n_inferior_pid != -1,
@@ -248,7 +272,7 @@ class PersonalityGdb(personality.Personality):
         f = open("/proc/%d/maps" % n_inferior_pid, "r")
         executable_lines = []
         for line in f:
-            if re.search(gs_inferior_name, line) != None:
+            if self.is_blacklisted_library(line):
                 # There may be more than one executable segment (for instance,
                 # the current iteration of DMTCP trampolines splits the code
                 # segment into several).
@@ -257,10 +281,13 @@ class PersonalityGdb(personality.Personality):
         f.close()
         fredutil.fred_assert(len(executable_lines) > 0,
             "Failed to find executable in /proc/%d/maps :" % n_inferior_pid)
-        gn_user_code_min = \
-            int(re.search(interval_re, executable_lines[0]).group(1), 16)
-        gn_user_code_max = \
-            int(re.search(interval_re, executable_lines[-1]).group(2), 16)
+        for executable_line in executable_lines:
+            n_min = \
+                int(re.search(interval_re, executable_line).group(1), 16)
+            n_max = \
+                int(re.search(interval_re, executable_line).group(2), 16)
+            fredutil.fred_debug("Blacklist: (%d, %d)" % (n_min, n_max))
+            gl_library_blacklist_code_ranges.append((n_min, n_max))
 
     def at_breakpoint(self, bt_frame, breakpoints):
         for breakpoint in breakpoints:
