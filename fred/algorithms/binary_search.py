@@ -259,6 +259,7 @@ def NEW_binary_search_expand_next(dbg, l_history, testIfTooFar,
     n_min = len(l_history)
     dbg.do_restart(b_clear_history = True)
     dbg.replay_history(l_history)
+    fredutil.fred_debug(">>> Appending step over libc")
     dbg.append_step_over_libc(l_history)
     if not dbg.program_is_running() or testIfTooFar():
         return (l_history, n_min)

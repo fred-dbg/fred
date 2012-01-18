@@ -33,6 +33,7 @@ def reverse_step(dbg, n=1):
         if len(l_history) == 0:
             break
         if l_history[-1].is_continue():
+            fredutil.fred_debug("Last command continue. Expanding")
             # Since we last executed 'continue', we must be at a breakpoint.
             # Use that to expand the last 'continue' command until we
             #   reach the breakpoint.
@@ -47,12 +48,14 @@ def reverse_step(dbg, n=1):
             while dbg.program_is_running() and not dbg.at_breakpoint():
                 l_history += [dbg._p.get_personality_cmd(freddebugger.fred_next_cmd())]
                 dbg.replay_history([l_history[-1]])
+        fredutil.fred_debug("Done next doubling; starting search.")
         while l_history[-1].is_next():
             level = dbg.state().level()
+            fredutil.fred_debug("Expanding next, level is %d" % level)
             # expand_next replaces last 'n' by ['s', 'n', ...]
             # dbg.state().level() can never increase under repeated 'n'
             # BUG:  Actually, 'n' can hit a breakpoint deeper in stack.
-            testIfTooFar = lambda: dbg.state().level() <= level or \
+            testIfTooFar = lambda: dbg.state().level() < level or \
                 dbg.at_breakpoint()
             (l_history, n_min) = \
                 binary_search.NEW_binary_search_expand_next(dbg, l_history,
@@ -62,7 +65,7 @@ def reverse_step(dbg, n=1):
                                                                     l_history,
                                                                     n_min,
                                                                     testIfTooFar)
-        
+        fredutil.fred_debug("Done reverse step.")
         fredutil.fred_assert(l_history[-1].is_step())
         del l_history[-1]
     # Gene - Am I using the next four lines correctly?
