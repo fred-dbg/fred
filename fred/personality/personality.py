@@ -177,7 +177,10 @@ class Personality:
     def current_position(self):
         """Return a BacktraceFrame representing current debugger position."""
         fredutil.fred_assert(self.n_top_backtrace_frame != -2)
-        return self.get_backtrace().get_frames()[self.n_top_backtrace_frame]
+        l_frames = self.get_backtrace().get_frames()
+        if len(l_frames) == 0:
+            return None
+        return l_frames[self.n_top_backtrace_frame]
 
     def switch_to_thread(self, n_tid):
         """Switch debugger to given thread."""

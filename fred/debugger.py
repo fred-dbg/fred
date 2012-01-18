@@ -147,11 +147,20 @@ class Debugger():
         # The extra debugging functions are gdb-specific.  When a gdb
         #  target app exits, it first returns to the call frames below.
         if self.personality_name() == "gdb":
+            if not self.program_is_runnable():
+                return False
             return self._p.program_is_running() and \
                 self._p.current_position().s_function != "_start" and \
                 self._p.current_position().s_function != "__libc_start_main"
         else:
             return self._p.program_is_running()
+
+    def program_is_runnable(self):
+        """Return True if inferior is in a "runnable" state."""
+        if self.personality_name() == "gdb":
+            return self._p.current_position() != None
+        else:
+            fredutil.fred_assert(False, "Unimplemented")
 
     def stop_inferior(self):
         """Sends SIGSTOP to inferior process."""
