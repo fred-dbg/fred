@@ -240,7 +240,7 @@ class PersonalityGdb(personality.Personality):
     def parse_address(self, s_addr):
         """Parse the given address string from gdb and return a number."""
         # Example input: "$2 = (int (*)(item *)) 0x8048508 <list_len>"
-        exp = ".+\(.+\) (0x[0-9A-Fa-f]+).+"
+        exp = ".+\(.+\)\s+(0x[0-9A-Fa-f]+).+"
         # Use DOTALL mode so the '.' character matches across
         # newlines, in case the output by gdb spanned multiple lines.
         m = re.search(exp, s_addr, re.DOTALL)
