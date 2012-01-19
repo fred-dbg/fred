@@ -533,7 +533,7 @@ log_entry_t create_dup3_entry(clone_id_t clone_id, event_code_t event,
   return e;
 }
 
-log_entry_t create_exec_barrier_entry()
+log_entry_t create_exec_barrier_entry(clone_id_t id, event_code_t event)
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, CLONE_ID_ANYONE, exec_barrier_event);

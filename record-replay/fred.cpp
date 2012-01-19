@@ -89,7 +89,7 @@ static void recordReplayInit()
   }
   sync_logging_branch = atoi(getenv(ENV_VAR_LOG_REPLAY));
   /* Synchronize this constructor, if this is not the very first exec. */
-  log_entry_t my_entry = create_exec_barrier_entry();
+  log_entry_t my_entry = create_exec_barrier_entry(0, (event_code_t) 0);
   if (SYNC_IS_REPLAY) {
     memfence();
     waitForExecBarrier();
@@ -203,7 +203,7 @@ void fred_post_restart_resume()
       sem_init(&(*clone_id_to_sem_table)[id], 0, 0);
     }
     clone_id_t clone_id = GET_COMMON(temp_entry, clone_id);
-    JTRACE("Posting") (clone_id) (my_clone_id);
+    JNOTE("Posting") (clone_id) (my_clone_id);
     sem_post(&(*clone_id_to_sem_table)[clone_id]);
   }
   log_all_allocs = 1;

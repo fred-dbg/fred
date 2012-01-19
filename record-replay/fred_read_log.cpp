@@ -45,36 +45,14 @@
 // Must be in sync with synchronizationlogging.h definition.
 //#define READLINK_MAX_LENGTH 256
 
-#define IFNAME_PRINT_ENTRY(name, idx, entry)                                   \
-  do {                                                                         \
-    if (GET_COMMON_PTR(entry, event) == name##_event)                          \
-      print_log_entry_##name(idx, entry);                                      \
-  } while(0)
-
-#define TOSTRING(name) #name
-
-#define IFNAME_EVENT_TO_STRING(name, event_type, e)                            \
-  do {                                                                         \
-    if (e == name##_event)                                                     \
-      event_type.assign(TOSTRING(name));                                       \
-  } while(0)
-
-#define EVENT_TO_STRING(event_type, e)                                         \
-  do {                                                                         \
-    FOREACH_NAME(IFNAME_EVENT_TO_STRING, event_type, e);                       \
-  } while(0)
-
-#define PRINT_ENTRIES(idx, entry)                                              \
-  do {                                                                         \
-    FOREACH_NAME(IFNAME_PRINT_ENTRY, idx, entry);                              \
-  } while(0)
-
+#define EVENT_STR(type, name, ...) #name,
+static const char *log_event_str[numTotalWrappers+1] = {
+  FOREACH_RECORD_REPLAY_WRAPPER(EVENT_STR)
+};
 
 void print_log_entry_common(int idx, log_entry_t *entry) {
-  std::string event_type;
-  EVENT_TO_STRING(event_type, GET_COMMON_PTR(entry, event));
   printf("%2d: clone_id=%ld, [%-20.20s]: ",
-         idx, GET_COMMON_PTR(entry, clone_id), event_type.c_str());
+         idx, GET_COMMON_PTR(entry, clone_id), log_event_str[entry->header.event]);
 
   switch ((long) (unsigned long) GET_COMMON_PTR(entry, retval)) {
     case 0:
@@ -1189,9 +1167,32 @@ void print_log_entry_funlockfile(int idx, log_entry_t *entry) {
          GET_FIELD_PTR(entry, funlockfile, filehandle));
 }
 
+void print_log_entry_sigaction(int idx, log_entry_t *entry) {
+  print_log_entry_common(idx, entry);
+}
+
+void print_log_entry_signal(int idx, log_entry_t *entry) {
+  print_log_entry_common(idx, entry);
+}
+
+void print_log_entry_sigset(int idx, log_entry_t *entry) {
+  print_log_entry_common(idx, entry);
+}
+
+void print_log_entry_empty(int idx, log_entry_t *entry) {
+  print_log_entry_common(idx, entry);
+}
+
+#define EVENT_PRINT_FUNC(type, name, ...) print_log_entry_##name,
+void (*print_log_entry_fn[numTotalWrappers+1])(int, log_entry_t*) = {
+  FOREACH_RECORD_REPLAY_WRAPPER(EVENT_PRINT_FUNC)
+};
+
 void printEntry(int idx, log_entry_t *entry)
 {
-  PRINT_ENTRIES(idx, entry);
+  void (*fn)(int, log_entry_t*) = print_log_entry_fn[entry->header.event];
+  (*fn)(idx, entry);
+  //PRINT_ENTRIES(idx, entry);
 }
 
 void rewriteLog(char *log_path)

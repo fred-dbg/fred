@@ -34,7 +34,6 @@
 #include <string.h>
 #include <fcntl.h>
 #include "constants.h"
-//#include "sockettable.h"
 #include <sys/select.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -55,17 +54,28 @@ typedef funcptr_t ( *signal_funcptr_t ) ();
 
 extern void *dmtcp_get_libc_dlsym_addr();
 extern void prepareFredWrappers();
+void * _real_dlsym ( void *handle, const char *symbol );
 
-static void *_real_func_addr[numLibcWrappers];
+static void *_real_func_addr[numTotalWrappers];
 static int _wrappers_initialized = 0;
-#define GET_FUNC_ADDR(name) \
+
+#define NOT_IMPLEMENTED()                                                   \
+  do {                                                                      \
+    fprintf(stderr, "NOT REACHED***********\n\n\n");                        \
+    _exit(0);                                                               \
+  } while(0)
+
+#define GET_FUNC_ADDR(type, name, ...) \
   _real_func_addr[ENUM(name)] = _real_dlsym(RTLD_NEXT, #name);
+#define GET_FUNC_ADDR_2(type, name, ...) \
+  _real_func_addr[ENUM(name)] = _real_dlsym(RTLD_NEXT, "__" #name);
 
 LIB_PRIVATE
 void initialize_wrappers()
 {
   if (!_wrappers_initialized) {
-    FOREACH_DMTCP_WRAPPER(GET_FUNC_ADDR);
+    FOREACH_RECORD_REPLAY_WRAPPER_1(GET_FUNC_ADDR);
+    FOREACH_RECORD_REPLAY_WRAPPER_2(GET_FUNC_ADDR_2);
     _wrappers_initialized = 1;
   }
 }
@@ -120,36 +130,6 @@ void *_real_dlsym ( void *handle, const char *symbol ) {
   }
 
   return (*dlsym_fptr) ( handle, symbol );
-}
-
-/* In dmtcphijack.so code always use this function instead of unsetenv.
- * Bash has its own implementation of getenv/setenv/unsetenv and keeps its own
- * environment equivalent to its shell variables. If DMTCP uses the bash
- * unsetenv, bash will unset its internal environment variable but won't remove
- * the process environment variable and yet on the next getenv, bash will
- * return the process environment variable.
- * This is arguably a bug in bash-3.2.
- */
-LIB_PRIVATE
-int _dmtcp_unsetenv( const char *name ) {
-  unsetenv (name);
-  // FIXME: Fix this by getting the symbol address from libc.
-  // Another way to fix this would be to do a getenv() here and put a '\0' byte
-  // at the start of the returned value.
-  //REAL_FUNC_PASSTHROUGH ( unsetenv ) ( name );
-  char *str = (char*) getenv(name);
-  if (str != NULL) *str = '\0';
-  return 1;
-}
-
-LIB_PRIVATE
-void *_real_dlopen(const char *filename, int flag){
-  REAL_FUNC_PASSTHROUGH_TYPED ( void*, dlopen ) ( filename, flag );
-}
-
-LIB_PRIVATE
-int _real_dlclose(void *handle){
-  REAL_FUNC_PASSTHROUGH_TYPED ( int, dlclose ) ( handle );
 }
 
 LIB_PRIVATE
@@ -295,47 +275,6 @@ int _real_getsockopt ( int s, int level, int optname, void *optval,
 }
 
 LIB_PRIVATE
-int _real_fexecve ( int fd, char *const argv[], char *const envp[] )
-{
-  REAL_FUNC_PASSTHROUGH ( fexecve ) ( fd,argv,envp );
-}
-
-LIB_PRIVATE
-int _real_execve ( const char *filename, char *const argv[],
-                   char *const envp[] )
-{
-  REAL_FUNC_PASSTHROUGH ( execve ) ( filename,argv,envp );
-}
-
-LIB_PRIVATE
-int _real_execv ( const char *path, char *const argv[] )
-{
-  REAL_FUNC_PASSTHROUGH ( execv ) ( path,argv );
-}
-
-LIB_PRIVATE
-int _real_execvp ( const char *file, char *const argv[] )
-{
-  REAL_FUNC_PASSTHROUGH ( execvp ) ( file,argv );
-}
-LIB_PRIVATE
-int _real_execvpe(const char *file, char *const argv[], char *const envp[]) {
-  REAL_FUNC_PASSTHROUGH ( execvpe ) ( file, argv, envp );
-}
-
-LIB_PRIVATE
-int _real_system ( const char *cmd )
-{
-  REAL_FUNC_PASSTHROUGH ( system ) ( cmd );
-}
-
-LIB_PRIVATE
-pid_t _real_fork( void )
-{
-  REAL_FUNC_PASSTHROUGH_TYPED ( pid_t, fork ) ();
-}
-
-LIB_PRIVATE
 int _real_close ( int fd )
 {
   REAL_FUNC_PASSTHROUGH ( close ) ( fd );
@@ -366,21 +305,15 @@ int _real_fchdir ( int fd )
 }
 
 LIB_PRIVATE
-void _real_exit ( int status )
-{
-  REAL_FUNC_PASSTHROUGH_VOID ( exit ) ( status );
-}
-
-LIB_PRIVATE
 int _real_getpt ( void )
 {
-  REAL_FUNC_PASSTHROUGH ( getpt ) ( );
+  NOT_IMPLEMENTED();
 }
 
 LIB_PRIVATE
 int _real_ptsname_r ( int fd, char * buf, size_t buflen )
 {
-  REAL_FUNC_PASSTHROUGH ( ptsname_r ) ( fd, buf, buflen );
+  NOT_IMPLEMENTED();
 }
 
 LIB_PRIVATE
@@ -392,13 +325,13 @@ int _real_socketpair ( int d, int type, int protocol, int sv[2] )
 LIB_PRIVATE
 void _real_openlog ( const char *ident, int option, int facility )
 {
-  REAL_FUNC_PASSTHROUGH_VOID ( openlog ) ( ident,option,facility );
+  NOT_IMPLEMENTED();
 }
 
 LIB_PRIVATE
 void _real_closelog ( void )
 {
-  REAL_FUNC_PASSTHROUGH_VOID ( closelog ) ();
+  NOT_IMPLEMENTED();
 }
 
 //set the handler
@@ -410,76 +343,9 @@ LIB_PRIVATE
 int _real_sigaction(int signum, const struct sigaction *act, struct sigaction *oldact){
   REAL_FUNC_PASSTHROUGH ( sigaction ) ( signum, act, oldact );
 }
-LIB_PRIVATE
-int _real_sigvec(int signum, const struct sigvec *vec, struct sigvec *ovec){
-  REAL_FUNC_PASSTHROUGH ( sigvec ) ( signum, vec, ovec );
-}
-
-//set the mask
-LIB_PRIVATE
-int _real_sigblock(int mask){
-  REAL_FUNC_PASSTHROUGH ( sigblock ) ( mask );
-}
-LIB_PRIVATE
-int _real_sigsetmask(int mask){
-  REAL_FUNC_PASSTHROUGH ( sigsetmask ) ( mask );
-}
-LIB_PRIVATE
-int _real_siggetmask(void){
-  REAL_FUNC_PASSTHROUGH ( siggetmask )( );
-}
-LIB_PRIVATE
-int _real_sigprocmask(int how, const sigset_t *a, sigset_t *b){
-  REAL_FUNC_PASSTHROUGH ( sigprocmask ) ( how, a, b);
-}
-LIB_PRIVATE
-int _real_pthread_sigmask(int how, const sigset_t *a, sigset_t *b){
-  REAL_FUNC_PASSTHROUGH_TYPED ( int, pthread_sigmask ) ( how, a, b);
-}
-
-LIB_PRIVATE
-int _real_sigsuspend(const sigset_t *mask){
-  REAL_FUNC_PASSTHROUGH ( sigsuspend ) ( mask );
-}
-LIB_PRIVATE
 sighandler_t _real_sigset(int sig, sighandler_t disp)
 {
   REAL_FUNC_PASSTHROUGH_TYPED ( sighandler_t, sigset ) ( sig, disp );
-}
-LIB_PRIVATE
-int _real_sighold(int sig){
-  REAL_FUNC_PASSTHROUGH ( sighold ) ( sig );
-}
-LIB_PRIVATE
-int _real_sigignore(int sig){
-  REAL_FUNC_PASSTHROUGH ( sigignore ) ( sig );
-}
-// See 'man sigpause':  signal.h defines two possible versions for sigpause.
-LIB_PRIVATE
-int _real__sigpause(int __sig_or_mask, int __is_sig){
-  REAL_FUNC_PASSTHROUGH ( __sigpause ) ( __sig_or_mask, __is_sig );
-}
-LIB_PRIVATE
-int _real_sigpause(int sig){
-  REAL_FUNC_PASSTHROUGH ( sigpause ) ( sig );
-}
-LIB_PRIVATE
-int _real_sigrelse(int sig){
-  REAL_FUNC_PASSTHROUGH ( sigrelse ) ( sig );
-}
-
-LIB_PRIVATE
-int _real_sigwait(const sigset_t *set, int *sig) {
-  REAL_FUNC_PASSTHROUGH ( sigwait ) ( set, sig);
-}
-LIB_PRIVATE
-int _real_sigwaitinfo(const sigset_t *set, siginfo_t *info) {
-  REAL_FUNC_PASSTHROUGH ( sigwaitinfo ) ( set, info);
-}
-LIB_PRIVATE
-int _real_sigtimedwait(const sigset_t *set, siginfo_t *info,
-                       const struct timespec *timeout) {
-  REAL_FUNC_PASSTHROUGH ( sigtimedwait ) ( set, info, timeout);
 }
 
 LIB_PRIVATE
@@ -488,123 +354,13 @@ int _real_ioctl(int d, int request, void *arg) {
 }
 
 LIB_PRIVATE
-pid_t _real_wait(__WAIT_STATUS stat_loc) {
-  REAL_FUNC_PASSTHROUGH_TYPED ( pid_t, wait ) ( stat_loc );
-}
-
-LIB_PRIVATE
-pid_t _real_waitpid(pid_t pid, int *stat_loc, int options) {
-  REAL_FUNC_PASSTHROUGH_TYPED ( pid_t, waitpid ) ( pid, stat_loc, options );
-}
-
-LIB_PRIVATE
 int   _real_waitid(idtype_t idtype, id_t id, siginfo_t *infop, int options) {
   REAL_FUNC_PASSTHROUGH ( waitid ) ( idtype, id, infop, options );
 }
 
 LIB_PRIVATE
-pid_t _real_wait3(__WAIT_STATUS status, int options, struct rusage *rusage) {
-  REAL_FUNC_PASSTHROUGH_TYPED ( pid_t, wait3 ) ( status, options, rusage );
-}
-
-LIB_PRIVATE
 pid_t _real_wait4(pid_t pid, __WAIT_STATUS status, int options, struct rusage *rusage) {
   REAL_FUNC_PASSTHROUGH_TYPED ( pid_t, wait4 ) ( pid, status, options, rusage );
-}
-
-#ifdef PID_VIRTUALIZATION
-LIB_PRIVATE
-pid_t _real_getpid(void){
-  // libc caches pid of the process and hence after restart, libc:getpid()
-  // returns the pre-ckpt value.
-  return (pid_t) _real_syscall(SYS_getpid);
-}
-
-LIB_PRIVATE
-pid_t _real_getppid(void){
-  // libc caches ppid of the process and hence after restart, libc:getppid()
-  // returns the pre-ckpt value.
-  return (pid_t) _real_syscall(SYS_getppid);
-}
-
-LIB_PRIVATE
-int _real_tcsetpgrp(int fd, pid_t pgrp){
-  REAL_FUNC_PASSTHROUGH ( tcsetpgrp ) ( fd, pgrp );
-}
-
-LIB_PRIVATE
-int _real_tcgetpgrp(int fd) {
-  REAL_FUNC_PASSTHROUGH ( tcgetpgrp ) ( fd );
-}
-
-LIB_PRIVATE
-pid_t _real_getpgrp(void) {
-  REAL_FUNC_PASSTHROUGH_TYPED ( pid_t, getpgrp ) ( );
-}
-
-LIB_PRIVATE
-pid_t _real_setpgrp(void) {
-  REAL_FUNC_PASSTHROUGH_TYPED ( pid_t, setpgrp ) ( );
-}
-
-LIB_PRIVATE
-pid_t _real_getpgid(pid_t pid) {
-  REAL_FUNC_PASSTHROUGH_TYPED ( pid_t, getpgid ) ( pid );
-}
-
-LIB_PRIVATE
-int   _real_setpgid(pid_t pid, pid_t pgid) {
-  REAL_FUNC_PASSTHROUGH ( setpgid ) ( pid, pgid );
-}
-
-LIB_PRIVATE
-pid_t _real_getsid(pid_t pid) {
-  REAL_FUNC_PASSTHROUGH_TYPED ( pid_t, getsid ) ( pid );
-}
-
-LIB_PRIVATE
-pid_t _real_setsid(void) {
-  REAL_FUNC_PASSTHROUGH_TYPED ( pid_t, setsid ) ( );
-}
-
-LIB_PRIVATE
-int   _real_kill(pid_t pid, int sig) {
-  REAL_FUNC_PASSTHROUGH ( kill ) ( pid, sig );
-}
-
-LIB_PRIVATE
-int _real_setgid(gid_t gid) {
-  REAL_FUNC_PASSTHROUGH( setgid ) (gid);
-}
-
-LIB_PRIVATE
-int _real_setuid(uid_t uid) {
-  REAL_FUNC_PASSTHROUGH( setuid ) (uid);
-}
-
-#endif
-
-// gettid / tkill / tgkill are not defined in libc.
-// So, this is needed even if there is no PID_VIRTUALIZATION
-LIB_PRIVATE
-pid_t _real_gettid(void){
-  // No glibc wrapper for gettid, although even if it had one, we would have
-  // the issues similar to getpid/getppid().
-  return (pid_t) _real_syscall(SYS_gettid);
-}
-
-LIB_PRIVATE
-int   _real_tkill(int tid, int sig) {
-  // No glibc wrapper for tkill, although even if it had one, we would have
-  // the issues similar to getpid/getppid().
-  return (int) _real_syscall(SYS_tkill, tid, sig);
-}
-
-LIB_PRIVATE
-int   _real_tgkill(int tgid, int tid, int sig) {
-  // No glibc wrapper for tgkill, although even if it had one, we would have
-  // the issues similar to getpid/getppid().
-  return (int) _real_syscall(SYS_tgkill, tgid, tid, sig);
 }
 
 LIB_PRIVATE
@@ -632,54 +388,39 @@ FILE * _real_freopen( const char *path, const char *mode, FILE *stream ) {
   REAL_FUNC_PASSTHROUGH_TYPED ( FILE *, freopen ) ( path, mode, stream );
 }
 
-/* See comments for syscall wrapper */
-LIB_PRIVATE
-long int _real_syscall(long int sys_num, ... ) {
-  int i;
-  void * arg[7];
-  va_list ap;
-
-  va_start(ap, sys_num);
-  for (i = 0; i < 7; i++)
-    arg[i] = va_arg(ap, void *);
-  va_end(ap);
-
-  // /usr/include/unistd.h says syscall returns long int (contrary to man page)
-  REAL_FUNC_PASSTHROUGH_TYPED ( long int, syscall ) ( sys_num, arg[0], arg[1],
-                                                      arg[2], arg[3], arg[4],
-                                                      arg[5], arg[6] );
-}
-
 LIB_PRIVATE
 int _real_xstat(int vers, const char *path, struct stat *buf) {
-  REAL_FUNC_PASSTHROUGH ( __xstat ) ( vers, path, buf );
+  REAL_FUNC_PASSTHROUGH ( xstat ) ( vers, path, buf );
 }
 
 LIB_PRIVATE
 int _real_xstat64(int vers, const char *path, struct stat64 *buf) {
-  REAL_FUNC_PASSTHROUGH ( __xstat64 ) ( vers, path, buf );
+  REAL_FUNC_PASSTHROUGH ( xstat64 ) ( vers, path, buf );
 }
 
 LIB_PRIVATE
 int _real_lxstat(int vers, const char *path, struct stat *buf) {
-  REAL_FUNC_PASSTHROUGH ( __lxstat ) ( vers, path, buf );
+  REAL_FUNC_PASSTHROUGH ( lxstat ) ( vers, path, buf );
 }
 
 LIB_PRIVATE
 int _real_lxstat64(int vers, const char *path, struct stat64 *buf) {
-  REAL_FUNC_PASSTHROUGH ( __lxstat64 ) ( vers, path, buf );
+  REAL_FUNC_PASSTHROUGH ( lxstat64 ) ( vers, path, buf );
+}
+
+LIB_PRIVATE
+int _real_fxstat(int vers, int fd, struct stat *buf) {
+  REAL_FUNC_PASSTHROUGH ( fxstat ) ( vers, fd, buf );
+}
+
+LIB_PRIVATE
+int _real_fxstat64(int vers, int fd, struct stat64 *buf) {
+  REAL_FUNC_PASSTHROUGH ( fxstat64 ) ( vers, fd, buf );
 }
 
 LIB_PRIVATE
 ssize_t _real_readlink(const char *path, char *buf, size_t bufsiz) {
   REAL_FUNC_PASSTHROUGH_TYPED ( ssize_t, readlink ) ( path, buf, bufsiz );
-}
-
-LIB_PRIVATE
-int _real_clone ( int ( *function ) (void *), void *child_stack, int flags, void *arg, int *parent_tidptr, struct user_desc *newtls, int *child_tidptr )
-{
-  REAL_FUNC_PASSTHROUGH ( __clone ) ( function, child_stack, flags, arg,
-                                      parent_tidptr, newtls, child_tidptr );
 }
 
 LIB_PRIVATE
@@ -692,26 +433,6 @@ int _real_pthread_create(pthread_t *thread, const pthread_attr_t *attr,
     void *(*start_routine)(void*), void *arg) {
   REAL_FUNC_PASSTHROUGH_TYPED ( int,pthread_create )
     (thread,attr,start_routine,arg);
-}
-
-LIB_PRIVATE
-int _real_shmget (key_t key, size_t size, int shmflg) {
-  REAL_FUNC_PASSTHROUGH ( shmget ) (key, size, shmflg);
-}
-
-LIB_PRIVATE
-void* _real_shmat (int shmid, const void *shmaddr, int shmflg) {
-  REAL_FUNC_PASSTHROUGH_TYPED ( void*, shmat ) (shmid, shmaddr, shmflg);
-}
-
-LIB_PRIVATE
-int _real_shmdt (const void *shmaddr) {
-  REAL_FUNC_PASSTHROUGH ( shmdt ) (shmaddr);
-}
-
-LIB_PRIVATE
-int _real_shmctl (int shmid, int cmd, struct shmid_ds *buf) {
-  REAL_FUNC_PASSTHROUGH ( shmctl ) (shmid, cmd, buf);
 }
 
 LIB_PRIVATE
@@ -731,7 +452,7 @@ void * _real_realloc(void *ptr, size_t size) {
 
 LIB_PRIVATE
 void * _real_libc_memalign(size_t boundary, size_t size) {
-  REAL_FUNC_PASSTHROUGH_TYPED (void*, __libc_memalign) (boundary, size);
+  REAL_FUNC_PASSTHROUGH_TYPED (void*, libc_memalign) (boundary, size);
 }
 
 LIB_PRIVATE
@@ -763,42 +484,6 @@ int _real_munmap(void *addr, size_t length) {
   REAL_FUNC_PASSTHROUGH_TYPED (int, munmap) (addr, length);
 }
 
-
-LIB_PRIVATE
-int _real_epoll_create(int size) {
-  REAL_FUNC_PASSTHROUGH (epoll_create) (size);
-}
-
-LIB_PRIVATE
-int _real_epoll_create1(int flags) {
-  REAL_FUNC_PASSTHROUGH (epoll_create1) (flags);
-}
-
-LIB_PRIVATE
-int _real_epoll_ctl(int epfd, int op, int fd, struct epoll_event *event) {
-  REAL_FUNC_PASSTHROUGH (epoll_ctl) (epfd, op, fd, event);
-}
-
-LIB_PRIVATE
-int _real_epoll_wait(int epfd, struct epoll_event *events,
-                     int maxevents, int timeout) {
-  REAL_FUNC_PASSTHROUGH (epoll_wait) (epfd, events, maxevents, timeout);
-}
-
-LIB_PRIVATE
-int _real_epoll_pwait(int epfd, struct epoll_event *events,
-                      int maxevents, int timeout, const sigset_t *sigmask) {
-  REAL_FUNC_PASSTHROUGH (epoll_pwait) (epfd, events, maxevents, timeout, sigmask);
-}
-
-#ifdef PTRACE
-LIB_PRIVATE
-long _real_ptrace(enum __ptrace_request request, pid_t pid, void *addr,
-                  void *data) {
-  REAL_FUNC_PASSTHROUGH_TYPED ( long, ptrace ) ( request, pid, addr, data );
-}
-#endif
-
 LIB_PRIVATE
 int _real_getsockname(int sockfd, struct sockaddr *addr, socklen_t *addrlen) {
   REAL_FUNC_PASSTHROUGH_TYPED ( int, getsockname ) ( sockfd, addr, addrlen );
@@ -807,16 +492,6 @@ int _real_getsockname(int sockfd, struct sockaddr *addr, socklen_t *addrlen) {
 LIB_PRIVATE
 int _real_getpeername(int sockfd, struct sockaddr *addr, socklen_t *addrlen) {
   REAL_FUNC_PASSTHROUGH_TYPED ( int, getpeername ) ( sockfd, addr, addrlen );
-}
-
-LIB_PRIVATE
-int _real_fxstat(int vers, int fd, struct stat *buf) {
-  REAL_FUNC_PASSTHROUGH ( __fxstat ) ( vers, fd, buf );
-}
-
-LIB_PRIVATE
-int _real_fxstat64(int vers, int fd, struct stat64 *buf) {
-  REAL_FUNC_PASSTHROUGH ( __fxstat64 ) ( vers, fd, buf );
 }
 
 LIB_PRIVATE

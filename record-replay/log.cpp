@@ -41,6 +41,16 @@
 #include "util.h"
 #include "jassert.h"
 
+#define EVENT_SIZE(type, name, ...) log_event_##name##_size,
+static size_t log_event_size[numTotalWrappers+1] = {
+  FOREACH_RECORD_REPLAY_WRAPPER(EVENT_SIZE)
+};
+
+static size_t getLogEventSize(const log_entry_t& entry)
+{
+  return log_event_size[entry.header.event];
+}
+
 void dmtcp::SynchronizationLog::initialize(const char *path, size_t size)
 {
   bool mapWithNoReserveFlag = SYNC_IS_RECORD;
@@ -307,23 +317,15 @@ int dmtcp::SynchronizationLog::getEntryAtOffset(log_entry_t& entry, size_t index
     return 0;
   }
 
-  size_t event_size;
   JASSERT(GET_COMMON(entry, event) > 0);
-  GET_EVENT_SIZE(GET_COMMON(entry, event), event_size);
+  size_t event_size = getLogEventSize(entry);
 
   if (index + log_event_common_size + event_size > currentDataSize) {
     JASSERT ((index + log_event_common_size + event_size) <= currentDataSize)
       (index) (log_event_common_size) (event_size) (currentDataSize);
   }
 
-#if 1
-  READ_ENTRY_FROM_LOG(&_log[index + log_event_common_size], entry);
-#else
-  void *ptr;
-  GET_EVENT_DATA_PTR(entry, ptr);
-  memcpy(ptr, &_log[index + log_event_common_size], event_size);
-#endif
-
+  memcpy(&entry.edata, &_log[index + log_event_common_size], getLogEventSize(entry));
   return log_event_common_size + event_size;
 }
 
@@ -332,7 +334,7 @@ void dmtcp::SynchronizationLog::appendEntry(log_entry_t& entry)
   int eventSize = -1;
   log_off_t offset;
 
-  GET_EVENT_SIZE(GET_COMMON(entry, event), eventSize);
+  eventSize = getLogEventSize(entry);
   JASSERT( eventSize > 0 );
   eventSize += log_event_common_size;
   offset = atomicIncrementOffset(eventSize);
@@ -391,8 +393,7 @@ int dmtcp::SynchronizationLog::writeEntryAtOffset(const log_entry_t& entry,
     JASSERT(false);
   }
 
-  int event_size = -1;
-  GET_EVENT_SIZE(GET_COMMON(entry, event), event_size);
+  int event_size = getLogEventSize(entry);
   JASSERT( event_size > 0 );
 
   JASSERT ((LOG_OFFSET_FROM_START + index +
@@ -402,14 +403,7 @@ int dmtcp::SynchronizationLog::writeEntryAtOffset(const log_entry_t& entry,
 
   writeEntryHeaderAtOffset(entry, index);
 
-#if 1
-  WRITE_ENTRY_TO_LOG(&_log[index + log_event_common_size], entry);
-#else
-  void *ptr;
-  GET_EVENT_DATA_PTR(entry, ptr);
-  memcpy(&_log[index + log_event_common_size], ptr, event_size);
-#endif
-
+  memcpy(&_log[index + log_event_common_size], &entry.edata, getLogEventSize(entry));
   return log_event_common_size + event_size;
 }
 
