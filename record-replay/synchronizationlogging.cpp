@@ -1977,56 +1977,46 @@ static TURN_CHECK_P(base_turn_check)
 TURN_CHECK_P(pthread_mutex_lock_turn_check)
 {
   return base_turn_check(e1,e2) &&
-    GET_FIELD_PTR(e1, pthread_mutex_lock, addr) ==
-      GET_FIELD_PTR(e2, pthread_mutex_lock, addr);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, pthread_mutex_lock, addr);
 }
 
 TURN_CHECK_P(pthread_mutex_trylock_turn_check)
 {
   return base_turn_check(e1,e2) &&
-    GET_FIELD_PTR(e1, pthread_mutex_trylock, addr) ==
-      GET_FIELD_PTR(e2, pthread_mutex_trylock, addr);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, pthread_mutex_trylock, addr);
 }
 
 TURN_CHECK_P(pthread_mutex_unlock_turn_check)
 {
   return base_turn_check(e1,e2) &&
-    GET_FIELD_PTR(e1, pthread_mutex_unlock, addr) ==
-      GET_FIELD_PTR(e2, pthread_mutex_unlock, addr);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, pthread_mutex_unlock, addr);
 }
 
 TURN_CHECK_P(pthread_cond_signal_turn_check)
 {
   return base_turn_check(e1,e2) &&
-    GET_FIELD_PTR(e1, pthread_cond_signal, addr) ==
-      GET_FIELD_PTR(e2, pthread_cond_signal, addr);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, pthread_cond_signal, addr);
 }
 
 TURN_CHECK_P(pthread_cond_broadcast_turn_check)
 {
   return base_turn_check(e1,e2) &&
-    GET_FIELD_PTR(e1, pthread_cond_broadcast, addr) ==
-      GET_FIELD_PTR(e2, pthread_cond_broadcast, addr);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, pthread_cond_broadcast, addr);
 }
 
 TURN_CHECK_P(pthread_cond_wait_turn_check)
 {
   return base_turn_check(e1,e2) &&
-    GET_FIELD_PTR(e1, pthread_cond_wait, mutex_addr) ==
-      GET_FIELD_PTR(e2, pthread_cond_wait, mutex_addr) &&
-    GET_FIELD_PTR(e1, pthread_cond_wait, cond_addr) ==
-      GET_FIELD_PTR(e2, pthread_cond_wait, cond_addr);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, pthread_cond_wait, mutex_addr) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, pthread_cond_wait, cond_addr);
 }
 
 TURN_CHECK_P(pthread_cond_timedwait_turn_check)
 {
   return base_turn_check(e1,e2) &&
-    GET_FIELD_PTR(e1, pthread_cond_timedwait, mutex_addr) ==
-      GET_FIELD_PTR(e2, pthread_cond_timedwait, mutex_addr) &&
-    GET_FIELD_PTR(e1, pthread_cond_timedwait, cond_addr) ==
-      GET_FIELD_PTR(e2, pthread_cond_timedwait, cond_addr) &&
-    GET_FIELD_PTR(e1, pthread_cond_timedwait, abstime) ==
-      GET_FIELD_PTR(e2, pthread_cond_timedwait, abstime);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, pthread_cond_timedwait, mutex_addr) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, pthread_cond_timedwait, cond_addr) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, pthread_cond_timedwait, abstime);
 }
 
 TURN_CHECK_P(pthread_cond_destroy_turn_check)
@@ -2038,77 +2028,62 @@ TURN_CHECK_P(pthread_cond_destroy_turn_check)
 TURN_CHECK_P(pthread_rwlock_unlock_turn_check)
 {
   return base_turn_check(e1,e2) &&
-    GET_FIELD_PTR(e1, pthread_rwlock_unlock, addr) ==
-      GET_FIELD_PTR(e2, pthread_rwlock_unlock, addr);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, pthread_rwlock_unlock, addr);
 }
 
 TURN_CHECK_P(pthread_rwlock_rdlock_turn_check)
 {
   return base_turn_check(e1,e2) &&
-    GET_FIELD_PTR(e1, pthread_rwlock_rdlock, addr) ==
-      GET_FIELD_PTR(e2, pthread_rwlock_rdlock, addr);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, pthread_rwlock_rdlock, addr);
 }
 
 TURN_CHECK_P(pthread_rwlock_wrlock_turn_check)
 {
   return base_turn_check(e1,e2) &&
-    GET_FIELD_PTR(e1, pthread_rwlock_wrlock, addr) ==
-      GET_FIELD_PTR(e2, pthread_rwlock_wrlock, addr);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, pthread_rwlock_wrlock, addr);
 }
 
 TURN_CHECK_P(pthread_create_turn_check)
 {
   return base_turn_check(e1, e2) &&
-    GET_FIELD_PTR(e1, pthread_create, thread) ==
-      GET_FIELD_PTR(e2, pthread_create, thread) &&
-    GET_FIELD_PTR(e1, pthread_create, attr) ==
-      GET_FIELD_PTR(e2, pthread_create, attr) &&
-    GET_FIELD_PTR(e1, pthread_create, start_routine) ==
-      GET_FIELD_PTR(e2, pthread_create, start_routine) &&
-    GET_FIELD_PTR(e1, pthread_create, arg) ==
-      GET_FIELD_PTR(e2, pthread_create, arg);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, pthread_create, thread) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, pthread_create, attr) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, pthread_create, start_routine) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, pthread_create, arg);
 }
 
 TURN_CHECK_P(pthread_detach_turn_check)
 {
   return base_turn_check(e1, e2) &&
-    GET_FIELD_PTR(e1, pthread_detach, thread) ==
-      GET_FIELD_PTR(e2, pthread_detach, thread);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, pthread_detach, thread);
 }
 
 TURN_CHECK_P(pthread_exit_turn_check)
 {
   return base_turn_check(e1, e2) &&
-    GET_FIELD_PTR(e1, pthread_exit, value_ptr) ==
-      GET_FIELD_PTR(e2, pthread_exit, value_ptr);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, pthread_exit, value_ptr);
 }
 
 
 TURN_CHECK_P(pthread_join_turn_check)
 {
   return base_turn_check(e1, e2) &&
-    GET_FIELD_PTR(e1, pthread_join, thread) ==
-      GET_FIELD_PTR(e2, pthread_join, thread) &&
-    GET_FIELD_PTR(e1, pthread_join, value_ptr) ==
-      GET_FIELD_PTR(e2, pthread_join, value_ptr);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, pthread_join, thread) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, pthread_join, value_ptr);
 }
 
 TURN_CHECK_P(pthread_kill_turn_check)
 {
   return base_turn_check(e1, e2) &&
-    GET_FIELD_PTR(e1, pthread_kill, thread) ==
-      GET_FIELD_PTR(e2, pthread_kill, thread) &&
-    GET_FIELD_PTR(e1, pthread_kill, sig) ==
-      GET_FIELD_PTR(e2, pthread_kill, sig);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, pthread_kill, thread) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, pthread_kill, sig);
 }
 
 TURN_CHECK_P(read_turn_check)
 {
   return base_turn_check(e1, e2) &&
-    GET_FIELD_PTR(e1, read, buf_addr) ==
-      GET_FIELD_PTR(e2, read, buf_addr) &&
-    GET_FIELD_PTR(e1, read, count) ==
-      GET_FIELD_PTR(e2, read, count);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, read, buf_addr) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, read, count);
 }
 
 TURN_CHECK_P(readv_turn_check)
@@ -2122,31 +2097,26 @@ TURN_CHECK_P(readv_turn_check)
 TURN_CHECK_P(readdir_turn_check)
 {
   return base_turn_check(e1, e2) &&
-    GET_FIELD_PTR(e1, readdir, dirp) ==
-      GET_FIELD_PTR(e2, readdir, dirp);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, readdir, dirp);
 }
 
 TURN_CHECK_P(readdir_r_turn_check)
 {
   return base_turn_check(e1, e2) &&
-    GET_FIELD_PTR(e1, readdir_r, dirp) ==
-      GET_FIELD_PTR(e2, readdir_r, dirp);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, readdir_r, dirp);
 }
 
 TURN_CHECK_P(readlink_turn_check)
 {
   return base_turn_check(e1, e2) &&
-    GET_FIELD_PTR(e1, readlink, path) ==
-      GET_FIELD_PTR(e2, readlink, path) &&
-    GET_FIELD_PTR(e1, readlink, bufsiz) ==
-      GET_FIELD_PTR(e2, readlink, bufsiz);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, readlink, path) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, readlink, bufsiz);
 }
 
 TURN_CHECK_P(unlink_turn_check)
 {
   return base_turn_check(e1, e2) &&
-    GET_FIELD_PTR(e1, unlink, pathname) ==
-      GET_FIELD_PTR(e2, unlink, pathname);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, unlink, pathname);
 }
 
 TURN_CHECK_P(user_turn_check)
@@ -2157,10 +2127,8 @@ TURN_CHECK_P(user_turn_check)
 TURN_CHECK_P(write_turn_check)
 {
   return base_turn_check(e1, e2) &&
-    GET_FIELD_PTR(e1, write, buf_addr) ==
-      GET_FIELD_PTR(e2, write, buf_addr) &&
-    GET_FIELD_PTR(e1, write, count) ==
-      GET_FIELD_PTR(e2, write, count);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, write, buf_addr) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, write, count);
 }
 
 TURN_CHECK_P(writev_turn_check)
@@ -2179,17 +2147,14 @@ TURN_CHECK_P(close_turn_check)
 TURN_CHECK_P(closedir_turn_check)
 {
   return base_turn_check(e1, e2) &&
-    GET_FIELD_PTR(e1, closedir, dirp) ==
-      GET_FIELD_PTR(e2, closedir, dirp);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, closedir, dirp);
 }
 
 TURN_CHECK_P(connect_turn_check)
 {
   return base_turn_check(e1, e2) &&
-    GET_FIELD_PTR(e1, connect, serv_addr) ==
-      GET_FIELD_PTR(e2, connect, serv_addr) &&
-    GET_FIELD_PTR(e1, connect, addrlen) ==
-      GET_FIELD_PTR(e2, connect, addrlen);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, connect, serv_addr) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, connect, addrlen);
 }
 
 TURN_CHECK_P(dup_turn_check)
@@ -2221,61 +2186,46 @@ TURN_CHECK_P(rand_turn_check)
 TURN_CHECK_P(srand_turn_check)
 {
   return base_turn_check(e1, e2) &&
-    GET_FIELD_PTR(e1, srand, seed) ==
-      GET_FIELD_PTR(e2, srand, seed);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, srand, seed);
 }
 
 TURN_CHECK_P(socket_turn_check)
 {
   return base_turn_check(e1, e2) &&
-    GET_FIELD_PTR(e1, socket, domain) ==
-      GET_FIELD_PTR(e2, socket, domain) &&
-    GET_FIELD_PTR(e1, socket, type) ==
-      GET_FIELD_PTR(e2, socket, type) &&
-    GET_FIELD_PTR(e1, socket, protocol) ==
-      GET_FIELD_PTR(e2, socket, protocol);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, socket, domain) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, socket, type) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, socket, protocol);
 }
 
 TURN_CHECK_P(socketpair_turn_check)
 {
   return base_turn_check(e1, e2) &&
-    GET_FIELD_PTR(e1, socketpair, domain) ==
-      GET_FIELD_PTR(e2, socketpair, domain) &&
-    GET_FIELD_PTR(e1, socketpair, type) ==
-      GET_FIELD_PTR(e2, socketpair, type) &&
-    GET_FIELD_PTR(e1, socketpair, protocol) ==
-      GET_FIELD_PTR(e2, socketpair, protocol) &&
-    GET_FIELD_PTR(e1, socketpair, sv) ==
-      GET_FIELD_PTR(e2, socketpair, sv);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, socketpair, domain) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, socketpair, type) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, socketpair, protocol) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, socketpair, sv);
 }
 
 TURN_CHECK_P(xstat_turn_check)
 {
   return base_turn_check(e1, e2) &&
-    GET_FIELD_PTR(e1, xstat, vers) ==
-      GET_FIELD_PTR(e2, xstat, vers) &&
-    GET_FIELD_PTR(e1, xstat, path) ==
-      GET_FIELD_PTR(e2, xstat, path);
-  /*GET_FIELD_PTR(e1, xstat, buf) ==
-    GET_FIELD_PTR(e2, xstat, buf);*/
+    ARE_FIELDS_EQUAL_PTR(e1, e2, xstat, vers) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, xstat, path);
+  /*ARE_FIELDS_EQUAL_PTR(e1, e2, xstat, buf);*/
 }
 
 TURN_CHECK_P(xstat64_turn_check)
 {
   return base_turn_check(e1, e2) &&
-    GET_FIELD_PTR(e1, xstat64, vers) ==
-      GET_FIELD_PTR(e2, xstat64, vers) &&
-    GET_FIELD_PTR(e1, xstat64, path) ==
-      GET_FIELD_PTR(e2, xstat64, path);
-  /*GET_FIELD_PTR(e1, xstat64, buf) ==
-    GET_FIELD_PTR(e2, xstat64, buf);*/
+    ARE_FIELDS_EQUAL_PTR(e1, e2, xstat64, vers) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, xstat64, path);
+  /*ARE_FIELDS_EQUAL_PTR(e1, e2, xstat64, buf);*/
 }
 
 TURN_CHECK_P(time_turn_check)
 {
   return base_turn_check(e1, e2) &&
-    GET_FIELD_PTR(e1, time, tloc) ==
-      GET_FIELD_PTR(e2, time, tloc);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, time, tloc);
 }
 
 TURN_CHECK_P(tmpfile_turn_check)
@@ -2314,142 +2264,108 @@ TURN_CHECK_P(ftruncate64_turn_check)
 TURN_CHECK_P(accept_turn_check)
 {
   return base_turn_check(e1, e2) &&
-    GET_FIELD_PTR(e1, accept, addr) ==
-      GET_FIELD_PTR(e2, accept, addr) &&
-    GET_FIELD_PTR(e1, accept, addrlen) ==
-      GET_FIELD_PTR(e2, accept, addrlen);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, accept, addr) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, accept, addrlen);
 }
 
 TURN_CHECK_P(accept4_turn_check)
 {
   return base_turn_check(e1, e2) &&
-    GET_FIELD_PTR(e1, accept4, addr) ==
-      GET_FIELD_PTR(e2, accept4, addr) &&
-    GET_FIELD_PTR(e1, accept4, addrlen) ==
-      GET_FIELD_PTR(e2, accept4, addrlen) &&
-    GET_FIELD_PTR(e1, accept4, flags) ==
-      GET_FIELD_PTR(e2, accept4, flags);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, accept4, addr) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, accept4, addrlen) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, accept4, flags);
 }
 
 TURN_CHECK_P(access_turn_check)
 {
   return base_turn_check(e1, e2) &&
-    GET_FIELD_PTR(e1, access, pathname) ==
-      GET_FIELD_PTR(e2, access, pathname) &&
-    GET_FIELD_PTR(e1, access, mode) ==
-      GET_FIELD_PTR(e2, access, mode);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, access, pathname) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, access, mode);
 }
 
 TURN_CHECK_P(bind_turn_check)
 {
   return base_turn_check(e1, e2) &&
-    GET_FIELD_PTR(e1, bind, addr) ==
-      GET_FIELD_PTR(e2, bind, addr) &&
-    GET_FIELD_PTR(e1, bind, addrlen) ==
-      GET_FIELD_PTR(e2, bind, addrlen);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, bind, addr) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, bind, addrlen);
 }
 
 TURN_CHECK_P(getpeername_turn_check)
 {
   return base_turn_check(e1, e2) &&
-    /*GET_FIELD_PTR(e1, getpeername, sockfd) ==
-      GET_FIELD_PTR(e2, getpeername, sockfd) &&*/
-    GET_FIELD_PTR(e1, getpeername, addrlen) ==
-      GET_FIELD_PTR(e2, getpeername, addrlen);
+  /*ARE_FIELDS_EQUAL_PTR(e1, e2, getpeername, sockfd) &&*/
+    ARE_FIELDS_EQUAL_PTR(e1, e2, getpeername, addrlen);
     // TODO: How to compare these:
-  /*GET_FIELD_PTR(e1, getpeername, addr) ==
-      GET_FIELD_PTR(e2, getpeername, addr)*/
+  /*ARE_FIELDS_EQUAL_PTR(e1, e2, getpeername, addr)*/
 }
 
 TURN_CHECK_P(getsockname_turn_check)
 {
   return base_turn_check(e1, e2) &&
-    /*GET_FIELD_PTR(e1, getsockname, sockfd) ==
-      GET_FIELD_PTR(e2, getsockname, sockfd) &&*/
-    GET_FIELD_PTR(e1, getsockname, addrlen) ==
-      GET_FIELD_PTR(e2, getsockname, addrlen) &&
-    GET_FIELD_PTR(e1, getsockname, addr) ==
-      GET_FIELD_PTR(e2, getsockname, addr);
+  /*ARE_FIELDS_EQUAL_PTR(e1, e2, getsockname, sockfd) &&*/
+    ARE_FIELDS_EQUAL_PTR(e1, e2, getsockname, addrlen) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, getsockname, addr);
 }
 
 TURN_CHECK_P(setsockopt_turn_check)
 {
   return base_turn_check(e1,e2) &&
-    GET_FIELD_PTR(e1, setsockopt, level) ==
-      GET_FIELD_PTR(e2, setsockopt, level) &&
-    GET_FIELD_PTR(e1, setsockopt, optname) ==
-      GET_FIELD_PTR(e2, setsockopt, optname) &&
-    GET_FIELD_PTR(e1, setsockopt, optval) ==
-      GET_FIELD_PTR(e2, setsockopt, optval) &&
-    GET_FIELD_PTR(e1, setsockopt, optlen) ==
-      GET_FIELD_PTR(e2, setsockopt, optlen);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, setsockopt, level) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, setsockopt, optname) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, setsockopt, optval) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, setsockopt, optlen);
 }
 
 TURN_CHECK_P(getsockopt_turn_check)
 {
   return base_turn_check(e1,e2) &&
-    GET_FIELD_PTR(e1, getsockopt, level) ==
-      GET_FIELD_PTR(e2, getsockopt, level) &&
-    GET_FIELD_PTR(e1, getsockopt, optname) ==
-      GET_FIELD_PTR(e2, getsockopt, optname) &&
-    GET_FIELD_PTR(e1, getsockopt, optval) ==
-      GET_FIELD_PTR(e2, getsockopt, optval) &&
-    GET_FIELD_PTR(e1, getsockopt, optlen) ==
-      GET_FIELD_PTR(e2, getsockopt, optlen);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, getsockopt, level) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, getsockopt, optname) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, getsockopt, optval) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, getsockopt, optlen);
 }
 
 TURN_CHECK_P(ioctl_turn_check)
 {
   return base_turn_check(e1,e2) &&
-    GET_FIELD_PTR(e1, ioctl, d) ==
-      GET_FIELD_PTR(e2, ioctl, d) &&
-    GET_FIELD_PTR(e1, ioctl, request) ==
-      GET_FIELD_PTR(e2, ioctl, request) &&
-    GET_FIELD_PTR(e1, ioctl, arg) ==
-      GET_FIELD_PTR(e2, ioctl, arg);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, ioctl, d) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, ioctl, request) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, ioctl, arg);
 }
 
 TURN_CHECK_P(signal_handler_turn_check)
 {
   return base_turn_check(e1,e2) &&
-    GET_FIELD_PTR(e1, signal_handler, sig) ==
-      GET_FIELD_PTR(e2, signal_handler, sig) &&
-    GET_FIELD_PTR(e1, signal_handler, info) ==
-      GET_FIELD_PTR(e2, signal_handler, info) &&
-    GET_FIELD_PTR(e1, signal_handler, data) ==
-      GET_FIELD_PTR(e2, signal_handler, data);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, signal_handler, sig) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, signal_handler, info) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, signal_handler, data);
 }
 
 TURN_CHECK_P(sigwait_turn_check)
 {
   return base_turn_check(e1,e2) &&
-    GET_FIELD_PTR(e1, sigwait, set) ==
-      GET_FIELD_PTR(e2, sigwait, set) &&
-    GET_FIELD_PTR(e1, sigwait, sigwait_sig) ==
-      GET_FIELD_PTR(e2, sigwait, sigwait_sig);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, sigwait, set) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, sigwait, sigwait_sig);
 }
 
 TURN_CHECK_P(fclose_turn_check)
 {
   return base_turn_check(e1,e2) &&
-    GET_FIELD_PTR(e1, fclose, fp) ==
-      GET_FIELD_PTR(e2, fclose, fp);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, fclose, fp);
 }
 
 TURN_CHECK_P(fchdir_turn_check)
 {
   return base_turn_check(e1,e2) &&
-    GET_FIELD_PTR(e1, fchdir, fd) ==
-      GET_FIELD_PTR(e2, fchdir, fd);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, fchdir, fd);
 }
 
 TURN_CHECK_P(fcntl_turn_check)
 {
   return base_turn_check(e1,e2) &&
-    GET_FIELD_PTR(e1, fcntl, cmd) ==
-      GET_FIELD_PTR(e2, fcntl, cmd) &&
-    GET_FIELD_PTR(e1, fcntl, arg) ==
-      GET_FIELD_PTR(e2, fcntl, arg);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, fcntl, fd) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, fcntl, cmd) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, fcntl, arg);
 }
 
 TURN_CHECK_P(fdatasync_turn_check)
@@ -2460,56 +2376,46 @@ TURN_CHECK_P(fdatasync_turn_check)
 TURN_CHECK_P(fdopen_turn_check)
 {
   return base_turn_check(e1,e2) &&
-    GET_FIELD_PTR(e1, fdopen, fd) ==
-      GET_FIELD_PTR(e2, fdopen, fd) &&
-    GET_FIELD_PTR(e1, fdopen, mode) ==
-      GET_FIELD_PTR(e2, fdopen, mode);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, fdopen, fd) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, fdopen, mode);
 }
 
 TURN_CHECK_P(fdopendir_turn_check)
 {
   return base_turn_check(e1,e2) &&
-    GET_FIELD_PTR(e1, fdopendir, fd) ==
-      GET_FIELD_PTR(e2, fdopendir, fd);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, fdopendir, fd);
 }
 
 TURN_CHECK_P(fgets_turn_check)
 {
   return base_turn_check(e1,e2) &&
-    GET_FIELD_PTR(e1, fgets, s) ==
-      GET_FIELD_PTR(e2, fgets, s) &&
-    GET_FIELD_PTR(e1, fgets, stream) ==
-      GET_FIELD_PTR(e2, fgets, stream) &&
-    GET_FIELD_PTR(e1, fgets, size) ==
-      GET_FIELD_PTR(e2, fgets, size);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, fgets, s) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, fgets, stream) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, fgets, size);
 }
 
 TURN_CHECK_P(ferror_turn_check)
 {
   return base_turn_check(e1,e2) &&
-    GET_FIELD_PTR(e1, ferror, stream) ==
-      GET_FIELD_PTR(e2, ferror, stream);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, ferror, stream);
 }
 
 TURN_CHECK_P(feof_turn_check)
 {
   return base_turn_check(e1,e2) &&
-    GET_FIELD_PTR(e1, feof, stream) ==
-      GET_FIELD_PTR(e2, feof, stream);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, feof, stream);
 }
 
 TURN_CHECK_P(fileno_turn_check)
 {
   return base_turn_check(e1,e2) &&
-    GET_FIELD_PTR(e1, fileno, stream) ==
-      GET_FIELD_PTR(e2, fileno, stream);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, fileno, stream);
 }
 
 TURN_CHECK_P(fflush_turn_check)
 {
   return base_turn_check(e1,e2) &&
-    GET_FIELD_PTR(e1, fflush, stream) ==
-      GET_FIELD_PTR(e2, fflush, stream);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, fflush, stream);
 }
 
 TURN_CHECK_P(setvbuf_turn_check)
@@ -2524,42 +2430,34 @@ TURN_CHECK_P(setvbuf_turn_check)
 TURN_CHECK_P(getc_turn_check)
 {
   return base_turn_check(e1,e2) &&
-    GET_FIELD_PTR(e1, getc, stream) ==
-      GET_FIELD_PTR(e2, getc, stream);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, getc, stream);
 }
 
 TURN_CHECK_P(getcwd_turn_check)
 {
   return base_turn_check(e1,e2) &&
-    GET_FIELD_PTR(e1, getcwd, buf) ==
-      GET_FIELD_PTR(e2, getcwd, buf) &&
-    GET_FIELD_PTR(e1, getcwd, size) ==
-      GET_FIELD_PTR(e2, getcwd, size);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, getcwd, buf) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, getcwd, size);
 }
 
 TURN_CHECK_P(gettimeofday_turn_check)
 {
   return base_turn_check(e1,e2) &&
-    GET_FIELD_PTR(e1, gettimeofday, tv) ==
-      GET_FIELD_PTR(e2, gettimeofday, tv) &&
-    GET_FIELD_PTR(e1, gettimeofday, tz) ==
-      GET_FIELD_PTR(e2, gettimeofday, tz);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, gettimeofday, tv) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, gettimeofday, tz);
 }
 
 TURN_CHECK_P(fgetc_turn_check)
 {
   return base_turn_check(e1,e2) &&
-    GET_FIELD_PTR(e1, fgetc, stream) ==
-      GET_FIELD_PTR(e2, fgetc, stream);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, fgetc, stream);
 }
 
 TURN_CHECK_P(ungetc_turn_check)
 {
   return base_turn_check(e1,e2) &&
-    GET_FIELD_PTR(e1, ungetc, stream) ==
-      GET_FIELD_PTR(e2, ungetc, stream) &&
-    GET_FIELD_PTR(e1, ungetc, c) ==
-      GET_FIELD_PTR(e2, ungetc, c);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, ungetc, stream) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, ungetc, c);
 }
 
 TURN_CHECK_P(getline_turn_check)
@@ -2567,10 +2465,8 @@ TURN_CHECK_P(getline_turn_check)
   /* We don't check for n because it might change, in case lineptr gets
      reallocated. */
   return base_turn_check(e1,e2) &&
-    GET_FIELD_PTR(e1, getline, lineptr) ==
-      GET_FIELD_PTR(e2, getline, lineptr) &&
-    GET_FIELD_PTR(e1, getline, stream) ==
-      GET_FIELD_PTR(e2, getline, stream);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, getline, lineptr) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, getline, stream);
 }
 
 TURN_CHECK_P(getdelim_turn_check)
@@ -2586,106 +2482,81 @@ TURN_CHECK_P(getdelim_turn_check)
 TURN_CHECK_P(fopen_turn_check)
 {
   return base_turn_check(e1,e2) &&
-    GET_FIELD_PTR(e1, fopen, name) ==
-      GET_FIELD_PTR(e2, fopen, name) &&
-    GET_FIELD_PTR(e1, fopen, mode) ==
-      GET_FIELD_PTR(e2, fopen, mode);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, fopen, name) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, fopen, mode);
 }
 
 TURN_CHECK_P(fopen64_turn_check)
 {
   return base_turn_check(e1,e2) &&
-    GET_FIELD_PTR(e1, fopen64, name) ==
-      GET_FIELD_PTR(e2, fopen64, name) &&
-    GET_FIELD_PTR(e1, fopen64, mode) ==
-      GET_FIELD_PTR(e2, fopen64, mode);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, fopen64, name) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, fopen64, mode);
 }
 
 TURN_CHECK_P(freopen_turn_check)
 {
   return base_turn_check(e1,e2) &&
-    GET_FIELD_PTR(e1, freopen, path) ==
-      GET_FIELD_PTR(e2, freopen, path) &&
-    GET_FIELD_PTR(e1, freopen, mode) ==
-      GET_FIELD_PTR(e2, freopen, mode) &&
-    GET_FIELD_PTR(e1, freopen, stream) ==
-      GET_FIELD_PTR(e2, freopen, stream);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, freopen, path) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, freopen, mode) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, freopen, stream);
 }
 
 TURN_CHECK_P(fprintf_turn_check)
 {
   return base_turn_check(e1,e2) &&
-    GET_FIELD_PTR(e1, fprintf, stream) ==
-      GET_FIELD_PTR(e2, fprintf, stream) &&
-    GET_FIELD_PTR(e1, fprintf, format) ==
-      GET_FIELD_PTR(e2, fprintf, format);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, fprintf, stream) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, fprintf, format);
 }
 
 TURN_CHECK_P(fscanf_turn_check)
 {
   return base_turn_check(e1,e2) &&
-    GET_FIELD_PTR(e1, fscanf, stream) ==
-      GET_FIELD_PTR(e2, fscanf, stream) &&
-    GET_FIELD_PTR(e1, fscanf, format) ==
-      GET_FIELD_PTR(e2, fscanf, format);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, fscanf, stream) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, fscanf, format);
 }
 
 TURN_CHECK_P(fseek_turn_check)
 {
   return base_turn_check(e1,e2) &&
-    GET_FIELD_PTR(e1, fseek, stream) ==
-      GET_FIELD_PTR(e2, fseek, stream) &&
-    GET_FIELD_PTR(e1, fseek, offset) ==
-      GET_FIELD_PTR(e2, fseek, offset) &&
-    GET_FIELD_PTR(e1, fseek, whence) ==
-      GET_FIELD_PTR(e2, fseek, whence);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, fseek, stream) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, fseek, offset) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, fseek, whence);
 }
 
 TURN_CHECK_P(fputs_turn_check)
 {
   return base_turn_check(e1,e2) &&
-    GET_FIELD_PTR(e1, fputs, s) ==
-      GET_FIELD_PTR(e2, fputs, s) &&
-    GET_FIELD_PTR(e1, fputs, stream) ==
-      GET_FIELD_PTR(e2, fputs, stream);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, fputs, s) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, fputs, stream);
 }
 
 TURN_CHECK_P(fputc_turn_check)
 {
   return base_turn_check(e1,e2) &&
-    GET_FIELD_PTR(e1, fputc, c) ==
-      GET_FIELD_PTR(e2, fputc, c) &&
-    GET_FIELD_PTR(e1, fputc, stream) ==
-      GET_FIELD_PTR(e2, fputc, stream);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, fputc, c) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, fputc, stream);
 }
 
 TURN_CHECK_P(calloc_turn_check)
 {
   return base_turn_check(e1, e2) &&
-    GET_FIELD_PTR(e1, calloc, nmemb) ==
-      GET_FIELD_PTR(e2, calloc, nmemb) &&
-    GET_FIELD_PTR(e1, calloc, size) ==
-      GET_FIELD_PTR(e2, calloc, size);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, calloc, nmemb) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, calloc, size);
 }
 
 TURN_CHECK_P(chmod_turn_check)
 {
   return base_turn_check(e1, e2) &&
-    GET_FIELD_PTR(e1, chmod, path) ==
-      GET_FIELD_PTR(e2, chmod, path) &&
-    GET_FIELD_PTR(e1, chmod, mode) ==
-      GET_FIELD_PTR(e2, chmod, mode);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, chmod, path) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, chmod, mode);
 }
 
 TURN_CHECK_P(chown_turn_check)
 {
   return base_turn_check(e1, e2) &&
-    GET_FIELD_PTR(e1, chown, path) ==
-      GET_FIELD_PTR(e2, chown, path) &&
-    GET_FIELD_PTR(e1, chown, owner) ==
-      GET_FIELD_PTR(e2, chown, owner) &&
-    GET_FIELD_PTR(e1, chown, group) ==
-      GET_FIELD_PTR(e2, chown, group);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, chown, path) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, chown, owner) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, chown, group);
 }
 
 TURN_CHECK_P(lseek_turn_check)
@@ -2715,10 +2586,8 @@ TURN_CHECK_P(llseek_turn_check)
 TURN_CHECK_P(link_turn_check)
 {
   return base_turn_check(e1,e2) &&
-    GET_FIELD_PTR(e1, link, oldpath) ==
-      GET_FIELD_PTR(e2, link, oldpath) &&
-    GET_FIELD_PTR(e1, link, newpath) ==
-      GET_FIELD_PTR(e2, link, newpath);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, link, oldpath) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, link, newpath);
 }
 
 TURN_CHECK_P(symlink_turn_check)
@@ -2731,10 +2600,8 @@ TURN_CHECK_P(symlink_turn_check)
 TURN_CHECK_P(listen_turn_check)
 {
   return base_turn_check(e1,e2) &&
-    GET_FIELD_PTR(e1, listen, sockfd) ==
-      GET_FIELD_PTR(e2, listen, sockfd) &&
-    GET_FIELD_PTR(e1, listen, backlog) ==
-      GET_FIELD_PTR(e2, listen, backlog);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, listen, sockfd) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, listen, backlog);
 }
 
 TURN_CHECK_P(utime_turn_check)
@@ -2796,162 +2663,120 @@ TURN_CHECK_P(clock_settime_turn_check)
 TURN_CHECK_P(lxstat_turn_check)
 {
   return base_turn_check(e1,e2) &&
-    GET_FIELD_PTR(e1, lxstat, vers) ==
-      GET_FIELD_PTR(e2, lxstat, vers) &&
-    GET_FIELD_PTR(e1, lxstat, path) ==
-      GET_FIELD_PTR(e2, lxstat, path);
-  /*GET_FIELD_PTR(e1, lxstat, buf) ==
-    GET_FIELD_PTR(e2, lxstat, buf);*/
+    ARE_FIELDS_EQUAL_PTR(e1, e2, lxstat, vers) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, lxstat, path);
+  /*ARE_FIELDS_EQUAL_PTR(e1, e2, lxstat, buf);*/
 }
 
 TURN_CHECK_P(lxstat64_turn_check)
 {
   return base_turn_check(e1,e2) &&
-    GET_FIELD_PTR(e1, lxstat64, vers) ==
-      GET_FIELD_PTR(e2, lxstat64, vers) &&
-    GET_FIELD_PTR(e1, lxstat64, path) ==
-      GET_FIELD_PTR(e2, lxstat64, path);
-  /*GET_FIELD_PTR(e1, lxstat64, buf) ==
-    GET_FIELD_PTR(e2, lxstat64, buf);*/
+    ARE_FIELDS_EQUAL_PTR(e1, e2, lxstat64, vers) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, lxstat64, path);
+  /*ARE_FIELDS_EQUAL_PTR(e1, e2, lxstat64, buf);*/
 }
 
 TURN_CHECK_P(malloc_turn_check)
 {
   return base_turn_check(e1, e2) &&
-    GET_FIELD_PTR(e1, malloc, size) ==
-      GET_FIELD_PTR(e2, malloc, size);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, malloc, size);
 }
 
 TURN_CHECK_P(mkdir_turn_check)
 {
   return base_turn_check(e1, e2) &&
-    GET_FIELD_PTR(e1, mkdir, pathname) ==
-      GET_FIELD_PTR(e2, mkdir, pathname) &&
-    GET_FIELD_PTR(e1, mkdir, mode) ==
-      GET_FIELD_PTR(e2, mkdir, mode);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, mkdir, pathname) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, mkdir, mode);
 }
 
 TURN_CHECK_P(mkstemp_turn_check)
 {
   return base_turn_check(e1, e2) &&
-    GET_FIELD_PTR(e1, mkstemp, temp) ==
-      GET_FIELD_PTR(e2, mkstemp, temp);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, mkstemp, temp);
 }
 
 TURN_CHECK_P(mmap_turn_check)
 {
   return base_turn_check(e1, e2) &&
-    GET_FIELD_PTR(e1, mmap, addr) ==
-      GET_FIELD_PTR(e2, mmap, addr) &&
-    GET_FIELD_PTR(e1, mmap, length) ==
-      GET_FIELD_PTR(e2, mmap, length) &&
-    GET_FIELD_PTR(e1, mmap, prot) ==
-      GET_FIELD_PTR(e2, mmap, prot) &&
-    GET_FIELD_PTR(e1, mmap, flags) ==
-      GET_FIELD_PTR(e2, mmap, flags) &&
-    GET_FIELD_PTR(e1, mmap, fd) ==
-      GET_FIELD_PTR(e2, mmap, fd) &&
-    GET_FIELD_PTR(e1, mmap, offset) ==
-      GET_FIELD_PTR(e2, mmap, offset);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, mmap, addr) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, mmap, length) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, mmap, prot) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, mmap, flags) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, mmap, fd) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, mmap, offset);
 }
 
 TURN_CHECK_P(mmap64_turn_check)
 {
   return base_turn_check(e1, e2) &&
-    GET_FIELD_PTR(e1, mmap64, addr) ==
-      GET_FIELD_PTR(e2, mmap64, addr) &&
-    GET_FIELD_PTR(e1, mmap64, length) ==
-      GET_FIELD_PTR(e2, mmap64, length) &&
-    GET_FIELD_PTR(e1, mmap64, prot) ==
-      GET_FIELD_PTR(e2, mmap64, prot) &&
-    GET_FIELD_PTR(e1, mmap64, flags) ==
-      GET_FIELD_PTR(e2, mmap64, flags) &&
-    GET_FIELD_PTR(e1, mmap64, fd) ==
-      GET_FIELD_PTR(e2, mmap64, fd) &&
-    GET_FIELD_PTR(e1, mmap64, offset) ==
-      GET_FIELD_PTR(e2, mmap64, offset);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, mmap64, addr) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, mmap64, length) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, mmap64, prot) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, mmap64, flags) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, mmap64, fd) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, mmap64, offset);
 }
 
 TURN_CHECK_P(mremap_turn_check)
 {
   return base_turn_check(e1, e2) &&
-    GET_FIELD_PTR(e1, mremap, old_address) ==
-      GET_FIELD_PTR(e2, mremap, old_address) &&
-    GET_FIELD_PTR(e1, mremap, old_size) ==
-      GET_FIELD_PTR(e2, mremap, old_size) &&
-    GET_FIELD_PTR(e1, mremap, new_size) ==
-      GET_FIELD_PTR(e2, mremap, new_size) &&
-    GET_FIELD_PTR(e1, mremap, flags) ==
-      GET_FIELD_PTR(e2, mremap, flags);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, mremap, old_address) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, mremap, old_size) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, mremap, new_size) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, mremap, flags);
 }
 
 TURN_CHECK_P(munmap_turn_check)
 {
   return base_turn_check(e1, e2) &&
-    GET_FIELD_PTR(e1, munmap, addr) ==
-      GET_FIELD_PTR(e2, munmap, addr) &&
-    GET_FIELD_PTR(e1, munmap, length) ==
-      GET_FIELD_PTR(e2, munmap, length);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, munmap, addr) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, munmap, length);
 }
 
 TURN_CHECK_P(open_turn_check)
 {
   return base_turn_check(e1, e2) &&
-    GET_FIELD_PTR(e1, open, path) ==
-      GET_FIELD_PTR(e2, open, path) &&
-    GET_FIELD_PTR(e1, open, flags) ==
-      GET_FIELD_PTR(e2, open, flags) &&
-    GET_FIELD_PTR(e1, open, open_mode) ==
-      GET_FIELD_PTR(e2, open, open_mode);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, open, path) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, open, flags) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, open, open_mode);
 }
 
 TURN_CHECK_P(open64_turn_check)
 {
   return base_turn_check(e1, e2) &&
-    GET_FIELD_PTR(e1, open64, path) ==
-      GET_FIELD_PTR(e2, open64, path) &&
-    GET_FIELD_PTR(e1, open64, flags) ==
-      GET_FIELD_PTR(e2, open64, flags) &&
-    GET_FIELD_PTR(e1, open64, open_mode) ==
-      GET_FIELD_PTR(e2, open64, open_mode);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, open64, path) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, open64, flags) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, open64, open_mode);
 }
 
 TURN_CHECK_P(openat_turn_check)
 {
   return base_turn_check(e1, e2) &&
-    GET_FIELD_PTR(e1, openat, dirfd) ==
-      GET_FIELD_PTR(e2, openat, dirfd) &&
-    GET_FIELD_PTR(e1, openat, pathname) ==
-      GET_FIELD_PTR(e2, openat, pathname) &&
-    GET_FIELD_PTR(e1, openat, flags) ==
-      GET_FIELD_PTR(e2, openat, flags);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, openat, dirfd) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, openat, pathname) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, openat, flags);
 
 }
 
 TURN_CHECK_P(opendir_turn_check)
 {
   return base_turn_check(e1, e2) &&
-    GET_FIELD_PTR(e1, opendir, name) ==
-      GET_FIELD_PTR(e2, opendir, name);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, opendir, name);
 }
 
 TURN_CHECK_P(pread_turn_check)
 {
   return base_turn_check(e1, e2) &&
-    /*GET_FIELD_PTR(e1, pread, fd) ==
-      GET_FIELD_PTR(e2, pread, fd) &&*/
-    GET_FIELD_PTR(e1, pread, buf) ==
-      GET_FIELD_PTR(e2, pread, buf) &&
-    GET_FIELD_PTR(e1, pread, count) ==
-      GET_FIELD_PTR(e2, pread, count) &&
-    GET_FIELD_PTR(e1, pread, offset) ==
-      GET_FIELD_PTR(e2, pread, offset);
+  /*ARE_FIELDS_EQUAL_PTR(e1, e2, pread, fd) &&*/
+    ARE_FIELDS_EQUAL_PTR(e1, e2, pread, buf) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, pread, count) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, pread, offset);
 }
 
 TURN_CHECK_P(preadv_turn_check)
 {
   return base_turn_check(e1, e2) &&
-    /*ARE_FIELDS_EQUAL_PTR(e1, e2, preadv, fd) &&*/
+  /*ARE_FIELDS_EQUAL_PTR(e1, e2, preadv, fd) &&*/
     ARE_FIELDS_EQUAL_PTR(e1, e2, preadv, iov) &&
     ARE_FIELDS_EQUAL_PTR(e1, e2, preadv, iovcnt) &&
     ARE_FIELDS_EQUAL_PTR(e1, e2, preadv, offset);
@@ -2960,29 +2785,23 @@ TURN_CHECK_P(preadv_turn_check)
 TURN_CHECK_P(putc_turn_check)
 {
   return base_turn_check(e1, e2) &&
-    GET_FIELD_PTR(e1, putc, c) ==
-      GET_FIELD_PTR(e2, putc, c) &&
-    GET_FIELD_PTR(e1, putc, stream) ==
-      GET_FIELD_PTR(e2, putc, stream);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, putc, c) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, putc, stream);
 }
 
 TURN_CHECK_P(pwrite_turn_check)
 {
   return base_turn_check(e1, e2) &&
-    /*GET_FIELD_PTR(e1, pwrite, fd) ==
-      GET_FIELD_PTR(e2, pwrite, fd) &&*/
-    GET_FIELD_PTR(e1, pwrite, buf) ==
-      GET_FIELD_PTR(e2, pwrite, buf) &&
-    GET_FIELD_PTR(e1, pwrite, count) ==
-      GET_FIELD_PTR(e2, pwrite, count) &&
-    GET_FIELD_PTR(e1, pwrite, offset) ==
-      GET_FIELD_PTR(e2, pwrite, offset);
+  /*ARE_FIELDS_EQUAL_PTR(e1, e2, pwrite, fd) &&*/
+    ARE_FIELDS_EQUAL_PTR(e1, e2, pwrite, buf) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, pwrite, count) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, pwrite, offset);
 }
 
 TURN_CHECK_P(pwritev_turn_check)
 {
   return base_turn_check(e1, e2) &&
-    /*ARE_FIELDS_EQUAL_PTR(e1, e2, pwritev, fd) &&*/
+  /*ARE_FIELDS_EQUAL_PTR(e1, e2, pwritev, fd) &&*/
     ARE_FIELDS_EQUAL_PTR(e1, e2, pwritev, iov) &&
     ARE_FIELDS_EQUAL_PTR(e1, e2, pwritev, iovcnt) &&
     ARE_FIELDS_EQUAL_PTR(e1, e2, pwritev, offset);
@@ -2991,122 +2810,94 @@ TURN_CHECK_P(pwritev_turn_check)
 TURN_CHECK_P(libc_memalign_turn_check)
 {
   return base_turn_check(e1, e2) &&
-    GET_FIELD_PTR(e1, libc_memalign, boundary) ==
-      GET_FIELD_PTR(e2, libc_memalign, boundary) &&
-    GET_FIELD_PTR(e1, libc_memalign, size) ==
-      GET_FIELD_PTR(e2, libc_memalign, size);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, libc_memalign, boundary) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, libc_memalign, size);
 }
 
 TURN_CHECK_P(free_turn_check)
 {
   return base_turn_check(e1, e2) &&
-    GET_FIELD_PTR(e1, free, ptr) ==
-      GET_FIELD_PTR(e2, free, ptr);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, free, ptr);
 }
 
 TURN_CHECK_P(ftell_turn_check)
 {
   return base_turn_check(e1, e2) &&
-    GET_FIELD_PTR(e1, ftell, stream) ==
-      GET_FIELD_PTR(e2, ftell, stream);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, ftell, stream);
 }
 
 TURN_CHECK_P(fwrite_turn_check)
 {
   return base_turn_check(e1, e2) &&
-    GET_FIELD_PTR(e1, fwrite, ptr) ==
-      GET_FIELD_PTR(e2, fwrite, ptr) &&
-    GET_FIELD_PTR(e1, fwrite, size) ==
-      GET_FIELD_PTR(e2, fwrite, size) &&
-    GET_FIELD_PTR(e1, fwrite, nmemb) ==
-      GET_FIELD_PTR(e2, fwrite, nmemb) &&
-    GET_FIELD_PTR(e1, fwrite, stream) ==
-      GET_FIELD_PTR(e2, fwrite, stream);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, fwrite, ptr) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, fwrite, size) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, fwrite, nmemb) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, fwrite, stream);
 }
 
 TURN_CHECK_P(fread_turn_check)
 {
   return base_turn_check(e1, e2) &&
-    GET_FIELD_PTR(e1, fread, ptr) ==
-      GET_FIELD_PTR(e2, fread, ptr) &&
-    GET_FIELD_PTR(e1, fread, size) ==
-      GET_FIELD_PTR(e2, fread, size) &&
-    GET_FIELD_PTR(e1, fread, nmemb) ==
-      GET_FIELD_PTR(e2, fread, nmemb) &&
-    GET_FIELD_PTR(e1, fread, stream) ==
-      GET_FIELD_PTR(e2, fread, stream);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, fread, ptr) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, fread, size) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, fread, nmemb) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, fread, stream);
 }
 
 TURN_CHECK_P(fsync_turn_check)
 {
-  return base_turn_check(e1, e2);/* &&
-    GET_FIELD_PTR(e1, fsync, fd) ==
-    GET_FIELD_PTR(e2, fsync, fd);*/
+  return base_turn_check(e1, e2);
+  /*ARE_FIELDS_EQUAL_PTR(e1, e2, fsync, fd);*/
 }
 
 TURN_CHECK_P(fxstat_turn_check)
 {
   return base_turn_check(e1, e2) &&
-    /*GET_FIELD_PTR(e1, fxstat, fd) ==
-      GET_FIELD_PTR(e2, fxstat, fd) &&*/
-    GET_FIELD_PTR(e1, fxstat, vers) ==
-      GET_FIELD_PTR(e2, fxstat, vers);
-    /*GET_FIELD_PTR(e1, fxstat, buf) ==
-      GET_FIELD_PTR(e2, fxstat, buf);*/
+  /*ARE_FIELDS_EQUAL_PTR(e1, e2, fxstat, fd) &&*/
+    ARE_FIELDS_EQUAL_PTR(e1, e2, fxstat, vers);
+  /*ARE_FIELDS_EQUAL_PTR(e1, e2, fxstat, buf);*/
 }
 
 TURN_CHECK_P(fxstat64_turn_check)
 {
   return base_turn_check(e1, e2) &&
-    /*GET_FIELD_PTR(e1, fxstat64, fd) ==
-      GET_FIELD_PTR(e2, fxstat64, fd) &&*/
-    GET_FIELD_PTR(e1, fxstat64, vers) ==
-      GET_FIELD_PTR(e2, fxstat64, vers);
-    /*GET_FIELD_PTR(e1, fxstat64, buf) ==
-      GET_FIELD_PTR(e2, fxstat64, buf);*/
+  /*ARE_FIELDS_EQUAL_PTR(e1, e2, fxstat64, fd) &&*/
+    ARE_FIELDS_EQUAL_PTR(e1, e2, fxstat64, vers);
+  /*ARE_FIELDS_EQUAL_PTR(e1, e2, fxstat64, buf);*/
 }
 
 TURN_CHECK_P(realloc_turn_check)
 {
   return base_turn_check(e1, e2) &&
-    GET_FIELD_PTR(e1, realloc, ptr) ==
-      GET_FIELD_PTR(e2, realloc, ptr) &&
-    GET_FIELD_PTR(e1, realloc, size) ==
-      GET_FIELD_PTR(e2, realloc, size);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, realloc, ptr) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, realloc, size);
 }
 
 TURN_CHECK_P(rename_turn_check)
 {
   return base_turn_check(e1,e2) &&
-    GET_FIELD_PTR(e1, rename, oldpath) ==
-      GET_FIELD_PTR(e2, rename, oldpath) &&
-    GET_FIELD_PTR(e1, rename, newpath) ==
-      GET_FIELD_PTR(e2, rename, newpath);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, rename, oldpath) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, rename, newpath);
 }
 
 TURN_CHECK_P(rewind_turn_check)
 {
   return base_turn_check(e1,e2) &&
-    GET_FIELD_PTR(e1, rewind, stream) ==
-      GET_FIELD_PTR(e2, rewind, stream);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, rewind, stream);
 }
 
 TURN_CHECK_P(rmdir_turn_check)
 {
   return base_turn_check(e1,e2) &&
-    GET_FIELD_PTR(e1, rmdir, pathname) ==
-      GET_FIELD_PTR(e2, rmdir, pathname);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, rmdir, pathname);
 }
 
 TURN_CHECK_P(select_turn_check)
 {
   return base_turn_check(e1,e2) &&
-    GET_FIELD_PTR(e1, select, nfds) ==
-      GET_FIELD_PTR(e2, select, nfds) &&
-    GET_FIELD_PTR(e1, select, exceptfds) ==
-      GET_FIELD_PTR(e2, select, exceptfds) &&
-    GET_FIELD_PTR(e1, select, timeout) ==
-      GET_FIELD_PTR(e2, select, timeout);
+    ARE_FIELDS_EQUAL_PTR(e1, e2, select, nfds) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, select, exceptfds) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, select, timeout);
 }
 
 TURN_CHECK_P(ppoll_turn_check)
@@ -3256,7 +3047,7 @@ TURN_CHECK_P(waitid_turn_check)
 {
   return base_turn_check(e1,e2) &&
     ARE_FIELDS_EQUAL_PTR(e1, e2, waitid, idtype) &&
-    //ARE_FIELDS_EQUAL_PTR(e1, e2, waitid, id) &&
+  /*ARE_FIELDS_EQUAL_PTR(e1, e2, waitid, id) &&*/
     ARE_FIELDS_EQUAL_PTR(e1, e2, waitid, infop) &&
     ARE_FIELDS_EQUAL_PTR(e1, e2, waitid, options);
 }
@@ -3264,7 +3055,7 @@ TURN_CHECK_P(waitid_turn_check)
 TURN_CHECK_P(wait4_turn_check)
 {
   return base_turn_check(e1,e2) &&
-    //ARE_FIELDS_EQUAL_PTR(e1, e2, wait4, pid) &&
+  /*ARE_FIELDS_EQUAL_PTR(e1, e2, wait4, pid) &&*/
     ARE_FIELDS_EQUAL_PTR(e1, e2, wait4, status) &&
     ARE_FIELDS_EQUAL_PTR(e1, e2, wait4, options) &&
     ARE_FIELDS_EQUAL_PTR(e1, e2, wait4, rusage);
