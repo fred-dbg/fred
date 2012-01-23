@@ -743,6 +743,16 @@ extern "C" int ftruncate(int fd, off_t length)
   BASIC_SYNC_WRAPPER(int, ftruncate, _real_ftruncate, fd, length);
 }
 
+extern "C" int truncate64(const char *path, off64_t length)
+{
+  BASIC_SYNC_WRAPPER(int, truncate64, _real_truncate64, path, length);
+}
+
+extern "C" int ftruncate64(int fd, off64_t length)
+{
+  BASIC_SYNC_WRAPPER(int, ftruncate64, _real_ftruncate64, fd, length);
+}
+
 extern "C" long ftell(FILE *stream)
 {
   BASIC_SYNC_WRAPPER(long, ftell, _real_ftell, stream);
@@ -1630,4 +1640,31 @@ extern "C" pid_t wait4(pid_t pid, __WAIT_STATUS status, int options,
     WRAPPER_LOG_WRITE_ENTRY(my_entry);
   }
   return retval;
+}
+
+extern "C" int shmget(key_t key, size_t size, int shmflg)
+{
+  errno = ENOMEM;
+  return -1;
+}
+
+extern "C" int eventfd(unsigned int initval, int flags)
+{
+  errno = ENODEV;
+  return -1;
+}
+
+extern "C" void flockfile(FILE *filehandle)
+{
+  BASIC_SYNC_WRAPPER_VOID(flockfile, _real_flockfile, filehandle);
+}
+
+extern "C" int ftrylockfile(FILE *filehandle)
+{
+  BASIC_SYNC_WRAPPER(int, ftrylockfile, _real_ftrylockfile, filehandle);
+}
+
+extern "C" void funlockfile(FILE *filehandle)
+{
+  BASIC_SYNC_WRAPPER_VOID(funlockfile, _real_funlockfile, filehandle);
 }

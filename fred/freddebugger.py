@@ -166,7 +166,6 @@ class ReversibleDebugger(debugger.Debugger):
     def reset_on_restart(self):
         """Perform any reset functions that should happen on restart."""
         if self.personality_name() == "gdb":
-            self._p.execute_command("signal SIGKILL")
             self._p.reset_user_code_interval()
 
     def do_restart(self, n_index=-1, b_clear_history=False):
@@ -446,6 +445,24 @@ class ReversibleDebugger(debugger.Debugger):
         return l_result
 
     def replay_history(self, l_history=[], n=-1):
+        import signal
+        class TimeoutException(Exception):
+            pass
+        def timeout_handler(signum, frame):
+            raise TimeoutException()
+        n_timeout = 30
+        signal.signal(signal.SIGALRM, timeout_handler)
+        signal.alarm(n_timeout)
+        while True:
+            try:
+                self.replay_history_helper(l_history, n)
+                signal.alarm(0)
+                return
+            except TimeoutException:
+                fredutil.fred_debug("Replay history timed out.")
+                self.do_restart()
+
+    def replay_history_helper(self, l_history=[], n=-1):
         """Issue the commands in given or current checkpoint's history to
         debugger."""
         if len(l_history) == 0:
@@ -458,7 +475,7 @@ class ReversibleDebugger(debugger.Debugger):
                             str(l_temp))
         for cmd in l_temp:
             self.execute_fred_command(cmd, b_update=False)
-        self.update_state()
+        self.update_state()        
 
     def first_n_commands(self, l_history, n):
         """Return the first 'n' commands from given history."""

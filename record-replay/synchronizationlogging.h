@@ -399,7 +399,11 @@ static inline bool isProcessGDB() {
     MACRO(link, __VA_ARGS__);                                                  \
     MACRO(symlink, __VA_ARGS__);                                               \
     MACRO(listen, __VA_ARGS__);                                                \
-    MACRO(localtime, __VA_ARGS__);                                             \
+    MACRO(localtime_r, __VA_ARGS__);                                           \
+    MACRO(utime, __VA_ARGS__);                                                 \
+    MACRO(utimes, __VA_ARGS__);                                                \
+    MACRO(futimes, __VA_ARGS__);                                               \
+    MACRO(lutimes, __VA_ARGS__);                                               \
     MACRO(clock_getres, __VA_ARGS__);                                          \
     MACRO(clock_gettime, __VA_ARGS__);                                         \
     MACRO(clock_settime, __VA_ARGS__);                                         \
@@ -430,6 +434,7 @@ static inline bool isProcessGDB() {
     MACRO(pthread_mutex_unlock, __VA_ARGS__);                                  \
     MACRO(pthread_cond_wait, __VA_ARGS__);                                     \
     MACRO(pthread_cond_timedwait, __VA_ARGS__);                                \
+    MACRO(pthread_cond_destroy, __VA_ARGS__);                                  \
     MACRO(pthread_exit, __VA_ARGS__);                                          \
     MACRO(pthread_join, __VA_ARGS__);                                          \
     MACRO(pthread_kill, __VA_ARGS__);                                          \
@@ -458,6 +463,8 @@ static inline bool isProcessGDB() {
     MACRO(tmpfile, __VA_ARGS__);                                               \
     MACRO(truncate, __VA_ARGS__);                                              \
     MACRO(ftruncate, __VA_ARGS__);                                             \
+    MACRO(truncate64, __VA_ARGS__);                                            \
+    MACRO(ftruncate64, __VA_ARGS__);                                           \
     MACRO(unlink, __VA_ARGS__);                                                \
     MACRO(write, __VA_ARGS__);                                                 \
     MACRO(writev, __VA_ARGS__);                                                \
@@ -483,6 +490,10 @@ static inline bool isProcessGDB() {
                                                                                \
     MACRO(wait4, __VA_ARGS__);                                                 \
     MACRO(waitid, __VA_ARGS__);                                                \
+                                                                               \
+    MACRO(flockfile, __VA_ARGS__);                                             \
+    MACRO(ftrylockfile, __VA_ARGS__);                                          \
+    MACRO(funlockfile, __VA_ARGS__);                                           \
   } while(0)
 
 /* Event codes: */
@@ -545,7 +556,11 @@ typedef enum {
   link_event,
   symlink_event,
   listen_event,
-  localtime_event,
+  localtime_r_event,
+  utime_event,
+  utimes_event,
+  futimes_event,
+  lutimes_event,
   clock_getres_event,
   clock_gettime_event,
   clock_settime_event,
@@ -579,6 +594,7 @@ typedef enum {
   pthread_mutex_unlock_event,
   pthread_cond_wait_event,
   pthread_cond_timedwait_event,
+  pthread_cond_destroy_event,
   pthread_exit_event,
   pthread_join_event,
   pthread_kill_event, // no return event -- asynchronous
@@ -607,6 +623,8 @@ typedef enum {
   tmpfile_event,
   truncate_event,
   ftruncate_event,
+  truncate64_event,
+  ftruncate64_event,
   unlink_event,
   user_event,
   write_event,
@@ -630,7 +648,11 @@ typedef enum {
   recvmsg_event,
 
   wait4_event,
-  waitid_event
+  waitid_event,
+
+  flockfile_event,
+  ftrylockfile_event,
+  funlockfile_event
 } event_code_t;
 /* end event codes */
 
@@ -702,6 +724,15 @@ typedef struct {
 } log_event_pthread_cond_timedwait_t;
 
 static const int log_event_pthread_cond_timedwait_size = sizeof(log_event_pthread_cond_timedwait_t);
+
+typedef struct {
+  // For pthread_cond_destroy():
+  pthread_cond_t *cond_addr;
+  pthread_cond_t cond;
+} log_event_pthread_cond_destroy_t;
+
+static const int log_event_pthread_cond_destroy_size =
+  sizeof(log_event_pthread_cond_destroy_t);
 
 typedef struct {
   // For pthread_exit():
@@ -1267,12 +1298,45 @@ typedef struct {
 static const int log_event_listen_size = sizeof(log_event_listen_t);
 
 typedef struct {
-  // For localtime():
-  time_t *timep;
-  struct tm localtime_retval;
-} log_event_localtime_t;
+  // For utime():
+  char *filename;
+  struct utimbuf *times;
+} log_event_utime_t;
 
-static const int log_event_localtime_size = sizeof(log_event_localtime_t);
+static const int log_event_utime_size = sizeof(log_event_utime_t);
+
+typedef struct {
+  // For utimes():
+  char *filename;
+  struct timeval *times;
+} log_event_utimes_t;
+
+static const int log_event_utimes_size = sizeof(log_event_utimes_t);
+
+typedef struct {
+  // For futimes():
+  int fd;
+  struct timeval *times;
+} log_event_futimes_t;
+
+static const int log_event_futimes_size = sizeof(log_event_futimes_t);
+
+typedef struct {
+  // For lutimes():
+  char *filename;
+  struct timeval *times;
+} log_event_lutimes_t;
+
+static const int log_event_lutimes_size = sizeof(log_event_lutimes_t);
+
+typedef struct {
+  // For localtime_r():
+  time_t *timep;
+  struct tm *result;
+  struct tm ret_result;
+} log_event_localtime_r_t;
+
+static const int log_event_localtime_r_size = sizeof(log_event_localtime_r_t);
 
 typedef struct {
   // For clock_getres():
@@ -1673,6 +1737,22 @@ typedef struct {
 static const int log_event_ftruncate_size = sizeof(log_event_ftruncate_t);
 
 typedef struct {
+  // For truncate64():
+  char *path;
+  off_t length;
+} log_event_truncate64_t;
+
+static const int log_event_truncate64_size = sizeof(log_event_truncate64_t);
+
+typedef struct {
+  // For ftruncate64():
+  int fd;
+  off_t length;
+} log_event_ftruncate64_t;
+
+static const int log_event_ftruncate64_size = sizeof(log_event_ftruncate64_t);
+
+typedef struct {
   // For srand():
   unsigned int seed;
 } log_event_srand_t;
@@ -1916,6 +1996,17 @@ typedef struct {
 
 static const int log_event_wait4_size = sizeof(log_event_wait4_t);
 
+typedef struct {
+  // For flockfile();
+  FILE *filehandle;
+} log_event_flockfile_t;
+typedef log_event_flockfile_t log_event_ftrylockfile_t;
+typedef log_event_flockfile_t log_event_funlockfile_t;
+
+static const int log_event_flockfile_size = sizeof(log_event_flockfile_t);
+static const int log_event_ftrylockfile_size = sizeof(log_event_ftrylockfile_t);
+static const int log_event_funlockfile_size = sizeof(log_event_funlockfile_t);
+
 
 typedef struct {
   // FIXME:
@@ -1950,8 +2041,9 @@ typedef struct {
     log_event_pthread_cond_broadcast_t           log_event_pthread_cond_broadcast;
     log_event_pthread_cond_wait_t                log_event_pthread_cond_wait;
     log_event_pthread_cond_timedwait_t           log_event_pthread_cond_timedwait;
+    log_event_pthread_cond_destroy_t             log_event_pthread_cond_destroy;
     log_event_select_t                           log_event_select;
-    log_event_ppoll_t                           log_event_ppoll;
+    log_event_ppoll_t                            log_event_ppoll;
     log_event_read_t                             log_event_read;
     log_event_readv_t                            log_event_readv;
     log_event_readdir_t                          log_event_readdir;
@@ -2018,7 +2110,11 @@ typedef struct {
     log_event_link_t                             log_event_link;
     log_event_symlink_t                          log_event_symlink;
     log_event_listen_t                           log_event_listen;
-    log_event_localtime_t                        log_event_localtime;
+    log_event_localtime_r_t                      log_event_localtime_r;
+    log_event_utimes_t                           log_event_utimes;
+    log_event_futimes_t                          log_event_futimes;
+    log_event_lutimes_t                          log_event_lutimes;
+    log_event_utime_t                            log_event_utime;
     log_event_clock_getres_t                     log_event_clock_getres;
     log_event_clock_gettime_t                    log_event_clock_gettime;
     log_event_clock_settime_t                    log_event_clock_settime;
@@ -2049,6 +2145,8 @@ typedef struct {
     log_event_tmpfile_t                          log_event_tmpfile;
     log_event_truncate_t                         log_event_truncate;
     log_event_ftruncate_t                        log_event_ftruncate;
+    log_event_truncate64_t                       log_event_truncate64;
+    log_event_ftruncate64_t                      log_event_ftruncate64;
     log_event_unlink_t                           log_event_unlink;
     log_event_user_t                             log_event_user;
     log_event_srand_t                            log_event_srand;
@@ -2080,6 +2178,10 @@ typedef struct {
 
     log_event_waitid_t                           log_event_waitid;
     log_event_wait4_t                            log_event_wait4;
+
+    log_event_flockfile_t                        log_event_flockfile;
+    log_event_ftrylockfile_t                     log_event_ftrylockfile;
+    log_event_funlockfile_t                      log_event_funlockfile;
   } event_data;
 } log_entry_t;
 
@@ -2304,7 +2406,11 @@ CREATE_ENTRY_FUNC(libc_memalign, size_t boundary, size_t size);
 CREATE_ENTRY_FUNC(link, const char *oldpath, const char *newpath);
 CREATE_ENTRY_FUNC(symlink, const char *oldpath, const char *newpath);
 CREATE_ENTRY_FUNC(listen, int sockfd, int backlog);
-CREATE_ENTRY_FUNC(localtime, const time_t *timep);
+CREATE_ENTRY_FUNC(localtime_r, const time_t *timep, struct tm *result);
+CREATE_ENTRY_FUNC(utime, const char *filename, const struct utimbuf *times);
+CREATE_ENTRY_FUNC(utimes, const char *filename, const struct timeval times[2]);
+CREATE_ENTRY_FUNC(futimes, int fd, const struct timeval times[2]);
+CREATE_ENTRY_FUNC(lutimes, const char *filename, const struct timeval times[2]);
 CREATE_ENTRY_FUNC(clock_getres, clockid_t clk_id, struct timespec *res);
 CREATE_ENTRY_FUNC(clock_gettime, clockid_t clk_id, struct timespec *tp);
 CREATE_ENTRY_FUNC(clock_settime, clockid_t clk_id, const struct timespec *tp);
@@ -2340,6 +2446,7 @@ CREATE_ENTRY_FUNC(pthread_cond_wait,
 CREATE_ENTRY_FUNC(pthread_cond_timedwait,
                   pthread_cond_t *cond_var, pthread_mutex_t *mutex,
                   const struct timespec *abstime);
+CREATE_ENTRY_FUNC(pthread_cond_destroy, pthread_cond_t *cond_var);
 CREATE_ENTRY_FUNC(pthread_rwlock_unlock, pthread_rwlock_t *rwlock);
 CREATE_ENTRY_FUNC(pthread_rwlock_rdlock, pthread_rwlock_t *rwlock);
 CREATE_ENTRY_FUNC(pthread_rwlock_wrlock, pthread_rwlock_t *rwlock);
@@ -2387,6 +2494,8 @@ CREATE_ENTRY_FUNC(time, time_t *tloc);
 CREATE_ENTRY_FUNC(tmpfile);
 CREATE_ENTRY_FUNC(truncate, const char *path, off_t length);
 CREATE_ENTRY_FUNC(ftruncate, int fd, off_t length);
+CREATE_ENTRY_FUNC(truncate64, const char *path, off64_t length);
+CREATE_ENTRY_FUNC(ftruncate64, int fd, off64_t length);
 CREATE_ENTRY_FUNC(unlink, const char *pathname);
 CREATE_ENTRY_FUNC(write, int fd, const void* buf_addr, size_t count);
 CREATE_ENTRY_FUNC(writev, int fd, const struct iovec *iov, int iovcnt);
@@ -2422,6 +2531,10 @@ CREATE_ENTRY_FUNC(waitid, idtype_t idtype, id_t id, siginfo_t *infop,
                   int options);
 CREATE_ENTRY_FUNC(wait4, pid_t pid, __WAIT_STATUS status, int options,
                   struct rusage *rusage);
+
+CREATE_ENTRY_FUNC(flockfile, FILE *filehandle);
+CREATE_ENTRY_FUNC(ftrylockfile, FILE *filehandle);
+CREATE_ENTRY_FUNC(funlockfile, FILE *filehandle);
 
 /* Special case: user synchronized events. */
 CREATE_ENTRY_FUNC(user);

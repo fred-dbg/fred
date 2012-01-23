@@ -29,13 +29,14 @@
 #define RECORD_REPLAY
 
 #include <stdio.h>
-#include <sys/types.h>
 #include <sys/socket.h>
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include "constants.h"
 #include <sys/ptrace.h>
+#include <utime.h>
+#include <sys/time.h>
 #include <stdarg.h>
 #include <asm/ldt.h>
 #include <stdio.h>
@@ -132,7 +133,9 @@ LIB_PRIVATE extern __thread int thread_performing_dlopen_dlsym;
   MACRO(connect)                            \
   MACRO(bind)                               \
   MACRO(listen)                             \
-  MACRO(localtime)                          \
+  MACRO(localtime_r)                        \
+  MACRO(utime)                              \
+  MACRO(utimes)                             \
   MACRO(clock_getres)                       \
   MACRO(clock_gettime)                      \
   MACRO(clock_settime)                      \
@@ -243,6 +246,8 @@ LIB_PRIVATE extern __thread int thread_performing_dlopen_dlsym;
   MACRO(tmpfile)                              \
   MACRO(truncate)                             \
   MACRO(ftruncate)                            \
+  MACRO(truncate64)                           \
+  MACRO(ftruncate64)                          \
   MACRO(getsockname)                          \
   MACRO(getpeername)                          \
   MACRO(fcntl)                                \
@@ -302,16 +307,22 @@ LIB_PRIVATE extern __thread int thread_performing_dlopen_dlsym;
                                               \
   MACRO(pthread_cond_wait)                    \
   MACRO(pthread_cond_timedwait)               \
+  MACRO(pthread_cond_destroy)                 \
   MACRO(pthread_cond_signal)                  \
   MACRO(pthread_cond_broadcast)               \
   MACRO(pthread_detach)                       \
   MACRO(pthread_exit)                         \
   MACRO(pthread_kill)                         \
                                               \
+  MACRO(flockfile)                            \
+  MACRO(ftrylockfile)                         \
+  MACRO(funlockfile)                          \
+                                              \
   MACRO(sendto)                               \
   MACRO(sendmsg)                              \
   MACRO(recvfrom)                             \
   MACRO(recvmsg)
+
 
 #else
 # define FOREACH_RECORD_REPLAY_WRAPPERS(MACRO)
@@ -345,7 +356,9 @@ LIB_PRIVATE extern __thread int thread_performing_dlopen_dlsym;
   int _real_bind ( int sockfd,  const struct  sockaddr  *my_addr,
                    socklen_t addrlen );
   int _real_listen ( int sockfd, int backlog );
-  struct tm * _real_localtime ( const time_t *timep );
+  struct tm * _real_localtime_r ( const time_t *timep, struct tm *result);
+  int _real_utime(const char *filename, const struct utimbuf *times);
+  int _real_utimes(const char *filename, const struct timeval *times);
   int _real_clock_getres(clockid_t clk_id, struct timespec *res);
   int _real_clock_gettime(clockid_t clk_id, struct timespec *tp);
   int _real_clock_settime(clockid_t clk_id, const struct timespec *tp);
@@ -586,6 +599,7 @@ LIB_PRIVATE extern __thread int thread_performing_dlopen_dlsym;
   int _real_pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex);
   int _real_pthread_cond_timedwait(pthread_cond_t *cond, pthread_mutex_t *mutex,
       const struct timespec *abstime);
+  int _real_pthread_cond_destroy(pthread_cond_t *cond);
   void _real_pthread_exit(void *value_ptr);
   int _real_pthread_detach(pthread_t thread);
   int _real_pthread_kill(pthread_t thread, int sig);
@@ -598,6 +612,8 @@ LIB_PRIVATE extern __thread int thread_performing_dlopen_dlsym;
   FILE * _real_tmpfile(void);
   int _real_truncate(const char *path, off_t length);
   int _real_ftruncate(int fd, off_t length);
+  int _real_truncate64(const char *path, off64_t length);
+  int _real_ftruncate64(int fd, off64_t length);
   ssize_t _real_pread(int fd, void *buf, size_t count, off_t offset);
   ssize_t _real_pwrite(int fd, const void *buf, size_t count, off_t offset);
 
@@ -630,6 +646,10 @@ LIB_PRIVATE extern __thread int thread_performing_dlopen_dlsym;
   ssize_t _real_recvfrom(int sockfd, void *buf, size_t len, int flags,
                          struct sockaddr *src_addr, socklen_t *addrlen);
   ssize_t _real_recvmsg(int sockfd, struct msghdr *msg, int flags);
+
+  void _real_flockfile(FILE *filehandle);
+  int  _real_ftrylockfile(FILE *filehandle);
+  void _real_funlockfile(FILE *filehandle);
 #endif
 
 #ifdef __cplusplus
