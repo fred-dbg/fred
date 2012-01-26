@@ -55,7 +55,7 @@ def reverse_step(dbg, n=1):
             # expand_next replaces last 'n' by ['s', 'n', ...]
             # dbg.state().level() can never increase under repeated 'n'
             # BUG:  Actually, 'n' can hit a breakpoint deeper in stack.
-            testIfTooFar = lambda: dbg.state().level() < level or \
+            testIfTooFar = lambda: dbg.state().level() <= level or \
                 dbg.at_breakpoint()
             (l_history, n_min) = \
                 binary_search.NEW_binary_search_expand_next(dbg, l_history,

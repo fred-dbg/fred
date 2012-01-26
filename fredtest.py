@@ -245,7 +245,7 @@ def gdb_reverse_watch(n_count=1):
     global GS_TEST_PROGRAMS_DIRECTORY
     l_cmd = ["gdb", GS_TEST_PROGRAMS_DIRECTORY + "/test-list"]
     for i in range(0, n_count):
-        print_test_name("gdb reverse watch %d" % i)
+        print_test_name("gdb reverse-watch %d" % i)
         start_session(l_cmd)
         execute_commands(["b main", "r", "fred-ckpt", "b 29",
                           "c", "fred-rw list_len(head) < 10"])
@@ -255,6 +255,40 @@ def gdb_reverse_watch(n_count=1):
                 print GS_PASSED_STRING
             else:
                 print GS_FAILED_STRING
+        else:
+            print GS_FAILED_STRING
+        end_session()
+
+def gdb_reverse_watch_n_rs(n_count=1):
+    """Run a reverse-watch test on test_list linked list example."""
+    global GS_TEST_PROGRAMS_DIRECTORY
+    l_cmd = ["gdb", GS_TEST_PROGRAMS_DIRECTORY + "/test-list"]
+    for i in range(0, n_count):
+        print_test_name("gdb reverse-watch/n/reverse-step %d" % i)
+        start_session(l_cmd)
+        execute_commands(["b main", "r", "fred-ckpt", "b 30",
+                          "c", "fred-rw list_len(head) < 17",
+                          "n", "fred-rs"])
+        current_backtrace_frame = g_debugger.current_position()
+        if current_backtrace_frame.line() == 41:
+            print GS_PASSED_STRING
+        else:
+            print GS_FAILED_STRING
+        end_session()
+
+def gdb_reverse_watch_n_rn(n_count=1):
+    """Run a reverse-watch test on test_list linked list example."""
+    global GS_TEST_PROGRAMS_DIRECTORY
+    l_cmd = ["gdb", GS_TEST_PROGRAMS_DIRECTORY + "/test-list"]
+    for i in range(0, n_count):
+        print_test_name("gdb reverse-watch/n/reverse-next %d" % i)
+        start_session(l_cmd)
+        execute_commands(["b main", "r", "fred-ckpt", "b 30",
+                          "c", "fred-rw list_len(head) < 17",
+                          "n", "fred-rn"])
+        current_backtrace_frame = g_debugger.current_position()
+        if current_backtrace_frame.line() == 26:
+            print GS_PASSED_STRING
         else:
             print GS_FAILED_STRING
         end_session()
@@ -412,6 +446,8 @@ def run_integration_tests(n_iters):
     gdb_multiple_checkpoints_replay_st(n_iters)
     gdb_syscall_tester(n_iters)
     gdb_reverse_watch(n_iters)
+    gdb_reverse_watch_n_rs(n_iters)
+    gdb_reverse_watch_n_rn(n_iters)
     gdb_reverse_next(n_iters)
     gdb_reverse_step(n_iters)
     gdb_reverse_continue(n_iters)
@@ -509,6 +545,8 @@ def initialize_tests():
                  gdb_record_replay_pthread_cond,
                  "gdb-syscall-tester" : gdb_syscall_tester,
                  "gdb-reverse-watch" : gdb_reverse_watch,
+                 "gdb-reverse-watch-n-rs" : gdb_reverse_watch_n_rs,
+                 "gdb-reverse-watch-n-rn" : gdb_reverse_watch_n_rn,
                  "gdb-reverse-watch-mt" : gdb_reverse_watch_mt,
                  "gdb-reverse-watch-mt-priv" : gdb_reverse_watch_mt_priv,
                  "gdb-reverse-watch-no-log" : gdb_reverse_watch_no_log,

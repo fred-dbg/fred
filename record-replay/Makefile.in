@@ -41,7 +41,7 @@ ifeq (${HAS_I486},'yes')
 CXXFLAGS += -march=i486
 endif
 
-default: ${LIBNAME}.so fred_command fred_read_log
+all: ${LIBNAME}.so fred_command fred_read_log
 
 libfredinternal.a: ${LIBFREDINTERNAL_OBJS}
 	/usr/bin/ar cru $@ $^
