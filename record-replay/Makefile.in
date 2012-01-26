@@ -20,12 +20,17 @@ FREDHIJACK_OBJS = fred_signalwrappers.o fred_epollwrappers.o \
 
 LIBFREDINTERNAL_OBJS = synchronizationlogging.o log.o fred_trampolines.o
 
-FRED_READ_LOG_OBJS = fred_read_log.o nosyscallsreal.o util.o stubs.o \
-	$(JALIB)/jassert.o $(JALIB)/jalib.o $(JALIB)/jalloc.o \
-	$(JALIB)/jfilesystem.o
+JALIB_OBJS = $(JALIB)/jassert.o $(JALIB)/jalib.o $(JALIB)/jalloc.o \
+        $(JALIB)/jfilesystem.o
 
-CFLAGS += -I${DMTCP_SRC} -DDMTCP -fPIC -c --std=gnu99 -g
-CXXFLAGS += -I${DMTCP_SRC} -DDMTCP -fPIC -c -g
+j%.o: ${JALIB}/j%.o
+	cp $< $@
+
+FRED_READ_LOG_OBJS = fred_read_log.o nosyscallsreal.o util.o stubs.o \
+	${notdir ${JALIB_OBJS}}
+
+CFLAGS += -I${DMTCP_SRC} -DDMTCP -fPIC -DPIC -c --std=gnu99 -g
+CXXFLAGS += -I${DMTCP_SRC} -DDMTCP -fPIC -DPIC -c -g
 
 # For 32-bits, g++ will try to compile for generic 32-bit unless it knows
 #   it can assume i486 or better.
@@ -48,8 +53,8 @@ fred_read_log: ${FRED_READ_LOG_OBJS} libfredinternal.a
 	${CXX} -o $@ $^ -lpthread
 
 # We link the library using C++ for compatibility with the main dmtcphijack.so
-${LIBNAME}.so: ${LIBOBJS}
-	${CXX} -shared -fPIC -o $@ $<
+${LIBNAME}.so: ${FREDHIJACK_OBJS} libfredinternal.a
+	${CXX} -shared -fPIC -o $@ $^
 
 .c.o:
 	${CC} ${CFLAGS} -I. -o $@ $<
@@ -63,13 +68,14 @@ tidy:
 	rm -f *~ .*.swp dmtcp_restart_script*.sh ckpt_*.dmtcp
 
 clean:
-	echo ${DMTCP_ROOT}
 	rm -f ${FREDHIJACK_OBJS} ${LIBFREDINTERNAL_OBJS} \
-	  ${FRED_READ_LOG_OBJS} fred_command libfredinternal.a fred_read_log \
-	  ${LIBNAME}.so
+	  ${FRED_READ_LOG_OBJS} fred_command fred_command.o \
+	  libfredinternal.a fred_read_log \
+	  ${LIBNAME}.so ${notdir ${JALIB_OBJS}}
 
 distclean: clean
-	rm -f Makefile *~ .*.swp dmtcp_restart_script*.sh ckpt_*.dmtcp
+	rm -f Makefile *~ .*.swp dmtcp_restart_script*.sh ckpt_*.dmtcp \
+	  config.log config.status
 
 dist: distclean
 	dir=`basename $$PWD`; cd ..; \

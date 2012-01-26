@@ -10,7 +10,6 @@
 *.pyc
 ckpt_*
 dmtcp_restart_script*
-aclocal.m4
 autom4te.cache
 core
 fred_command
