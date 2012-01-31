@@ -52,7 +52,9 @@ def reverse_step(dbg, n=1):
         while l_history[-1].is_next():
             level = dbg.state().level()
             fredutil.fred_debug("Expanding next, level is %d" % level)
-            # expand_next replaces last 'n' by ['s', 'n', ...]
+            # expand_next replaces last 'n' by ['s', 'n', ..., 's']
+            #   while returning to current loc. Or returns [..., 'n/bkpt'].
+            # After exiting this while loop, will delete 's' before returning.
             # dbg.state().level() can never increase under repeated 'n'
             # BUG:  Actually, 'n' can hit a breakpoint deeper in stack.
             testIfTooFar = lambda: dbg.state().level() <= level or \
@@ -60,6 +62,9 @@ def reverse_step(dbg, n=1):
             (l_history, n_min) = \
                 binary_search.NEW_binary_search_expand_next(dbg, l_history,
                                                             testIfTooFar)
+            # If not is_step(), it's because we hit at_breakpoint(): 'n/bkpt'.
+            # First, search for correct expansion between n_min and currnt loc
+            # If it fails, then will have 'n' at end.  Loop around to strip it
             if not l_history[-1].is_step():
                 l_history = binary_search.NEW_binary_search_history(dbg,
                                                                     l_history,

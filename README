@@ -1,0 +1,29 @@
+To set this up, you'll want to do several things.
+
+1.  Configure a copy of DMTCP as:  ./configure --with-record-replay
+    Then compile as usual:  make  [ or maybe:  "make -j3" if you have 2 cores ]
+
+2.  ( cd record-replay; ./configure --with-dmtcp-root=DMTCP_ROOT )
+      where DMTCP_ROOT is the root directory of DMTCP that you configured above
+
+3.  ( cd record-replay; make )
+
+4.  Read setup.sh and modify DMTCP_ROOT and DMTCP_PORT
+
+5.  . ./setup.sh
+
+6.  You can now try it out with the suggestion of setup.sh:
+      ./fredapp.py --fred-demo gdb test/test-list
+    My own favorite sequence of commands is:
+    (gdb) break main
+    (gdb) run
+    (gdb) fred-ckpt
+    (gdb) break 30
+    (gdb) fred-reverse-watch list_len(head)<17
+    (gdb) where
+    (gdb) list
+    (gdb) next
+    (gdb) fred-reverse-step
+    (gdb) where
+    (gdb) fred-reverse-next
+    (gdb) where
