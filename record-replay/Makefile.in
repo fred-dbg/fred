@@ -13,6 +13,7 @@ endif
 DMTCP_SRC=${DMTCP_ROOT}/dmtcp/src
 JALIB=${DMTCP_ROOT}/dmtcp/jalib
 
+HEADERS = constants.h fred_interface.h fred_wrappers.h log.h synchronizationlogging.h
 # As you add new files to your hijack library, add the object file names here.
 FREDHIJACK_OBJS = fred_signalwrappers.o fred_epollwrappers.o \
 	fred_mallocwrappers.o fred_filewrappers.o fred_syscallsreal.o \
@@ -43,7 +44,7 @@ endif
 
 all: ${LIBNAME}.so fred_command fred_read_log
 
-libfredinternal.a: ${LIBFREDINTERNAL_OBJS}
+libfredinternal.a: ${LIBFREDINTERNAL_OBJS} ${HEADERS}
 	/usr/bin/ar cru $@ $^
 
 fred_command: fred_command.o libfredinternal.a

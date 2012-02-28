@@ -55,7 +55,7 @@ if (!shouldSynchronize(return_addr)) {
     kill(getpid(), SIGSEGV);
     return (*user_sig_handlers[sig]) (sig);
     }*/
-  if (jalib::Filesystem::GetProgramName() == "gdb") {
+  if (isProcessGDB()) {
     JASSERT ( false ) .Text("don't want this");
     return (*user_sig_handlers[sig]) (sig);
   }
@@ -80,7 +80,7 @@ if (!shouldSynchronize(return_addr)) {
     kill(getpid(), SIGSEGV);
     return (*user_sig_handlers[sig]) (sig);
     }*/
-  if (jalib::Filesystem::GetProgramName() == "gdb") {
+  if (isProcessGDB()) {
     JASSERT ( false ) .Text("don't want this");
     return (*user_sa_sigaction[sig]) (sig, info, data);
   }
@@ -114,8 +114,7 @@ EXTERNC sighandler_t signal(int signum, sighandler_t handler)
 EXTERNC sighandler_t sigset(int sig, sighandler_t disp)
 {
   void *return_addr = GET_RETURN_ADDRESS();
-  if (!shouldSynchronize(return_addr) ||
-      jalib::Filesystem::GetProgramName() == "gdb") {
+  if (!shouldSynchronize(return_addr) || isProcessGDB()) {
     // Don't use our wrapper for non-user signal() calls:
     return _real_sigset (sig, disp);
   } else {
@@ -135,7 +134,7 @@ EXTERNC int sigaction(int signum, const struct sigaction *act,
   }
   void *return_addr = GET_RETURN_ADDRESS();
   if (act != NULL && shouldSynchronize(return_addr) &&
-      jalib::Filesystem::GetProgramName() != "gdb") {
+      isProcessGDB()) {
     struct sigaction newact;
     memset(&newact, 0, sizeof(struct sigaction));
     if (act->sa_handler == SIG_DFL || act->sa_handler == SIG_IGN) {

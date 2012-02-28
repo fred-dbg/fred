@@ -1276,8 +1276,7 @@ extern "C" struct dirent * /*__attribute__ ((optimize(0)))*/ readdir(DIR *dirp)
   //WRAPPER_HEADER(struct dirent*, readdir, _real_readdir, dirp);
   void *return_addr = GET_RETURN_ADDRESS();
   do {
-    if (!shouldSynchronize(return_addr) ||
-        jalib::Filesystem::GetProgramName() == "gdb") {
+    if (!shouldSynchronize(return_addr) || isProcessGDB()) {
       return _real_readdir(dirp);
     }
   } while(0);
@@ -1313,8 +1312,7 @@ extern "C" int readdir_r(DIR *dirp, struct dirent *entry,
                          struct dirent **result)
 {
   void *return_addr = GET_RETURN_ADDRESS();
-  if (!shouldSynchronize(return_addr) ||
-      jalib::Filesystem::GetProgramName() == "gdb") {
+  if (!shouldSynchronize(return_addr) || isProcessGDB()) {
     return _real_readdir_r(dirp, entry, result);
   }
   int retval;
@@ -1391,8 +1389,7 @@ extern "C" void setlinebuf(FILE *stream)
 extern "C" int setvbuf(FILE *stream, char *buf, int mode, size_t size)
 {
   void *return_addr = GET_RETURN_ADDRESS();
-  if (!shouldSynchronize(return_addr) ||
-      jalib::Filesystem::GetProgramName() == "gdb") {
+  if (!shouldSynchronize(return_addr) || isProcessGDB()) {
     return _real_setvbuf(stream, buf, mode, size);
   }
   int retval;

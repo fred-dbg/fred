@@ -59,7 +59,8 @@ typedef unsigned long int log_off_t;
 namespace dmtcp { class SynchronizationLog; }
 
 static inline bool isProcessGDB() {
-  static bool isGDB = jalib::Filesystem::GetProgramName() == "gdb";
+  static dmtcp::string progName = jalib::Filesystem::GetProgramName();
+  static bool isGDB = progName == "gdb";
   return isGDB;
 }
 
@@ -107,8 +108,7 @@ static inline bool isProcessGDB() {
 #define WRAPPER_HEADER_VOID_RAW(name, real_func, ...)                   \
   void *return_addr = GET_RETURN_ADDRESS();                             \
   do {                                                                  \
-    if (!shouldSynchronize(return_addr) ||                              \
-        jalib::Filesystem::GetProgramName() == "gdb") {                 \
+    if (!shouldSynchronize(return_addr) || isProcessGDB()) {            \
       real_func(__VA_ARGS__);                                           \
       return;                                                           \
     }                                                                   \
@@ -117,8 +117,7 @@ static inline bool isProcessGDB() {
 #define WRAPPER_HEADER_RAW(ret_type, name, real_func, ...)              \
   void *return_addr = GET_RETURN_ADDRESS();                             \
   do {                                                                  \
-    if (!shouldSynchronize(return_addr) ||                              \
-        jalib::Filesystem::GetProgramName() == "gdb") {                 \
+    if (!shouldSynchronize(return_addr) || isProcessGDB()) {            \
       return real_func(__VA_ARGS__);                                    \
     }                                                                   \
   } while(0)
@@ -135,8 +134,7 @@ static inline bool isProcessGDB() {
 
 #define WRAPPER_HEADER_NO_RETURN(name, real_func, ...)                  \
   void *return_addr = GET_RETURN_ADDRESS();                             \
-  if (!shouldSynchronize(return_addr) ||                                \
-      jalib::Filesystem::GetProgramName() == "gdb") {                   \
+  if (!shouldSynchronize(return_addr) || isProcessGDB()) {              \
     real_func(__VA_ARGS__);                                             \
   }                                                                     \
   log_entry_t my_entry = create_##name##_entry(my_clone_id,             \
@@ -151,8 +149,7 @@ static inline bool isProcessGDB() {
 #define WRAPPER_HEADER_CKPT_DISABLED(ret_type, name, real_func, ...)    \
   void *return_addr = GET_RETURN_ADDRESS();                             \
   ret_type retval;                                                      \
-  if (!shouldSynchronize(return_addr) ||                                \
-      jalib::Filesystem::GetProgramName() == "gdb") {                   \
+  if (!shouldSynchronize(return_addr) || isProcessGDB()) {              \
     retval = real_func(__VA_ARGS__);                                    \
     WRAPPER_EXECUTION_ENABLE_CKPT();                                    \
     return retval;                                                      \

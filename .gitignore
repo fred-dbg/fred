@@ -31,3 +31,4 @@ pthread-test-thread-private
 test-list-no-malloc
 test/malloc-to-mmap
 test/reader
+record-replay/aclocal.m4

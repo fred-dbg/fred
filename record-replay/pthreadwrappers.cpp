@@ -760,8 +760,7 @@ extern "C" int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
    * reaper thread even if the current mode is SYNC_IS_NOOP. */
   void *return_addr = GET_RETURN_ADDRESS();
   if (!dmtcp_is_running_state() ||
-      !validAddress(return_addr) ||
-      jalib::Filesystem::GetProgramName() == "gdb") {
+      !validAddress(return_addr) || isProcessGDB()) {
     return _real_pthread_create(thread, attr, start_routine, arg);
   }
   /* Create the reaper thread always, even if we are not in SYNC_RECORD mode

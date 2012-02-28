@@ -209,7 +209,7 @@ static void my_free_hook (void *ptr, const void *caller)
 #define MMAP_WRAPPER_HEADER(name, ...)                                  \
   void *return_addr = GET_RETURN_ADDRESS();                             \
   if ((!shouldSynchronize(return_addr) && !log_all_allocs) ||           \
-      jalib::Filesystem::GetProgramName() == "gdb") {                   \
+      isProcessGDB()) {                                                 \
     void *retval = _real_ ## name (__VA_ARGS__);                        \
     UNSET_IN_MMAP_WRAPPER();                                            \
     return retval;                                                      \
@@ -227,31 +227,31 @@ static void my_free_hook (void *ptr, const void *caller)
   _real_pthread_mutex_unlock(&mmap_lock);                               \
   WRAPPER_REPLAY_END(name);
 
-#define MALLOC_FAMILY_WRAPPER_HEADER_TYPED(ret_type, name, ...)             \
-  void *return_addr = GET_RETURN_ADDRESS();                                 \
-  if ((!shouldSynchronize(return_addr) && !log_all_allocs) ||               \
-      jalib::Filesystem::GetProgramName() == "gdb") {                       \
-    ret_type retval = _real_ ## name (__VA_ARGS__);                         \
-    return retval;                                                          \
-  }                                                                         \
-  log_entry_t my_entry = create_ ## name ## _entry(my_clone_id,             \
-                                                   name ## _event,          \
-                                                   __VA_ARGS__);            \
+#define MALLOC_FAMILY_WRAPPER_HEADER_TYPED(ret_type, name, ...)         \
+  void *return_addr = GET_RETURN_ADDRESS();                             \
+  if ((!shouldSynchronize(return_addr) && !log_all_allocs) ||           \
+      isProcessGDB()) {                                                 \
+    ret_type retval = _real_ ## name (__VA_ARGS__);                     \
+    return retval;                                                      \
+  }                                                                     \
+  log_entry_t my_entry = create_ ## name ## _entry(my_clone_id,         \
+                                                   name ## _event,      \
+                                                   __VA_ARGS__);        \
   ret_type retval;
 
-#define MALLOC_FAMILY_WRAPPER_HEADER(name, ...)                             \
+#define MALLOC_FAMILY_WRAPPER_HEADER(name, ...)                         \
   MALLOC_FAMILY_WRAPPER_HEADER_TYPED(void*, name, __VA_ARGS__)
 
-#define MALLOC_FAMILY_WRAPPER_REPLAY_START(name) \
+#define MALLOC_FAMILY_WRAPPER_REPLAY_START(name)                        \
   unsigned waitRet = waitForAllocTurn(&my_entry, &name##_turn_check);
 
-#define MALLOC_FAMILY_WRAPPER_REPLAY_END(name) \
+#define MALLOC_FAMILY_WRAPPER_REPLAY_END(name)                          \
   WRAPPER_REPLAY_END(name)
 
-#define MALLOC_FAMILY_BASIC_SYNC_WRAPPER(ret_type, name, ...)               \
-  MALLOC_FAMILY_WRAPPER_HEADER_TYPED(ret_type, name, __VA_ARGS__);          \
-  do {                                                                      \
-    if (SYNC_IS_REPLAY) {                                                   \
+#define MALLOC_FAMILY_BASIC_SYNC_WRAPPER(ret_type, name, ...)           \
+  MALLOC_FAMILY_WRAPPER_HEADER_TYPED(ret_type, name, __VA_ARGS__);      \
+  do {                                                                  \
+    if (SYNC_IS_REPLAY) {                                               \
       MALLOC_FAMILY_WRAPPER_REPLAY_START(name);                         \
       retval = _real_ ## name(__VA_ARGS__);                             \
       if (waitRet) {                                                    \
@@ -260,22 +260,22 @@ static void my_free_hook (void *ptr, const void *caller)
       }                                                                 \
       void *savedRetval = GET_COMMON(my_entry, retval);                 \
       if (retval != savedRetval) {                                      \
-        JTRACE ( #name " returned wrong address on replay" )                \
+        JTRACE ( #name " returned wrong address on replay" )            \
           ( retval ) ( savedRetval ) (global_log.currentEntryIndex());  \
         while (1);                                                      \
-      }                                                                     \
+      }                                                                 \
       MALLOC_FAMILY_WRAPPER_REPLAY_END(name);                           \
-    } else if (SYNC_IS_RECORD) {                                            \
-      _real_pthread_mutex_lock(&allocation_lock);                           \
+    } else if (SYNC_IS_RECORD) {                                        \
+      _real_pthread_mutex_lock(&allocation_lock);                       \
       bool savedIsOptionalEvent = isOptionalEvent;                      \
-      isOptionalEvent = true;                                               \
-      retval = _real_ ## name(__VA_ARGS__);                                 \
+      isOptionalEvent = true;                                           \
+      retval = _real_ ## name(__VA_ARGS__);                             \
       isOptionalEvent = savedIsOptionalEvent;                           \
-      SET_COMMON2(my_entry, retval, (void *)retval);			    \
-      SET_COMMON2(my_entry, my_errno, errno);				    \
-      WRAPPER_LOG_WRITE_ENTRY(my_entry);                                    \
-      _real_pthread_mutex_unlock(&allocation_lock);                         \
-    }                                                                       \
+      SET_COMMON2(my_entry, retval, (void *)retval);			\
+      SET_COMMON2(my_entry, my_errno, errno);				\
+      WRAPPER_LOG_WRITE_ENTRY(my_entry);                                \
+      _real_pthread_mutex_unlock(&allocation_lock);                     \
+    }                                                                   \
   } while(0)
 
 
@@ -331,8 +331,7 @@ extern "C" void free(void *ptr)
   }
   void *return_addr = GET_RETURN_ADDRESS();
   if ((!shouldSynchronize(return_addr) && !log_all_allocs) ||
-      ptr == NULL ||
-      jalib::Filesystem::GetProgramName() == "gdb") {
+      ptr == NULL || isProcessGDB()) {
     _real_pthread_mutex_lock(&allocation_lock);
     _real_free(ptr);
     _real_pthread_mutex_unlock(&allocation_lock);
