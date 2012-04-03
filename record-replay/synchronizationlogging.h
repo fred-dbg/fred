@@ -46,13 +46,13 @@
 #include "constants.h"
 #include "dmtcpalloc.h"
 #include "util.h"
-#include "dmtcpmodule.h"
+#include "dmtcpplugin.h"
 #include "jfilesystem.h"
 
 #undef WRAPPER_EXECUTION_ENABLE_CKPT
 #undef WRAPPER_EXECUTION_DISABLE_CKPT
-#define WRAPPER_EXECUTION_ENABLE_CKPT dmtcp_module_enable_ckpt
-#define WRAPPER_EXECUTION_DISABLE_CKPT dmtcp_module_disable_ckpt
+#define WRAPPER_EXECUTION_ENABLE_CKPT DMTCP_PLUGIN_ENABLE_CKPT
+#define WRAPPER_EXECUTION_DISABLE_CKPT DMTCP_PLUGIN_DISABLE_CKPT
 typedef long int clone_id_t;
 typedef unsigned long int log_off_t;
 

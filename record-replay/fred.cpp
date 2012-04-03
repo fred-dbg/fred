@@ -221,17 +221,17 @@ EXTERNC void dmtcp_process_event(DmtcpEvent_t event, void* data)
     case DMTCP_EVENT_POST_SUSPEND:
       fred_post_suspend();
       break;
-    case DMTCP_EVENT_POST_CHECKPOINT_RESUME:
+    case DMTCP_EVENT_POST_CKPT_RESUME:
       fred_post_checkpoint_resume();
       break;
     case DMTCP_EVENT_POST_RESTART_RESUME:
       fred_post_restart_resume();
       break;
     case DMTCP_EVENT_PRE_EXIT:
-    case DMTCP_EVENT_PRE_CHECKPOINT:
+    case DMTCP_EVENT_PRE_CKPT:
     case DMTCP_EVENT_POST_LEADER_ELECTION:
     case DMTCP_EVENT_POST_DRAIN:
-    case DMTCP_EVENT_POST_CHECKPOINT:
+    case DMTCP_EVENT_POST_CKPT:
     case DMTCP_EVENT_POST_RESTART:
     default:
       break;
