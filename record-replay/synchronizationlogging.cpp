@@ -28,7 +28,7 @@
 #include <time.h>
 #include <algorithm>
 #include "fred_wrappers.h"
-#include "dmtcpmodule.h"
+#include "dmtcpplugin.h"
 #include "util.h"
 #include  "jassert.h"
 #include  "jtimer.h"
@@ -208,6 +208,7 @@ static bool shouldLogArea(char *area_name)
 
   if (dmtcp::Util::strEndsWith(area_name, "dmtcphijack.so")  ||
       dmtcp::Util::strEndsWith(area_name, "ptracehijack.so") ||
+      dmtcp::Util::strEndsWith(area_name, "pidvirt.so")      ||
       dmtcp::Util::strEndsWith(area_name, "fredhijack.so")   ||
       strstr(area_name, "libmtcp.so.1") != NULL) {
     return false;

@@ -35,6 +35,7 @@ GL_LIBRARY_BLACKLIST_NAMES = ["dmtcphijack",
                               "libmtcp",
                               "fredhijack",
                               "ptracehijack",
+                              "pidvirt",
                               "libc-2",
                               "libpthread-2"]
 gl_library_blacklist_code_ranges = []

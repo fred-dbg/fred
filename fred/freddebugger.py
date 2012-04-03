@@ -671,9 +671,9 @@ class Branch():
         self.add_checkpoint(new_ckpt)
         self.set_current_checkpoint(new_ckpt)
         dmtcpmanager.checkpoint()
-        fredutil.fred_debug(
-            "!! Sleeping after checkpoint (ptrace instability hack)")
-        time.sleep(1)
+        #fredutil.fred_debug(
+        #    "!! Sleeping after checkpoint (ptrace instability hack)")
+        #time.sleep(1)
         fredutil.fred_info("Created checkpoint #%d." %
                            self.get_last_checkpoint().get_index())
         return self.get_last_checkpoint().get_index()
@@ -713,8 +713,8 @@ class Branch():
             self.set_current_checkpoint(self.get_checkpoint(n_index))
         if b_clear_history:
             self.get_current_checkpoint().clear_history()
-        fredutil.fred_debug("!! Sleeping after restart (ptrace instability hack)")
-        time.sleep(1)
+        #fredutil.fred_debug("!! Sleeping after restart (ptrace instability hack)")
+        #time.sleep(1)
     
     def add_checkpoint(self, ckpt):
         """Append the given Checkpoint object to list of checkpoints."""

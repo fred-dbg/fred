@@ -19,7 +19,7 @@
  * along with FReD.  If not, see <http://www.gnu.org/licenses/>.            *
  ****************************************************************************/
 
-#include "dmtcpmodule.h"
+#include "dmtcpplugin.h"
 #include "constants.h"
 #include "jassert.h"
 

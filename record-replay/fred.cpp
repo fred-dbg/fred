@@ -31,7 +31,7 @@
 
 #include "constants.h"
 #include "fred_wrappers.h"
-#include "dmtcpmodule.h"
+#include "dmtcpplugin.h"
 #include "jassert.h"
 #include "jfilesystem.h"
 
