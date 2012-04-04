@@ -113,6 +113,9 @@ def kill_peers():
     else:
         os.waitpid(pid, 0)
 
+    while get_num_peers() != 0:
+        time.sleep(0.01)
+
 def remove_stale_ptrace_files():
     """Until DMTCP/ptrace cleans up its own files, we must clean up
     stale files explicitly."""
