@@ -17,19 +17,19 @@ class Debugger():
         #  Then methods like get_personality_cmd can be abbreviated to get_cmd
         self._p     = personality
         self._state = DebuggerState()
-        self._n_pid = -1
+        self._n_real_pid = -1
 
     def personality_name(self):
         """Return the name of the personality."""
         return self._p.s_name
 
-    def get_debugger_pid(self):
-        """Return the pid of the debugger process."""
-        return self._n_pid
+    def get_real_debugger_pid(self):
+        """Return the real pid of the debugger process."""
+        return self._n_real_pid
 
-    def set_debugger_pid(self, n_pid):
-        """Set the pid of the debugger process."""
-        self._n_pid = n_pid
+    def set_real_debugger_pid(self, n_pid):
+        """Set the real pid of the debugger process."""
+        self._n_real_pid = n_pid
 
     def _next(self, n, b_timeout=False):
         """Perform n 'next' commands. Returns output."""
@@ -164,7 +164,7 @@ class Debugger():
 
     def stop_inferior(self):
         """Sends SIGSTOP to inferior process."""
-        n_pid = fredutil.get_inferior_pid(self.get_debugger_pid())
+        n_pid = fredmanager.get_real_inferior_pid()
         fredutil.fred_assert(n_pid != -1)
         os.kill(n_pid, signal.SIGSTOP)
         # XXX: Figure out a way to avoid using fredio.
@@ -185,7 +185,7 @@ class Debugger():
 
     def interrupt_inferior(self):
         """Sends a ^C to the inferior process."""
-        n_pid = fredutil.get_inferior_pid(self.get_debugger_pid())
+        n_pid = fredmanager.get_real_inferior_pid()
         if n_pid != -1:
             os.kill(n_pid, signal.SIGINT)
 

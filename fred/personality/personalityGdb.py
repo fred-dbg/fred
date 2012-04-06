@@ -26,6 +26,7 @@ import re
 import sys
 import pdb
 
+from .. import fredmanager
 from .. import freddebugger
 from .. import debugger
 from .. import fredio
@@ -118,9 +119,6 @@ class PersonalityGdb(personality.Personality):
         exp = "\$[0-9]+ = (.+)"
         m = re.search(exp, s_printed)
         if m == None:
-            no_symbol_exp = "No symbol.+"
-            if re.search(no_symbol_exp, s_printed) != None:
-                fredutil.fred_assert(False)
             return s_printed
         else:
             return m.group(1)
@@ -264,8 +262,7 @@ class PersonalityGdb(personality.Personality):
     def get_code_addresses(self):
         """Get code ranges from /proc/pid/maps."""
         global gl_library_blacklist_code_ranges
-        n_gdb_pid = fredio.get_child_pid()
-        n_inferior_pid = fredutil.get_inferior_pid(n_gdb_pid)
+        n_inferior_pid = fredmanager.get_real_inferior_pid()
         fredutil.fred_assert(n_inferior_pid != -1,
                              "Error finding inferior pid.")
         permissions_re = "\sr.xp\s" # Matches an executable segment in proc maps

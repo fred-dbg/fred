@@ -338,8 +338,8 @@ def fred_setup():
         # virtualized pid.
         fredutil.fred_assert(g_debugger.personality_name() == "gdb")
         n_inf_pid = int(g_debugger.evaluate_expression("getpid()"))
-        fredmanager.set_inferior_pid(n_inf_pid)
-    g_debugger.set_debugger_pid(fredio.get_child_pid())
+        fredmanager.set_virtual_inferior_pid(n_inf_pid)
+    g_debugger.set_real_debugger_pid(fredio.get_child_pid())
 
 def fred_setup_as_module(l_cmd, s_dmtcp_port, b_debug):
     """Perform setup for FReD when being used as a module, return g_debugger.
@@ -351,7 +351,7 @@ def fred_setup_as_module(l_cmd, s_dmtcp_port, b_debug):
     setup_fredio(l_cmd, True)
     # Since modules won't use the main_io_loop, we perform the debugger setup
     # requiring a debugger prompt here.
-    g_debugger.set_debugger_pid(fredio.get_child_pid())
+    g_debugger.set_real_debugger_pid(fredio.get_child_pid())
     fredio.wait_for_prompt()
     interactive_debugger_setup()
     return g_debugger

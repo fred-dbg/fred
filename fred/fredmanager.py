@@ -22,6 +22,7 @@
 import fredutil
 import dmtcpmanager
 
+import glob
 import os
 import re
 import signal
@@ -30,34 +31,50 @@ GS_FREDHIJACK_NAME = "fredhijack.so"
 GS_FREDHIJACK_PATH = ""
 
 g_child_subprocess = None
-gn_pid = -1
-gn_initial_inf_pid = -1
+gn_real_inferior_pid = -1
+gn_virtual_inferior_pid = -1
 
-def set_inferior_pid(n_pid):
-    """Set the pid of the inferior process."""
-    global gn_pid
-    fredutil.fred_debug("Setting inferior pid to %d." % n_pid)
-    gn_pid = n_pid
+def reset_real_inferior_pid(n_gdb_pid):
+    global gn_real_inferior_pid
+    n_pid = _read_real_inferior_pid(n_gdb_pid)
+    fredutil.fred_debug("Setting real inferior pid to %d." % n_pid)
+    gn_real_inferior_pid = n_pid
 
-def get_inferior_pid():
+def get_real_inferior_pid():
     """Return the pid of the inferior process."""
-    global gn_pid
-    return gn_pid
+    global gn_real_inferior_pid
+    return gn_real_inferior_pid
 
-def set_initial_inferior_pid(n_pid):
-    """Set the initial (i.e. virtualized) pid of the inferior."""
-    global gn_initial_inf_pid
-    fredutil.fred_debug("Setting initial inferior pid to %d." % n_pid)
-    gn_initial_inf_pid = n_pid
+def set_virtual_inferior_pid(n_pid):
+    """Set the virtual pid of the inferior."""
+    global gn_virtual_inferior_pid
+    fredutil.fred_debug("Setting virtual inferior pid to %d." % n_pid)
+    gn_virtual_inferior_pid = n_pid
 
-def get_initial_inferior_pid():
-    """Return the initial (i.e. virtualized) pid of the inferior."""
-    global gn_initial_inf_pid
-    return gn_initial_inf_pid
+def get_virtual_inferior_pid():
+    """Return the virtual pid of the inferior."""
+    global gn_virtual_inferior_pid
+    return gn_virtual_inferior_pid
     
+def _read_real_inferior_pid(n_gdb_pid):
+    """Given the pid of gdb, return the pid of the inferior or -1 on error.
+    This is inefficiently implemented by scanning entries in /proc."""
+    l_pid_dirs = glob.glob("/proc/[0-9]*")
+    for pid_dir in l_pid_dirs:
+        n_pid = fredutil.to_int(re.search("/proc/([0-9]+).*", pid_dir).group(1))
+        try:
+            f = open(pid_dir + "/stat")
+        except IOError:
+            continue
+        n_ppid = fredutil.to_int(f.read().split()[3])
+        f.close()
+        if n_ppid == n_gdb_pid:
+            return n_pid
+    return -1
+
 def kill_inferior():
     """Kill the inferior process, if it exists."""
-    n_pid = get_inferior_pid()
+    n_pid = get_real_inferior_pid()
     if n_pid == -1:
         return
     try:
@@ -85,9 +102,9 @@ def _execute_fred_command(s_cmd, s_arg=None):
     global g_child_subprocess
     fredutil.fred_assert(s_cmd in ["status", "info", "break", "continue"])
     l_cmd = ["%s/fred_command" % GS_FREDHIJACK_PATH]
-    fredutil.fred_assert(get_initial_inferior_pid() != -1)
+    fredutil.fred_assert(get_virtual_inferior_pid() != -1)
     s_path = "%s/fred-shm.%d" % (os.environ["DMTCP_TMPDIR"],
-                                 get_initial_inferior_pid())
+                                 get_virtual_inferior_pid())
     l_cmd.append("--%s" % s_cmd)
     if s_arg != None:
         l_cmd.append(s_arg)
@@ -103,9 +120,10 @@ def _execute_fred_command(s_cmd, s_arg=None):
 
 def destroy():
     """Perform any cleanup associated with the fred manager."""
+    global gn_real_inferior_pid
     g_child_subprocess = None
-    set_inferior_pid(-1)
-    set_initial_inferior_pid(-1)
+    gn_real_inferior_pid = -1
+    set_virtual_inferior_pid(-1)
 
 def set_fred_breakpoint(n_index):
     """Set a FReD internal breakpoint on entry index n_index."""

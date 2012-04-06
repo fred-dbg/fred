@@ -119,6 +119,9 @@ class ThreadedOutput(threading.Thread):
                         if g_find_prompt_function(gs_last_printed):
                             _reset_last_printed()
                             g_capture_output_event.set()
+                            # Make sure to set the event, as we did
+                            # find the prompt.
+                            g_prompt_ready_event.set()
                     else:
                         _reset_last_printed()
                         g_capture_output_event.set()

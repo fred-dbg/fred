@@ -197,19 +197,3 @@ def execute_background_shell_command(l_cmd):
     p = subprocess.Popen(l_cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                          stderr=subprocess.STDOUT, close_fds=True)
     return p
-
-def get_inferior_pid(n_gdb_pid):
-    """Given the pid of gdb, return the pid of the inferior or -1 on error.
-    This is inefficiently implemented by scanning entries in /proc."""
-    l_pid_dirs = glob.glob("/proc/[0-9]*")
-    for pid_dir in l_pid_dirs:
-        n_pid = to_int(re.search("/proc/([0-9]+).*", pid_dir).group(1))
-        try:
-            f = open(pid_dir + "/stat")
-        except IOError:
-            continue
-        n_ppid = to_int(f.read().split()[3])
-        f.close()
-        if n_ppid == n_gdb_pid:
-            return n_pid
-    return -1
