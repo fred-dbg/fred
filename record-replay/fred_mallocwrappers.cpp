@@ -243,7 +243,7 @@ static void my_free_hook (void *ptr, const void *caller)
   MALLOC_FAMILY_WRAPPER_HEADER_TYPED(void*, name, __VA_ARGS__)
 
 #define MALLOC_FAMILY_WRAPPER_REPLAY_START(name)                        \
-  unsigned waitRet = waitForAllocTurn(&my_entry, &name##_turn_check);
+  waitForAllocTurn(&my_entry, &name##_turn_check);
 
 #define MALLOC_FAMILY_WRAPPER_REPLAY_END(name)                          \
   WRAPPER_REPLAY_END(name)
@@ -252,28 +252,24 @@ static void my_free_hook (void *ptr, const void *caller)
   MALLOC_FAMILY_WRAPPER_HEADER_TYPED(ret_type, name, __VA_ARGS__);      \
   do {                                                                  \
     if (SYNC_IS_REPLAY) {                                               \
-      MALLOC_FAMILY_WRAPPER_REPLAY_START(name);                         \
-      retval = _real_ ## name(__VA_ARGS__);                             \
-      if (waitRet) {                                                    \
-        /* We found the optional event; now wait for the main event. */ \
-        MALLOC_FAMILY_WRAPPER_REPLAY_START(name);                       \
-      }                                                                 \
-      void *savedRetval = GET_COMMON(my_entry, retval);                 \
-      if (retval != savedRetval) {                                      \
-        JTRACE ( #name " returned wrong address on replay" )            \
-          ( retval ) ( savedRetval ) (global_log.currentEntryIndex());  \
-        while (1);                                                      \
-      }                                                                 \
-      MALLOC_FAMILY_WRAPPER_REPLAY_END(name);                           \
+      WRAPPER_REPLAY_START_TYPED(ret_type, name);                       \
+      _real_pthread_mutex_lock(&allocation_lock);                       \
+      WRAPPER_REPLAY_END(name);                                         \
+      ret_type new_retval = _real_ ## name(__VA_ARGS__);                \
+      _real_pthread_mutex_unlock(&allocation_lock);                     \
+      JASSERT (new_retval == retval)                                    \
+        ( retval ) ( new_retval ) (global_log.currentEntryIndex())      \
+        .Text ( #name " returned wrong address on replay" );            \
     } else if (SYNC_IS_RECORD) {                                        \
       _real_pthread_mutex_lock(&allocation_lock);                       \
+      WRAPPER_LOG_WRITE_ENTRY(my_entry);                                \
       bool savedIsOptionalEvent = isOptionalEvent;                      \
       isOptionalEvent = true;                                           \
       retval = _real_ ## name(__VA_ARGS__);                             \
       isOptionalEvent = savedIsOptionalEvent;                           \
-      SET_COMMON2(my_entry, retval, (void *)retval);			\
-      SET_COMMON2(my_entry, my_errno, errno);				\
-      WRAPPER_LOG_WRITE_ENTRY(my_entry);                                \
+      SET_COMMON2(my_entry, retval, (void *)retval);                    \
+      SET_COMMON2(my_entry, my_errno, errno);                           \
+      WRAPPER_LOG_UPDATE_ENTRY(my_entry);                               \
       _real_pthread_mutex_unlock(&allocation_lock);                     \
     }                                                                   \
   } while(0)
@@ -500,7 +496,6 @@ extern "C" int munmap(void *addr, size_t length)
 
 // When exactly did the declaration of /usr/include/sys/mman.h change?
 // (The extra parameter was created for the sake of MREMAP_FIXED.)
-# if __GLIBC_PREREQ (2,4)
 extern "C" void *mremap(void *old_address, size_t old_size,
                         size_t new_size, int flags, ...)
 {
@@ -529,30 +524,6 @@ extern "C" void *mremap(void *old_address, size_t old_size,
   }
   return retval;
 }
-# else
-extern "C" void *mremap(void *old_address, size_t old_size,
-    size_t new_size, int flags)
-{
-
-  MALLOC_FAMILY_WRAPPER_HEADER(mremap, old_address, old_size, new_size, flags,
-			       NULL);
-  if (SYNC_IS_REPLAY) {
-    MALLOC_FAMILY_WRAPPER_REPLAY_START(mremap);
-    void *addr = GET_COMMON(my_entry, retval);
-    flags |= MREMAP_MAYMOVE;
-    JASSERT(!isPartOfAddrRangeAlreadyMmapped(addr, new_size));
-    retval = _real_mremap (old_address, old_size, new_size, flags, addr);
-    JASSERT ( retval == GET_COMMON(my_entry, retval) );
-    MALLOC_FAMILY_WRAPPER_REPLAY_END(mremap);
-  } else if (SYNC_IS_RECORD) {
-    _real_pthread_mutex_lock(&mmap_lock);
-    retval = _real_mremap (old_address, old_size, new_size, flags, 0);
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
-    _real_pthread_mutex_unlock(&mmap_lock);
-  }
-  return retval;
-}
-# endif
 
 /*
 extern "C" void *mmap2(void *addr, size_t length, int prot,

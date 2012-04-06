@@ -2539,6 +2539,5 @@ CREATE_ENTRY_FUNC(user);
 LIB_PRIVATE log_entry_t create_exec_barrier_entry();
 
 LIB_PRIVATE void waitForTurn(log_entry_t *my_entry, turn_pred_t pred);
-LIB_PRIVATE unsigned waitForAllocTurn(log_entry_t *my_entry, turn_pred_t pred);
 LIB_PRIVATE void waitForExecBarrier();
 #endif // SYNCHRONIZATION_LOGGING_H
