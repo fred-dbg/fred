@@ -2,6 +2,7 @@ import signal
 import os
 
 import fredutil
+import fredmanager
 
 class Debugger():
     """Represents control and management of an actual debugger.
