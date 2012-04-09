@@ -42,6 +42,7 @@
 #include <net/if.h>
 #include <netdb.h>
 #include <signal.h>
+#include <semaphore.h>
 
 #include "constants.h"
 #include "dmtcpalloc.h"
@@ -2279,8 +2280,10 @@ static const int         GLOBAL_CLONE_COUNTER_INIT = 1;
 static const int         RECORD_LOG_PATH_MAX = 256;
 
 /* Library private: */
+typedef struct new_sem new_sem_t;
 LIB_PRIVATE extern dmtcp::map<clone_id_t, pthread_t> *clone_id_to_tid_table;
 LIB_PRIVATE extern dmtcp::map<pthread_t, clone_id_t> *tid_to_clone_id_table;
+LIB_PRIVATE extern dmtcp::map<clone_id_t, sem_t>     *clone_id_to_sem_table;
 LIB_PRIVATE extern dmtcp::map<pthread_t, pthread_join_retval_t> pthread_join_retvals;
 LIB_PRIVATE extern char RECORD_LOG_PATH[RECORD_LOG_PATH_MAX];
 LIB_PRIVATE extern char RECORD_READ_DATA_LOG_PATH[RECORD_LOG_PATH_MAX];
@@ -2293,7 +2296,6 @@ LIB_PRIVATE extern dmtcp::SynchronizationLog global_log;
 
 // TODO: rename this, since a log entry is not a char. maybe log_event_TYPE_SIZE?
 #define LOG_ENTRY_SIZE sizeof(char)
-LIB_PRIVATE extern pthread_mutex_t global_clone_counter_mutex;
 
 /* Thread locals: */
 LIB_PRIVATE extern __thread clone_id_t my_clone_id;
@@ -2309,6 +2311,7 @@ LIB_PRIVATE extern volatile off_t         read_log_pos;
 LIB_PRIVATE void   addNextLogEntry(log_entry_t&);
 LIB_PRIVATE void   set_sync_mode(int mode);
 LIB_PRIVATE int    get_sync_mode();
+LIB_PRIVATE clone_id_t get_next_clone_id();
 LIB_PRIVATE void   copyFdSet(fd_set *src, fd_set *dest);
 LIB_PRIVATE void   getNextLogEntry();
 LIB_PRIVATE void   initializeLogNames();

@@ -44,6 +44,7 @@
 /* Library private: */
 LIB_PRIVATE dmtcp::map<clone_id_t, pthread_t> *clone_id_to_tid_table = NULL;
 LIB_PRIVATE dmtcp::map<pthread_t, clone_id_t> *tid_to_clone_id_table = NULL;
+LIB_PRIVATE dmtcp::map<clone_id_t, sem_t>     *clone_id_to_sem_table = NULL;
 LIB_PRIVATE dmtcp::map<pthread_t, pthread_join_retval_t> pthread_join_retvals;
 LIB_PRIVATE char RECORD_LOG_PATH[RECORD_LOG_PATH_MAX];
 LIB_PRIVATE char RECORD_READ_DATA_LOG_PATH[RECORD_LOG_PATH_MAX];
@@ -53,7 +54,6 @@ LIB_PRIVATE int             sync_logging_branch = 0;
 /* Setting this will log/replay *ALL* malloc family
    functions (i.e. including ones from DMTCP, std C++ lib, etc.). */
 LIB_PRIVATE int             log_all_allocs = 0;
-LIB_PRIVATE pthread_mutex_t global_clone_counter_mutex = PTHREAD_MUTEX_INITIALIZER;
 LIB_PRIVATE pthread_mutex_t read_data_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 LIB_PRIVATE dmtcp::SynchronizationLog global_log;
@@ -124,7 +124,7 @@ int get_sync_mode()
   return sync_logging_branch;
 }
 
-static inline clone_id_t get_next_clone_id()
+clone_id_t get_next_clone_id()
 {
   return __sync_fetch_and_add (&global_clone_counter, 1);
 }
@@ -314,7 +314,9 @@ void copyFdSet(fd_set *src, fd_set *dest)
 LIB_PRIVATE void initialize_thread()
 {
   /* Assigning my_clone_id should be the very first thing.*/
-  my_clone_id = global_clone_counter++;
+  if (my_clone_id == -1) {
+    my_clone_id = get_next_clone_id();
+  }
   JTRACE ( "Thread start initialization." ) ( my_clone_id );
 
   pid_t clone_id = my_clone_id;
@@ -350,6 +352,7 @@ void addNextLogEntry(log_entry_t& e)
   }
 }
 
+clone_id_t nextThread = -1;
 void getNextLogEntry()
 {
   if (my_clone_id == -1) {
@@ -362,6 +365,17 @@ void getNextLogEntry()
   if (global_log.advanceToNextEntry() == 0) {
     JTRACE ( "Switching back to record." );
     set_sync_mode(SYNC_RECORD);
+  } else {
+    log_entry_t temp_entry = EMPTY_LOG_ENTRY;
+    global_log.getCurrentEntry(temp_entry);
+    clone_id_t clone_id = GET_COMMON(temp_entry, clone_id);
+    nextThread = clone_id;
+    sem_t& sem = (*clone_id_to_sem_table)[clone_id];
+    JTRACE("Posting") (clone_id) (my_clone_id);
+    sem_post(&sem);
+    int val;
+    sem_getvalue(&sem, &val);
+    JTRACE("After Posting") (clone_id) (val);
   }
 }
 
@@ -3392,6 +3406,8 @@ static void execute_optional_event(int opt_event_num)
   }
 }
 
+clone_id_t waitThread=-1;
+
 /* Waits until the head of the log contains an entry matching pertinent fields
    of 'my_entry'. When it does, 'my_entry' is modified to point to the head of
    the log. */
@@ -3405,7 +3421,15 @@ void waitForTurn(log_entry_t *my_entry, turn_pred_t pred)
     SET_COMMON_PTR2(my_entry, clone_id, my_clone_id);
   }
   while (1) {
+    JASSERT(clone_id_to_sem_table->find(my_clone_id) != clone_id_to_sem_table->end())
+      (my_clone_id);
+    sem_t& sem = (*clone_id_to_sem_table)[my_clone_id];
+    sem_wait(&sem);
+    JTRACE("WAIT REturned") (my_clone_id);
+    waitThread = my_clone_id;
     global_log.getCurrentEntry(temp_entry);
+    JASSERT(GET_COMMON(temp_entry, clone_id) == my_clone_id)
+      (GET_COMMON(temp_entry, clone_id)) (my_clone_id);
     if ((*pred)(&temp_entry, my_entry))
       break;
     /* Also check for an optional event for this clone_id. */
@@ -3416,11 +3440,9 @@ void waitForTurn(log_entry_t *my_entry, turn_pred_t pred)
                                  false)) {
         JASSERT(false);
       }
+      sem_post(&sem);
       execute_optional_event(GET_COMMON(temp_entry, event));
     }
-
-    memfence();
-    usleep(1);
   }
 
   global_log.getCurrentEntry(*my_entry);

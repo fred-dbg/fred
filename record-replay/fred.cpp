@@ -65,15 +65,19 @@ static void recordReplayInit()
      counter. */
   JTRACE ( "resetting global clone counter." );
   global_clone_counter = GLOBAL_CLONE_COUNTER_INIT;
-  my_clone_id = global_clone_counter;
+  my_clone_id = get_next_clone_id();
 
   clone_id_to_tid_table = new dmtcp::map<clone_id_t, pthread_t>;
   tid_to_clone_id_table = new dmtcp::map<pthread_t, clone_id_t>;
+  clone_id_to_sem_table = new dmtcp::map<clone_id_t, sem_t>;
 
   clone_id_to_tid_table->clear();
   tid_to_clone_id_table->clear();
+  clone_id_to_sem_table->clear();
 
   initialize_thread();
+  clone_id_t ckpt_thread_id = get_next_clone_id();
+  sem_init(&(*clone_id_to_sem_table)[my_clone_id], 0, 0);
 
   /* Other initialization for sync log/replay specific to this process. */
   initializeLogNames();
@@ -165,6 +169,7 @@ void fred_post_suspend ()
     }
     for (size_t i = 0; i < stale_clone_ids.size(); i++) {
       clone_id_to_tid_table->erase(stale_clone_ids[i]);
+      clone_id_to_sem_table->erase(stale_clone_ids[i]);
     }
   }
 }
@@ -188,6 +193,9 @@ void fred_post_restart_resume()
   if (global_log.getCurrentEntry(temp_entry) == 0) {
     // If no log entries, go back to RECORD.
     set_sync_mode(SYNC_RECORD);
+  } else {
+    clone_id_t clone_id = GET_COMMON(temp_entry, clone_id);
+    sem_post(&(*clone_id_to_sem_table)[clone_id]);
   }
   log_all_allocs = 1;
 }
@@ -197,12 +205,9 @@ void fred_reset_on_fork()
   // This is called only on fork() by the new child process. We reset the
   // global clone counter for this process, assign the first thread (this one)
   // clone_id 1, and increment the counter.
-  _real_pthread_mutex_lock(&global_clone_counter_mutex);
   JTRACE ( "resetting global counter in new process." );
   global_clone_counter = GLOBAL_CLONE_COUNTER_INIT;
-  my_clone_id = global_clone_counter;
-  global_clone_counter++;
-  _real_pthread_mutex_unlock(&global_clone_counter_mutex);
+  my_clone_id = get_next_clone_id();
 
   // Perform other initialization for sync log/replay specific to this process.
   initSyncAddresses();

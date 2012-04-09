@@ -397,6 +397,10 @@ static int internal_pthread_create(pthread_t *thread,
     WRAPPER_REPLAY_END(pthread_create);
 
     ACQUIRE_THREAD_CREATE_DESTROY_LOCK();
+    //sem_t sem;
+    clone_id_t tid = global_clone_counter;
+    //(*clone_id_to_sem_table)[tid] = sem;
+    sem_init(&(*clone_id_to_sem_table)[tid], 0, 0);
     // Set up thread stacks to how they were at record time.
     pthread_attr_init(&the_attr);
 
@@ -672,6 +676,7 @@ static void reapThread()
       tid_to_clone_id_table->end()) {
     cid_to_reap = tid_to_clone_id_table->find(thread_to_reap)->second;
     clone_id_to_tid_table->erase(cid_to_reap);
+    clone_id_to_sem_table->erase(cid_to_reap);
   }
   tid_to_clone_id_table->erase(thread_to_reap);
 
