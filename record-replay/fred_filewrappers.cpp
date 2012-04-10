@@ -856,7 +856,7 @@ extern "C" FILE *freopen(const char* path, const char* mode, FILE *stream)
 
 extern "C" FILE *tmpfile()
 {
-  WRAPPER_HEADER_NO_ARGS(FILE *, tmpfile, _real_tmpfile);
+  WRAPPER_HEADER(FILE *, tmpfile, _real_tmpfile);
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_START_TYPED(FILE*, tmpfile);
     if (retval != NULL) {

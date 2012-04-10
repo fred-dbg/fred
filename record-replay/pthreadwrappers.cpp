@@ -944,7 +944,7 @@ extern "C" long int random()
 
 extern "C" int rand()
 {
-  WRAPPER_HEADER_NO_ARGS(int, rand, _real_rand);
+  WRAPPER_HEADER(int, rand, _real_rand);
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY(rand);
   } else if (SYNC_IS_RECORD) {

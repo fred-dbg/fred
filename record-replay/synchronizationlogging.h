@@ -130,16 +130,6 @@ LIB_PRIVATE extern __thread int mmap_no_sync;
     }                                                                   \
   } while(0)
 
-#define WRAPPER_HEADER_NO_ARGS(ret_type, name, real_func)                  \
-  void *return_addr = GET_RETURN_ADDRESS();                             \
-  if (!shouldSynchronize(return_addr) ||                                \
-      jalib::Filesystem::GetProgramName() == "gdb") {                   \
-    return real_func();                                             \
-  }                                                                     \
-  ret_type retval;                                                      \
-  log_entry_t my_entry = create_##name##_entry(my_clone_id,             \
-      name##_event);
-
 #define WRAPPER_HEADER_NO_RETURN(name, real_func, ...)                  \
   void *return_addr = GET_RETURN_ADDRESS();                             \
   if (!shouldSynchronize(return_addr) || isProcessGDB()) {              \
@@ -149,10 +139,10 @@ LIB_PRIVATE extern __thread int mmap_no_sync;
       name##_event, __VA_ARGS__);
 
 #define WRAPPER_HEADER(ret_type, name, real_func, ...)                  \
-  WRAPPER_HEADER_RAW(ret_type, name, real_func, __VA_ARGS__);           \
+  WRAPPER_HEADER_RAW(ret_type, name, real_func, ##__VA_ARGS__);         \
   ret_type retval;                                                      \
   log_entry_t my_entry = create_##name##_entry(my_clone_id,             \
-      name##_event, __VA_ARGS__);
+      name##_event, ##__VA_ARGS__);
 
 #define WRAPPER_HEADER_CKPT_DISABLED(ret_type, name, real_func, ...)    \
   void *return_addr = GET_RETURN_ADDRESS();                             \
