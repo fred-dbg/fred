@@ -1447,6 +1447,16 @@ log_entry_t create_readlink_entry(clone_id_t clone_id, event_code_t event,
   return e;
 }
 
+log_entry_t create_realpath_entry(clone_id_t clone_id, event_code_t event,
+                                  const char *path, char *resolved_path)
+{
+  log_entry_t e = EMPTY_LOG_ENTRY;
+  setupCommonFields(&e, clone_id, event);
+  SET_FIELD2(e, realpath, path, (char*) path);
+  SET_FIELD(e, realpath, resolved_path);
+  return e;
+}
+
 log_entry_t create_realloc_entry(clone_id_t clone_id, event_code_t event,
     void *ptr, size_t size)
 {
@@ -2111,6 +2121,13 @@ TURN_CHECK_P(readlink_turn_check)
   return base_turn_check(e1, e2) &&
     ARE_FIELDS_EQUAL_PTR(e1, e2, readlink, path) &&
     ARE_FIELDS_EQUAL_PTR(e1, e2, readlink, bufsiz);
+}
+
+TURN_CHECK_P(realpath_turn_check)
+{
+  return base_turn_check(e1, e2) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, realpath, path) &&
+    ARE_FIELDS_EQUAL_PTR(e1, e2, realpath, resolved_path);
 }
 
 TURN_CHECK_P(unlink_turn_check)

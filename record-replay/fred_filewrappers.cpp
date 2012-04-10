@@ -981,6 +981,30 @@ extern "C" READLINK_RET_TYPE readlink(const char *path, char *buf,
   return retval;
 }
 
+extern "C" char *realpath(const char *path, char *resolved_path)
+{
+  WRAPPER_HEADER(char *, realpath, _real_realpath, path, resolved_path);
+  if (SYNC_IS_REPLAY) {
+    WRAPPER_REPLAY_START_TYPED(char*, realpath);
+    if (retval != NULL) {
+      int len = GET_FIELD(my_entry, realpath, len);
+      WRAPPER_REPLAY_READ_FROM_READ_LOG(readlink, retval, len);
+    }
+    WRAPPER_REPLAY_END(realpath);
+  } else if (SYNC_IS_RECORD) {
+    isOptionalEvent = true;
+    retval = _real_realpath(path, resolved_path);
+    isOptionalEvent = false;
+    if (retval != NULL) {
+      int len = strlen(retval);
+      SET_FIELD(my_entry, realpath, len);
+      WRAPPER_LOG_WRITE_INTO_READ_LOG(realpath, retval, len);
+    }
+    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+  }
+  return retval;
+}
+
 extern "C" int select(int nfds, fd_set *readfds, fd_set *writefds,
                       fd_set *exceptfds, struct timeval *timeout)
 {

@@ -742,6 +742,13 @@ void print_log_entry_readlink(int idx, log_entry_t *entry) {
          GET_FIELD_PTR(entry, readlink, bufsiz));
 }
 
+void print_log_entry_realpath(int idx, log_entry_t *entry) {
+  print_log_entry_common(idx, entry);
+  printf(", path:%p, resolved_path:%p\n",
+         GET_FIELD_PTR(entry, realpath, path),
+         GET_FIELD_PTR(entry, realpath, resolved_path));
+}
+
 void print_log_entry_realloc(int idx, log_entry_t *entry) {
   print_log_entry_common(idx, entry);
   printf(", size=%zu, ptr=%p\n",

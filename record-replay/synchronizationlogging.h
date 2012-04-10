@@ -510,6 +510,14 @@ typedef struct {
 } log_event_readlink_t;
 
 typedef struct {
+  // For realpath():
+  const char *path;
+  char *resolved_path;
+  size_t len;
+  off_t data_offset;
+} log_event_realpath_t;
+
+typedef struct {
   // For unlink():
   char *pathname;
 } log_event_unlink_t;

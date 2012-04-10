@@ -171,6 +171,7 @@ extern "C"
   MACRO(struct dirent*, readdir, DIR *dirp) \
   MACRO(int, readdir_r, DIR *dirp, struct dirent *entry, struct dirent **result) \
   MACRO(ssize_t, readlink, const char *path, char *buf, size_t bufsiz) \
+  MACRO(char*, realpath, const char *path, char *resolved_path) \
   MACRO(void*, realloc, void *ptr, size_t size) \
   MACRO(int, rename, const char *oldpath, const char *newpath) \
   MACRO(void, rewind, FILE *stream) \

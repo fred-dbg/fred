@@ -424,6 +424,11 @@ ssize_t _real_readlink(const char *path, char *buf, size_t bufsiz) {
 }
 
 LIB_PRIVATE
+char *_real_realpath(const char *path, char *resolved_path) {
+  REAL_FUNC_PASSTHROUGH_TYPED (char*, realpath) (path, resolved_path);
+}
+
+LIB_PRIVATE
 int _real_pthread_join(pthread_t thread, void **value_ptr) {
   REAL_FUNC_PASSTHROUGH_TYPED ( int, pthread_join ) ( thread, value_ptr );
 }

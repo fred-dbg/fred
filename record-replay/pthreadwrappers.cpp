@@ -1030,6 +1030,16 @@ extern "C" int utimes(const char *filename, const struct timeval *times)
   BASIC_SYNC_WRAPPER(int, utimes, _real_utimes, filename, times);
 }
 
+extern "C" int futimes(int fd, const struct timeval tv[2])
+{
+  BASIC_SYNC_WRAPPER(int, futimes, _real_futimes, fd, tv);
+}
+
+extern "C" int lutimes(const char *filename, const struct timeval tv[2])
+{
+  BASIC_SYNC_WRAPPER(int, lutimes, _real_lutimes, filename, tv);
+}
+
 extern "C" struct tm *localtime(const time_t *timep)
 {
   static struct tm result;
