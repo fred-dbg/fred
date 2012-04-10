@@ -194,7 +194,16 @@ void fred_post_restart_resume()
     // If no log entries, go back to RECORD.
     set_sync_mode(SYNC_RECORD);
   } else {
+    dmtcp::map<clone_id_t, pthread_t>::iterator it;
+    for (it = clone_id_to_tid_table->begin();
+         it != clone_id_to_tid_table->end();
+         it++) {
+      clone_id_t id = it->first;
+      sem_t sem;
+      sem_init(&(*clone_id_to_sem_table)[id], 0, 0);
+    }
     clone_id_t clone_id = GET_COMMON(temp_entry, clone_id);
+    JTRACE("Posting") (clone_id) (my_clone_id);
     sem_post(&(*clone_id_to_sem_table)[clone_id]);
   }
   log_all_allocs = 1;
