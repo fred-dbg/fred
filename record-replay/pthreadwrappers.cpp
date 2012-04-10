@@ -39,8 +39,6 @@
 #include "log.h"
 #include "fred_wrappers.h"
 
-#include "fred_wrappers.h"
-
 static void *thread_reaper(void *arg);
 static void create_reaper_thread();
 static pthread_t reaperThread;

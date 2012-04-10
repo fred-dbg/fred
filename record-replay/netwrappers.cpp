@@ -27,8 +27,8 @@
  */
 #include <unistd.h>
 extern "C" int getnameinfo(const struct sockaddr *sa, socklen_t salen,
-                           char *host, socklen_t hostlen,
-                           char *serv, socklen_t servlen, int flags);
+                           char *host, size_t hostlen,
+                           char *serv, size_t servlen, int flags);
 #define getnameinfo(arg1,arg2,arg3,arg4,arg5,arg6,arg7) \
   dmtcp_getnameinfo_not_used(arg1,arg2,arg3,arg4,arg5,arg6,arg7)
 
@@ -404,8 +404,8 @@ extern "C" void freeaddrinfo(struct addrinfo *res)
 }
 
 extern "C" int getnameinfo(const struct sockaddr *sa, socklen_t salen,
-                           char *host, socklen_t hostlen,
-                           char *serv, socklen_t servlen, int flags)
+                           char *host, size_t hostlen,
+                           char *serv, size_t servlen, int flags)
 {
   WRAPPER_HEADER(int, getnameinfo, _real_getnameinfo, sa, salen, host, hostlen,
                  serv, servlen, flags);

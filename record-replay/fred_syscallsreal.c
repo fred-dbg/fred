@@ -483,17 +483,7 @@ int _real_sigtimedwait(const sigset_t *set, siginfo_t *info,
 }
 
 LIB_PRIVATE
-int _real_ioctl(int d, unsigned long int request, ...) {
-  void * arg;
-  va_list ap;
-
-  // Most calls to ioctl take 'void *', 'int' or no extra argument
-  // A few specialized ones take more args, but we don't need to handle those.
-  va_start(ap, request);
-  arg = va_arg(ap, void *);
-  va_end(ap);
-
-  // /usr/include/unistd.h says syscall returns long int (contrary to man page)
+int _real_ioctl(int d, int request, void *arg) {
   REAL_FUNC_PASSTHROUGH_TYPED ( int, ioctl ) ( d, request, arg );
 }
 
@@ -618,28 +608,12 @@ int   _real_tgkill(int tgid, int tid, int sig) {
 }
 
 LIB_PRIVATE
-int _real_open( const char *pathname, int flags, ...) {
-  mode_t mode = 0;
-  // Handling the variable number of arguments
-  if (flags & O_CREAT) {
-    va_list arg;
-    va_start (arg, flags);
-    mode = va_arg (arg, int);
-    va_end (arg);
-  }
+int _real_open( const char *pathname, int flags, mode_t mode) {
   REAL_FUNC_PASSTHROUGH ( open ) ( pathname, flags, mode );
 }
 
 LIB_PRIVATE
-int _real_open64( const char *pathname, int flags, ...) {
-  mode_t mode = 0;
-  // Handling the variable number of arguments
-  if (flags & O_CREAT) {
-    va_list arg;
-    va_start (arg, flags);
-    mode = va_arg (arg, int);
-    va_end (arg);
-  }
+int _real_open64( const char *pathname, int flags, mode_t mode) {
   REAL_FUNC_PASSTHROUGH ( open ) ( pathname, flags, mode );
 }
 
@@ -1016,47 +990,8 @@ size_t _real_fread(void *ptr, size_t size, size_t nmemb, FILE *stream) {
 }
 
 LIB_PRIVATE
-int _real_fcntl(int fd, int cmd, ...) {
-  va_list ap;
-  // Handling the variable number of arguments
-  long arg_3_l = -1;
-  struct flock *arg_3_f = NULL;
-  va_start( ap, cmd );
-  switch (cmd) {
-  case F_DUPFD:
-  //case F_DUP_FD_CLOEXEC:
-  case F_SETFD:
-  case F_SETFL:
-  case F_SETOWN:
-  case F_SETSIG:
-  case F_SETLEASE:
-  case F_NOTIFY:
-    arg_3_l = va_arg ( ap, long );
-    va_end ( ap );
-    break;
-  case F_GETFD:
-  case F_GETFL:
-  case F_GETOWN:
-  case F_GETSIG:
-  case F_GETLEASE:
-    va_end ( ap );
-    break;
-  case F_SETLK:
-  case F_SETLKW:
-  case F_GETLK:
-    arg_3_f = va_arg ( ap, struct flock *);
-    va_end ( ap );
-    break;
-  default:
-    break;
-  }
-  if (arg_3_l == -1 && arg_3_f == NULL) {
-    REAL_FUNC_PASSTHROUGH_TYPED ( int, fcntl ) ( fd, cmd );
-  } else if (arg_3_l == -1) {
-    REAL_FUNC_PASSTHROUGH_TYPED ( int, fcntl ) ( fd, cmd, arg_3_f);
-  } else {
-    REAL_FUNC_PASSTHROUGH_TYPED ( int, fcntl ) ( fd, cmd, arg_3_l);
-  }
+int _real_fcntl(int fd, int cmd, void *arg) {
+  REAL_FUNC_PASSTHROUGH_TYPED ( int, fcntl ) ( fd, cmd, arg);
 }
 
 LIB_PRIVATE
@@ -1260,8 +1195,8 @@ void _real_freeaddrinfo(struct addrinfo *res) {
 
 LIB_PRIVATE
 int _real_getnameinfo(const struct sockaddr *sa, socklen_t salen,
-                      char *host, socklen_t hostlen,
-                      char *serv, socklen_t servlen, unsigned int flags) {
+                      char *host, size_t hostlen,
+                      char *serv, size_t servlen, int flags) {
   REAL_FUNC_PASSTHROUGH (getnameinfo) (sa, salen, host, hostlen, serv, servlen,
                                        flags);
 }

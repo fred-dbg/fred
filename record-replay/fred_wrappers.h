@@ -383,8 +383,8 @@ LIB_PRIVATE extern __thread int thread_performing_dlopen_dlsym;
   pid_t _real_fork();
   int _real_clone ( int ( *fn ) ( void *arg ), void *child_stack, int flags, void *arg, int *parent_tidptr, struct user_desc *newtls, int *child_tidptr );
 
-  int _real_open(const char *pathname, int flags, ...);
-  int _real_open64(const char *pathname, int flags, ...);
+  int _real_open(const char *pathname, int flags, mode_t mode);
+  int _real_open64(const char *pathname, int flags, mode_t mode);
   FILE* _real_fopen(const char *path, const char *mode);
   FILE* _real_fopen64(const char *path, const char *mode);
   FILE* _real_freopen(const char *path, const char *mode, FILE *stream);
@@ -510,7 +510,7 @@ LIB_PRIVATE extern __thread int thread_performing_dlopen_dlsym;
   int _real_epoll_pwait(int epfd, struct epoll_event *events,
                         int maxevents, int timeout, const sigset_t *sigmask);
 
-  int _real_ioctl(int d,  unsigned long int request, ...) __THROW;
+  int _real_ioctl(int d, int request, void* arg);
   pid_t _real_wait(__WAIT_STATUS stat_loc);
   pid_t _real_waitpid(pid_t pid, int *stat_loc, int options);
   int   _real_waitid(idtype_t idtype, id_t id, siginfo_t *infop, int options);
@@ -573,7 +573,7 @@ LIB_PRIVATE extern __thread int thread_performing_dlopen_dlsym;
   int _real_fputc(int, FILE *stream);
   int _real_ungetc(int c, FILE *stream);
   int _real_putc(int c, FILE *stream);
-  int _real_fcntl(int fd, int cmd, ...);
+  int _real_fcntl(int fd, int cmd, void* arg);
   int _real_fdatasync(int fd);
   int _real_fsync(int fd);
   int _real_fseek(FILE *stream, long offset, int whence);
@@ -637,8 +637,8 @@ LIB_PRIVATE extern __thread int thread_performing_dlopen_dlsym;
   void _real_freeaddrinfo(struct addrinfo *res);
 
   int _real_getnameinfo(const struct sockaddr *sa, socklen_t salen,
-                        char *host, socklen_t hostlen,
-                        char *serv, socklen_t servlen, unsigned int flags);
+                        char *host, size_t hostlen,
+                        char *serv, size_t servlen, int flags);
 
   ssize_t _real_sendto(int sockfd, const void *buf, size_t len, int flags,
                        const struct sockaddr *dest_addr, socklen_t addrlen);

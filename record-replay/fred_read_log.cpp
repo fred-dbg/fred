@@ -201,11 +201,10 @@ void print_log_entry_fchdir(int idx, log_entry_t *entry) {
 
 void print_log_entry_fcntl(int idx, log_entry_t *entry) {
   print_log_entry_common(idx, entry);
-  printf(", fd=%d, cmd=%d, arg_3_l=%ld, arg_3_f=%p\n",
+  printf(", fd=%d, cmd=%d, arg_3=%p\n",
          GET_FIELD_PTR(entry, fcntl, fd),
          GET_FIELD_PTR(entry, fcntl, cmd),
-         GET_FIELD_PTR(entry, fcntl, arg_3_l),
-         GET_FIELD_PTR(entry, fcntl, arg_3_f));
+         GET_FIELD_PTR(entry, fcntl, arg));
 }
 
 void print_log_entry_fdatasync(int idx, log_entry_t *entry) {

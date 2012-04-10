@@ -313,16 +313,7 @@ pid_t _real_wait4(pid_t pid, __WAIT_STATUS status, int options, struct rusage *r
 }
 
 int send_sigwinch; /* not used.  Only version in pidwrappers.cpp is used */
-int _real_ioctl(int d, unsigned long int request, ...) {
-  void * arg;
-  va_list ap;
-
-  // Most calls to ioctl take 'void *', 'int' or no extra argument
-  // A few specialized ones take more args, but we don't need to handle those.
-  va_start(ap, request);
-  arg = va_arg(ap, void *);
-  va_end(ap);
-
+int _real_ioctl(int d, unsigned long int request, void *arg) {
   // /usr/include/unistd.h says syscall returns long int (contrary to man page)
   REAL_FUNC_PASSTHROUGH_TYPED ( int, ioctl ) ( d, request, arg );
 }
@@ -355,27 +346,11 @@ pid_t _real_gettid(void){
 #endif
 }
 
-int _real_open ( const char *pathname, int flags, ... ) {
-  mode_t mode = 0;
-  // Handling the variable number of arguments
-  if (flags & O_CREAT) {
-    va_list arg;
-    va_start (arg, flags);
-    mode = va_arg (arg, int);
-    va_end (arg);
-  }
+int _real_open ( const char *pathname, int flags, mode_t mode) {
   REAL_FUNC_PASSTHROUGH ( open ) ( pathname, flags, mode );
 }
 
-int _real_open64 ( const char *pathname, int flags, ... ) {
-  mode_t mode = 0;
-  // Handling the variable number of arguments
-  if (flags & O_CREAT) {
-    va_list arg;
-    va_start (arg, flags);
-    mode = va_arg (arg, int);
-    va_end (arg);
-  }
+int _real_open64 ( const char *pathname, int flags, mode_t mode) {
   REAL_FUNC_PASSTHROUGH ( open ) ( pathname, flags, mode );
 }
 

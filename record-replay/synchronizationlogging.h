@@ -49,6 +49,7 @@
 #include "util.h"
 #include "dmtcpplugin.h"
 #include "jfilesystem.h"
+#include "fred_wrappers.h"
 
 #undef WRAPPER_EXECUTION_ENABLE_CKPT
 #undef WRAPPER_EXECUTION_DISABLE_CKPT
@@ -1050,8 +1051,7 @@ typedef struct {
   // For fcntl():
   int fd;
   int cmd;
-  long arg_3_l;
-  struct flock *arg_3_f;
+  void *arg;
   struct flock ret_flock;
 } log_event_fcntl_t;
 
@@ -2363,7 +2363,7 @@ CREATE_ENTRY_FUNC(connect, int sockfd,
 CREATE_ENTRY_FUNC(dup, int oldfd);
 CREATE_ENTRY_FUNC(dup2, int oldfd, int newfd);
 CREATE_ENTRY_FUNC(dup3, int oldfd, int newfd, int flags);
-CREATE_ENTRY_FUNC(fcntl, int fd, int cmd, long arg_3_l, struct flock *arg_3_f);
+CREATE_ENTRY_FUNC(fcntl, int fd, int cmd, void *arg);
 CREATE_ENTRY_FUNC(fclose, FILE *fp);
 CREATE_ENTRY_FUNC(fchdir, int fd);
 CREATE_ENTRY_FUNC(fdatasync, int fd);
@@ -2455,7 +2455,7 @@ CREATE_ENTRY_FUNC(pthread_create,
                   void *(*start_routine)(void*), void *arg);
 CREATE_ENTRY_FUNC(pthread_detach, pthread_t thread);
 CREATE_ENTRY_FUNC(pthread_exit, void *value_ptr);
-CREATE_ENTRY_FUNC(pthread_join, pthread_t thread, void *value_ptr);
+CREATE_ENTRY_FUNC(pthread_join, pthread_t thread, void **value_ptr);
 CREATE_ENTRY_FUNC(pthread_kill, pthread_t thread, int sig);
 CREATE_ENTRY_FUNC(pthread_mutex_lock, pthread_mutex_t *mutex);
 CREATE_ENTRY_FUNC(pthread_mutex_trylock, pthread_mutex_t *mutex);
@@ -2517,7 +2517,7 @@ CREATE_ENTRY_FUNC(getaddrinfo, const char *node, const char *service,
                   const struct addrinfo *hints, struct addrinfo **res);
 CREATE_ENTRY_FUNC(freeaddrinfo, struct addrinfo *res);
 CREATE_ENTRY_FUNC(getnameinfo, const struct sockaddr *sa, socklen_t salen,
-                  char *host, socklen_t hostlen, char *serv, socklen_t servlen,
+                  char *host, size_t hostlen, char *serv, size_t servlen,
                   int flags);
 
 CREATE_ENTRY_FUNC(sendto, int sockfd, const void *buf, size_t len, int flags,

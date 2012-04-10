@@ -556,15 +556,14 @@ log_entry_t create_fchdir_entry(clone_id_t clone_id, event_code_t event, int fd)
   return e;
 }
 
-log_entry_t create_fcntl_entry(clone_id_t clone_id, event_code_t event, int fd, int cmd,
-    long arg_3_l, struct flock *arg_3_f)
+log_entry_t create_fcntl_entry(clone_id_t clone_id, event_code_t event,
+                               int fd, int cmd, void *arg)
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
   SET_FIELD(e, fcntl, fd);
   SET_FIELD(e, fcntl, cmd);
-  SET_FIELD(e, fcntl, arg_3_l);
-  SET_FIELD(e, fcntl, arg_3_f);
+  SET_FIELD(e, fcntl, arg);
   return e;
 }
 
@@ -1349,7 +1348,7 @@ log_entry_t create_pthread_exit_entry(clone_id_t clone_id, event_code_t event,
 }
 
 log_entry_t create_pthread_join_entry(clone_id_t clone_id, event_code_t event,
-    pthread_t thread, void *value_ptr)
+                                      pthread_t thread, void **value_ptr)
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
@@ -1539,8 +1538,9 @@ log_entry_t create_getsockopt_entry(clone_id_t clone_id, event_code_t event,
   return e;
 }
 
-log_entry_t create_ioctl_entry(clone_id_t clone_id, event_code_t event, int d,
-    int request, void *arg) {
+log_entry_t create_ioctl_entry(clone_id_t clone_id, event_code_t event,
+                               int d, int request, void *arg)
+{
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
   SET_FIELD(e, ioctl, d);
@@ -1845,8 +1845,8 @@ log_entry_t create_freeaddrinfo_entry(clone_id_t clone_id, event_code_t event,
 
 log_entry_t create_getnameinfo_entry(clone_id_t clone_id, event_code_t event,
                                      const struct sockaddr *sa, socklen_t salen,
-                                     char *host, socklen_t hostlen,
-                                     char *serv, socklen_t servlen,
+                                     char *host, size_t hostlen,
+                                     char *serv, size_t servlen,
                                      int flags)
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
@@ -2448,10 +2448,8 @@ TURN_CHECK_P(fcntl_turn_check)
   return base_turn_check(e1,e2) &&
     GET_FIELD_PTR(e1, fcntl, cmd) ==
       GET_FIELD_PTR(e2, fcntl, cmd) &&
-    GET_FIELD_PTR(e1, fcntl, arg_3_l) ==
-      GET_FIELD_PTR(e2, fcntl, arg_3_l) &&
-    GET_FIELD_PTR(e1, fcntl, arg_3_f) ==
-      GET_FIELD_PTR(e2, fcntl, arg_3_f);
+    GET_FIELD_PTR(e1, fcntl, arg) ==
+      GET_FIELD_PTR(e2, fcntl, arg);
 }
 
 TURN_CHECK_P(fdatasync_turn_check)

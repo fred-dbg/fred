@@ -57,9 +57,9 @@ fred_read_log: ${FRED_READ_LOG_OBJS} libfredinternal.a
 ${LIBNAME}.so: ${FREDHIJACK_OBJS} libfredinternal.a
 	${CXX} -shared -fPIC -o $@ $^
 
-.c.o:
+.c.o: ${HEADERS}
 	${CC} ${CFLAGS} -I. -o $@ $<
-.cpp.o:
+.cpp.o: ${HEADERS}
 	${CXX} ${CXXFLAGS} -I${DMTCP_SRC} -I${JALIB} -I. -o $@ $<
 
 check:
