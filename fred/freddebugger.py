@@ -541,7 +541,8 @@ class ReversibleDebugger(debugger.Debugger):
         global GS_NO_SYMBOL_ERROR
         s_val = self.do_print(s_expr)
         s_val = self._p.sanitize_print_result(s_val)
-        if re.search("No symbol .+ in current context", s_val) != None:
+        if (re.search("No symbol .+ in current context", s_val) != None or
+            re.search("You can't do that without a process to debug", s_val) != None):
             return GS_NO_SYMBOL_ERROR
         return s_val.strip()
 
