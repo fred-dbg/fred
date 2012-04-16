@@ -214,7 +214,7 @@ class PersonalityGdb(personality.Personality):
         if len(gl_library_blacklist_code_ranges) == 0:
             self.get_code_addresses()
         result = self.is_blacklisted_address(n_addr)
-        fredutil.fred_debug("Address %d is blacklisted? %s" % (n_addr, str(result)))
+        fredutil.fred_debug("Address 0x%x is blacklisted? %s" % (n_addr, str(result)))
         if not result and s_cur_func == "pthread_mutex_lock":
             # This is a bug that occurs very rarely, so I'm leaving
             # this trace in until I can figure it out. -Tyler
@@ -284,7 +284,7 @@ class PersonalityGdb(personality.Personality):
                 int(re.search(interval_re, executable_line).group(1), 16)
             n_max = \
                 int(re.search(interval_re, executable_line).group(2), 16)
-            fredutil.fred_debug("Blacklist: (%d, %d)" % (n_min, n_max))
+            fredutil.fred_debug("Blacklist: (0x%x, 0x%x)" % (n_min, n_max))
             gl_library_blacklist_code_ranges.append((n_min, n_max))
 
     def at_breakpoint(self, bt_frame, breakpoints):
