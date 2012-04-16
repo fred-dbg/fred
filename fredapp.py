@@ -104,6 +104,7 @@ GS_DMTCP_TMPDIR = GS_FRED_TMPDIR + "/dmtcp_tmpdir"
 g_debugger = None
 g_source_script = None
 gs_resume_dir_path = None
+gb_show_child_output = False
 ######################## End Global Variables #################################
 
 def fred_command_help():
@@ -220,6 +221,7 @@ def parse_program_args():
     """Initialize command line options, and parse them.
     Return the user's inferior to execute as a list."""
     global GS_FRED_USAGE, g_source_script, gs_resume_dir_path
+    global gb_show_child_output
     parser = OptionParser(usage=GS_FRED_USAGE, version=GS_FRED_VERSION)
     parser.disable_interspersed_args()
     # Note that '-h' and '--help' are supported automatically.
@@ -232,6 +234,9 @@ def parse_program_args():
     parser.add_option("--enable-debug", dest="debug", default=False,
                       action="store_true",
                       help="Enable FReD debugging messages.")
+    parser.add_option("--show-child-output", dest="show_child_output",
+                      default=False, action="store_true",
+                      help="Show all output from child processes.")
     parser.add_option("--fred-demo", dest="fred_demo", default=False,
                       action="store_true",
                       help="Enable FReD demo mode.")
@@ -247,8 +252,8 @@ def parse_program_args():
     if options.source_script != None:
         # Source script executed from main_io_loop().
         g_source_script = options.source_script
-    if options.fred_demo:
-        fredio.GB_FRED_DEMO = True
+    fredio.GB_FRED_DEMO = options.fred_demo
+    gb_show_child_output = options.show_child_output
     if options.resume_dir != None:
         # Resume session from given directory.
         gs_resume_dir_path = options.resume_dir
@@ -295,11 +300,12 @@ def setup_environment_variables(s_dmtcp_port="7779", b_debug=False):
 
 def setup_fredio(l_cmd, b_spawn_child=True):
     """Set up I/O handling."""
-    global g_debugger
+    global g_debugger, gb_show_child_output
     fredio.g_find_prompt_function  = g_debugger.get_find_prompt_function()
     fredio.g_print_prompt_function = g_debugger.get_prompt_string_function()
     fredio.gre_prompt              = g_debugger.get_prompt_regex()
     fredio.gls_needs_user_input    = g_debugger.get_ls_needs_input()
+    fredio.gb_show_child_output    = gb_show_child_output
     fredio.setup(l_cmd, b_spawn_child)
     
 def interactive_debugger_setup():
@@ -316,7 +322,7 @@ def interactive_debugger_setup():
 
 def fred_setup():
     """Perform any setup needed by FReD before entering an I/O loop."""
-    global g_debugger, gs_resume_dir_path, GS_FRED_TMPDIR
+    global g_debugger, gs_resume_dir_path, GS_FRED_TMPDIR, gb_show_child_output
     # Parse command line args and set up environment.
     l_cmd = parse_program_args()
     # Set up the FReD global debugger
@@ -341,13 +347,14 @@ def fred_setup():
         fredmanager.set_virtual_inferior_pid(n_inf_pid)
     g_debugger.set_real_debugger_pid(fredio.get_child_pid())
 
-def fred_setup_as_module(l_cmd, s_dmtcp_port, b_debug):
+def fred_setup_as_module(l_cmd, s_dmtcp_port, b_debug, b_show_child_output):
     """Perform setup for FReD when being used as a module, return g_debugger.
     For example, fredtest.py uses FReD as a module."""
-    global g_debugger
+    global g_debugger, gb_show_child_output
     cleanup_fred_files()
     setup_environment_variables(s_dmtcp_port, b_debug)
     setup_debugger(l_cmd[0])
+    gb_show_child_output = b_show_child_output
     setup_fredio(l_cmd, True)
     # Since modules won't use the main_io_loop, we perform the debugger setup
     # requiring a debugger prompt here.

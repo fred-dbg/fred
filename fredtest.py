@@ -47,6 +47,7 @@ gd_stored_variables = {}
 g_debugger = None
 gs_dmtcp_port = ""
 gb_fred_debug = False
+gb_show_child_output = False
 gn_num_iters = 1
 gd_tests = {}
 gn_coordinator_port = -1
@@ -67,9 +68,10 @@ To add a new test:
 
 def start_session(l_cmd):
     """Start the given command line as a fred session."""
-    global g_debugger
+    global g_debugger, gb_fred_debug, gb_show_child_output
     g_debugger = fredapp.fred_setup_as_module(l_cmd, gs_dmtcp_port,
-                                              gb_fred_debug)
+                                              gb_fred_debug,
+                                              gb_show_child_output)
 
 def end_session():
     """End the current debugger session."""
@@ -463,11 +465,11 @@ def run_unit_tests():
 
 def run_tests(ls_test_list):
     """Run given list of tests, or all tests if None."""
-    global gd_tests, gn_num_iters
+    global gd_tests, gn_num_iters, gb_show_child_output
     print "%-40s | %-15s" % ("Test name", "Result")
     print "-" * 41 + "+" + "-" * 15
     # TODO: This is hackish. Used to hide fred_info() messages.
-    fred.fredio.gb_hide_output = True
+    fred.fredio.gb_hide_output = not gb_show_child_output
     if ls_test_list == None:
         run_integration_tests(gn_num_iters)
         run_unit_tests()
@@ -485,6 +487,7 @@ def parse_fredtest_args():
     """Parse command line args, and return list of tests to run.
     Then set up fredapp module accordingly."""
     global gs_dmtcp_port, gb_fred_debug, gn_coordinator_port, gn_num_iters
+    global gb_show_child_output
     parser = OptionParser()
     parser.disable_interspersed_args()
     # Note that '-h' and '--help' are supported automatically.
@@ -495,6 +498,9 @@ def parse_fredtest_args():
     parser.add_option("--enable-debug", dest="debug", default=False,
                       action="store_true",
                       help="Enable FReD debugging messages.")
+    parser.add_option("--show-child-output", dest="show_child_output",
+                      default=False, action="store_true",
+                      help="Show all output from child processes.")
     parser.add_option("-l", "--list-tests", dest="list_tests", default=False,
                       action="store_true",
                       help="List available tests and exit.")
@@ -516,6 +522,7 @@ def parse_fredtest_args():
     else:
         gs_dmtcp_port = str(options.dmtcp_port)
     gb_fred_debug = options.debug
+    gb_show_child_output = options.show_child_output
     if options.num_iters:
         gn_num_iters = int(options.num_iters)
     return options.test_list.split(",") if options.test_list != None else None

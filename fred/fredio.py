@@ -90,6 +90,8 @@ gb_need_user_input = False
 # The last few characters printed by the child. This is used for detecting
 # when the prompt is printed.
 gs_last_printed = ""
+# Set to True, always display all child output, overriding other settings.
+gb_show_child_output = False
 
 # Functions beginning with an underscore ('_') should not be used outside of
 # this file!
@@ -99,7 +101,8 @@ class ThreadedOutput(threading.Thread):
         global g_prompt_ready_event, gb_capture_output, gs_captured_output, \
                g_capture_output_event, gb_capture_output_til_prompt, \
                gb_hide_output, gn_max_need_input_length, gb_need_user_input, \
-               gb_capture_output_multi_page, gs_last_printed
+               gb_capture_output_multi_page, gs_last_printed, \
+               gb_show_child_output
         # Used to detect when debugger needs additional user input
         last_printed_need_input = ""
         while 1:
@@ -125,7 +128,7 @@ class ThreadedOutput(threading.Thread):
                     else:
                         _reset_last_printed()
                         g_capture_output_event.set()
-                if not gb_hide_output:
+                if not gb_hide_output or gb_show_child_output:
                     # Always remove prompt from output so we can print it:
                     output = re.sub(gre_prompt, '', output)
                     sys.stdout.write(output)
