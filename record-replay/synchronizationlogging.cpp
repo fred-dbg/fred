@@ -3225,16 +3225,25 @@ void waitForTurn(log_entry_t *my_entry, turn_pred_t pred)
   }
   while (1) {
     struct timespec ts;
+    struct timespec ts_ms = {0, 1 * 1000 * 1000};
     JASSERT(clone_id_to_sem_table->find(my_clone_id) != clone_id_to_sem_table->end())
       (my_clone_id);
     sem_t& sem = (*clone_id_to_sem_table)[my_clone_id];
     do {
       _real_clock_gettime(CLOCK_REALTIME, &ts);
-      ts.tv_sec ++;
+      TIMESPEC_ADD(&ts, &ts_ms, &ts);
     } while (sem_timedwait(&sem, &ts) != 0);
     JTRACE("WAIT REturned") (my_clone_id);
     waitThread = my_clone_id;
     log_entry_t& temp_entry = global_log.getCurrentEntry();
+#if 0
+    if (GET_COMMON(temp_entry, clone_id) != my_clone_id) {
+      int x = 0;
+      JNOTE("ERROR********************")
+        (GET_COMMON(temp_entry, clone_id)) (my_clone_id);
+      while(!x);
+    }
+#endif
     JASSERT(GET_COMMON(temp_entry, clone_id) == my_clone_id)
       (GET_COMMON(temp_entry, clone_id)) (my_clone_id);
     if ((*pred)(&temp_entry, my_entry))
