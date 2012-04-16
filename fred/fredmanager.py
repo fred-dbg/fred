@@ -76,8 +76,10 @@ def kill_inferior():
     """Kill the inferior process, if it exists."""
     n_pid = get_real_inferior_pid()
     if n_pid == -1:
+        fredutil.fred_debug("Not sending inferior SIGKILL: pid is -1.")
         return
     try:
+        fredutil.fred_debug("Sending inferior %d SIGKILL." % n_pid)
         os.kill(n_pid, signal.SIGKILL)
         os.waitpid(n_pid, 0)
     except OSError:

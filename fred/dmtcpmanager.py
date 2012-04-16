@@ -224,9 +224,11 @@ def checkpoint():
 
 def restart(n_index):
     """Restart from the given index."""
+    # Kill inferior first because it is being traced, and cannot
+    # handle signals or DMTCP KILL messages.
+    fredmanager.kill_inferior()
     kill_peers()
     fredio.kill_child()
-    fredmanager.kill_inferior()
     
     # Wait until the peers are really gone
     while get_num_peers() != 0:
