@@ -3224,10 +3224,14 @@ void waitForTurn(log_entry_t *my_entry, turn_pred_t pred)
     SET_COMMON_PTR2(my_entry, clone_id, my_clone_id);
   }
   while (1) {
+    struct timespec ts;
     JASSERT(clone_id_to_sem_table->find(my_clone_id) != clone_id_to_sem_table->end())
       (my_clone_id);
     sem_t& sem = (*clone_id_to_sem_table)[my_clone_id];
-    sem_wait(&sem);
+    do {
+      _real_clock_gettime(CLOCK_REALTIME, &ts);
+      ts.tv_sec ++;
+    } while (sem_timedwait(&sem, &ts) != 0);
     JTRACE("WAIT REturned") (my_clone_id);
     waitThread = my_clone_id;
     log_entry_t& temp_entry = global_log.getCurrentEntry();

@@ -502,5 +502,9 @@ ssize_t _real_pwrite(int fd, const void *buf, size_t count, off_t offset) {
   REAL_FUNC_PASSTHROUGH_TYPED ( ssize_t,pwrite ) ( fd,buf,count,offset );
 }
 
+int _real_clock_gettime(clockid_t id, struct timespec *ts) {
+  REAL_FUNC_PASSTHROUGH_TYPED ( int,clock_gettime ) ( id, ts );
+}
+
 // Used for wrappers for mmap, sbrk
 void _dmtcp_setup_trampolines() {}

@@ -51,7 +51,7 @@ fred_command: fred_command.o libfredinternal.a
 	${CXX} -o $@ $^
 
 fred_read_log: ${FRED_READ_LOG_OBJS} libfredinternal.a
-	${CXX} -o $@ $^ -lpthread
+	${CXX} -o $@ $^ -lpthread -lrt
 
 # We link the library using C++ for compatibility with the main dmtcphijack.so
 ${LIBNAME}.so: ${FREDHIJACK_OBJS} ${LIBFREDINTERNAL_OBJS} libfredinternal.a
