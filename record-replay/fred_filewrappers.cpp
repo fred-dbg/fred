@@ -974,7 +974,7 @@ extern "C" READLINK_RET_TYPE readlink(const char *path, char *buf,
   } else if (SYNC_IS_RECORD) {
     retval = _real_readlink(path, buf, bufsiz);
     if (retval > 0 && buf != NULL) {
-      WRAPPER_LOG_WRITE_INTO_READ_LOG(getline, buf, retval);
+      WRAPPER_LOG_WRITE_INTO_READ_LOG(readlink, buf, retval);
     }
     WRAPPER_LOG_WRITE_ENTRY(my_entry);
   }
@@ -988,7 +988,9 @@ extern "C" char *realpath(const char *path, char *resolved_path)
     WRAPPER_REPLAY_START_TYPED(char*, realpath);
     if (retval != NULL) {
       int len = GET_FIELD(my_entry, realpath, len);
-      WRAPPER_REPLAY_READ_FROM_READ_LOG(readlink, retval, len);
+      WRAPPER_REPLAY_READ_FROM_READ_LOG(realpath, retval, len);
+      // NULL-terminate as per man page.
+      *(resolved_path + len) = '\0';
     }
     WRAPPER_REPLAY_END(realpath);
   } else if (SYNC_IS_RECORD) {
