@@ -349,6 +349,11 @@ sighandler_t _real_sigset(int sig, sighandler_t disp)
 }
 
 LIB_PRIVATE
+int _real_sigwait(const sigset_t *set, int *sig) {
+  REAL_FUNC_PASSTHROUGH ( sigwait ) ( set, sig);
+}
+
+LIB_PRIVATE
 int _real_ioctl(int d, int request, void *arg) {
   REAL_FUNC_PASSTHROUGH_TYPED ( int, ioctl ) ( d, request, arg );
 }
