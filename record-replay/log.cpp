@@ -41,6 +41,8 @@
 #include "util.h"
 #include "jassert.h"
 
+static log_entry_t _currentEntry = EMPTY_LOG_ENTRY;
+
 #define EVENT_SIZE(type, name, ...) log_event_##name##_size,
 static size_t log_event_size[numTotalWrappers+1] = {
   FOREACH_RECORD_REPLAY_WRAPPER(EVENT_SIZE)
@@ -90,6 +92,11 @@ void dmtcp::SynchronizationLog::initialize(const char *path, size_t size)
     // Reset for the next checkpoint.
     _entryOffsetMarker = 0;
     _entryIndexMarker = 0;
+  }
+
+  if (!global_log.isEndOfLog() && SYNC_IS_REPLAY) {
+    // Load the new entry.
+    getEntryAtOffset(_currentEntry, getIndex());
   }
 }
 
@@ -287,25 +294,28 @@ int dmtcp::SynchronizationLog::advanceToNextEntry()
     }
   }
 
-  log_entry_t temp_entry = EMPTY_LOG_ENTRY;
-  int entrySize = getCurrentEntry(temp_entry);
+  int entrySize = log_event_common_size + getLogEventSize(_currentEntry);
   JASSERT(entrySize > 0);
   atomicIncrementIndex(entrySize);
   atomicIncrementEntryIndex();
+
+  if (isEndOfLog()) {
+    return 0;
+  }
+
   // Load the new entry.
-  entrySize = getCurrentEntry(temp_entry);
+  getEntryAtOffset(_currentEntry, getIndex());
 
   /* Keep interface info up to date. */
-  _sharedInterfaceInfo->current_clone_id = GET_COMMON(temp_entry, clone_id);
+  _sharedInterfaceInfo->current_clone_id = GET_COMMON(_currentEntry, clone_id);
   _sharedInterfaceInfo->current_log_entry_index = _entryIndex;
 
-  return entrySize;
+  return 1;
 }
 
-int dmtcp::SynchronizationLog::getCurrentEntry(log_entry_t& entry)
+log_entry_t& dmtcp::SynchronizationLog::getCurrentEntry()
 {
-  int entrySize = getEntryAtOffset(entry, getIndex());
-  return entrySize;
+  return _currentEntry;
 }
 
 // Reads the entry from log and returns the length of entry

@@ -827,7 +827,7 @@ static void *signal_thread(void *arg)
   log_entry_t temp_entry = EMPTY_LOG_ENTRY;
   while (1) {
     // Lock this so it doesn't change from underneath:
-    global_log.getCurrentEntry(temp_entry);
+    temp_entry = global_log.getCurrentEntry();
     if (__builtin_expect(GET_COMMON(temp_entry,event) == signal_handler_event, 0)) {
       if (signal_sent_on != global_log.currentEntryIndex()) {
         // Only send one signal per sig_handler entry.

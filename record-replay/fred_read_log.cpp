@@ -1214,11 +1214,12 @@ void rewriteLog(char *log_path)
          log.getDataSize(), log.numEntries());
   log_entry_t entry = EMPTY_LOG_ENTRY;
   for (size_t i = 0; i < log.numEntries(); i++) {
-    if (log.getCurrentEntry(entry) == 0) {
+    if (log.isEndOfLog()) {
       printf("Error reading log file. numEntries: %zu, entriesRead: %zu\n",
              log.numEntries(), i);
       exit(1);
     }
+    entry = log.getCurrentEntry();
     printEntry(i, &entry);
     log.advanceToNextEntry();
   }

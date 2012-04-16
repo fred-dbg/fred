@@ -366,8 +366,7 @@ void getNextLogEntry()
     JTRACE ( "Switching back to record." );
     set_sync_mode(SYNC_RECORD);
   } else {
-    log_entry_t temp_entry = EMPTY_LOG_ENTRY;
-    global_log.getCurrentEntry(temp_entry);
+    const log_entry_t& temp_entry = global_log.getCurrentEntry();
     clone_id_t clone_id = GET_COMMON(temp_entry, clone_id);
     nextThread = clone_id;
     sem_t& sem = (*clone_id_to_sem_table)[clone_id];
@@ -3172,8 +3171,7 @@ static inline bool is_optional_event_for(event_code_t event,
    that event. */
 static void execute_optional_event(int opt_event_num)
 {
-  log_entry_t temp_entry = EMPTY_LOG_ENTRY;
-  global_log.getCurrentEntry(temp_entry);
+  const log_entry_t& temp_entry = global_log.getCurrentEntry();
 
   if (opt_event_num == mmap_event) {
     size_t length = GET_FIELD(temp_entry, mmap, length);
@@ -3219,7 +3217,6 @@ clone_id_t waitThread=-1;
    the log. */
 void waitForTurn(log_entry_t *my_entry, turn_pred_t pred)
 {
-  log_entry_t temp_entry = EMPTY_LOG_ENTRY;
   memfence();
 
   if (my_clone_id == -1) {
@@ -3233,7 +3230,7 @@ void waitForTurn(log_entry_t *my_entry, turn_pred_t pred)
     sem_wait(&sem);
     JTRACE("WAIT REturned") (my_clone_id);
     waitThread = my_clone_id;
-    global_log.getCurrentEntry(temp_entry);
+    log_entry_t& temp_entry = global_log.getCurrentEntry();
     JASSERT(GET_COMMON(temp_entry, clone_id) == my_clone_id)
       (GET_COMMON(temp_entry, clone_id)) (my_clone_id);
     if ((*pred)(&temp_entry, my_entry))
@@ -3251,14 +3248,13 @@ void waitForTurn(log_entry_t *my_entry, turn_pred_t pred)
     }
   }
 
-  global_log.getCurrentEntry(*my_entry);
+  *my_entry = global_log.getCurrentEntry();
 }
 
 void waitForExecBarrier()
 {
-  log_entry_t temp_entry = EMPTY_LOG_ENTRY;
   while (1) {
-    global_log.getCurrentEntry(temp_entry);
+    const log_entry_t& temp_entry = global_log.getCurrentEntry();
     if (GET_COMMON(temp_entry, event) == exec_barrier_event) {
       // We don't check clone ids because anyone can do an exec.
       break;

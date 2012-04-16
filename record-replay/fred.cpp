@@ -190,7 +190,7 @@ void fred_post_restart_resume()
   set_sync_mode(SYNC_REPLAY);
   sync_mode_pre_ckpt = SYNC_NOOP;
   initLogsForRecordReplay();
-  if (global_log.getCurrentEntry(temp_entry) == 0) {
+  if (global_log.isEndOfLog()) {
     // If no log entries, go back to RECORD.
     set_sync_mode(SYNC_RECORD);
   } else {
@@ -202,6 +202,7 @@ void fred_post_restart_resume()
       sem_t sem;
       sem_init(&(*clone_id_to_sem_table)[id], 0, 0);
     }
+    temp_entry = global_log.getCurrentEntry();
     clone_id_t clone_id = GET_COMMON(temp_entry, clone_id);
     JNOTE("Posting") (clone_id) (my_clone_id);
     sem_post(&(*clone_id_to_sem_table)[clone_id]);

@@ -95,6 +95,7 @@ namespace dmtcp
       void   map_in();
       size_t currentEntryIndex() { return _entryIndex; }
       bool   empty() { return numEntries() == 0; }
+      bool   isEndOfLog() { return getIndex() == getDataSize(); }
       size_t getIndex();
       size_t getDataSize();
       void   setDataSize(log_off_t newVal);
@@ -106,7 +107,7 @@ namespace dmtcp
       void   mergeLogs(dmtcp::vector<clone_id_t> clone_ids);
 
       int    advanceToNextEntry();
-      int    getCurrentEntry(log_entry_t& entry);
+      log_entry_t& getCurrentEntry();
       void   appendEntry(log_entry_t& entry);
       void   updateEntry(const log_entry_t& entry);
       void   moveMarkersToEnd();
