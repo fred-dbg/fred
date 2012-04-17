@@ -118,7 +118,7 @@ extern "C" struct passwd *getpwnam(const char *name)
   static __thread struct passwd pwd;
   static __thread struct passwd *result;
 
-  ok_to_log_next_func = true;
+  dmtcp::ThreadInfo::setOkToLogNextFnc();
   int res = getpwnam_r(name, &pwd, buf, sizeof(buf), &result);
 
   if (res == 0) {
@@ -134,7 +134,7 @@ extern "C" struct passwd *getpwuid(uid_t uid)
   static __thread struct passwd pwd;
   static __thread struct passwd *result;
 
-  ok_to_log_next_func = true;
+  dmtcp::ThreadInfo::setOkToLogNextFnc();
   int res = getpwuid_r(uid, &pwd, buf, sizeof(buf), &result);
 
   if (res == 0) {
@@ -150,7 +150,7 @@ extern "C" struct group *getgrnam(const char *name)
   static __thread struct group grp;
   static __thread struct group *result;
 
-  ok_to_log_next_func = true;
+  dmtcp::ThreadInfo::setOkToLogNextFnc();
   int res = getgrnam_r(name, &grp, buf, sizeof(buf), &result);
 
   if (res == 0) {
@@ -166,7 +166,7 @@ extern "C" struct group *getgrgid(gid_t gid)
   static __thread struct group grp;
   static __thread struct group *result;
 
-  ok_to_log_next_func = true;
+  dmtcp::ThreadInfo::setOkToLogNextFnc();
   int res = getgrgid_r(gid, &grp, buf, sizeof(buf), &result);
 
   if (res == 0) {
@@ -190,9 +190,9 @@ extern "C" int getpwnam_r(const char *name, struct passwd *pwd,
     *result = GET_FIELD(my_entry, getpwnam_r, ret_result);
     WRAPPER_REPLAY_END(getpwnam_r);
   } else if (SYNC_IS_RECORD) {
-    isOptionalEvent = true;
+    dmtcp::ThreadInfo::setOptionalEvent();
     retval = _real_getpwnam_r(name, pwd, buf, buflen, result);
-    isOptionalEvent = false;
+    dmtcp::ThreadInfo::unsetOptionalEvent();
     if (retval == 0 && result != NULL) {
       SET_FIELD2(my_entry, getpwnam_r, ret_pwd, *pwd);
       WRAPPER_LOG_WRITE_INTO_READ_LOG(getpwnam_r, buf, buflen);
@@ -217,9 +217,9 @@ extern "C" int getpwuid_r(uid_t uid, struct passwd *pwd,
     *result = GET_FIELD(my_entry, getpwuid_r, ret_result);
     WRAPPER_REPLAY_END(getpwuid_r);
   } else if (SYNC_IS_RECORD) {
-    isOptionalEvent = true;
+    dmtcp::ThreadInfo::setOptionalEvent();
     retval = _real_getpwuid_r(uid, pwd, buf, buflen, result);
-    isOptionalEvent = false;
+    dmtcp::ThreadInfo::unsetOptionalEvent();
     if (retval == 0 && result != NULL) {
       SET_FIELD2(my_entry, getpwuid_r, ret_pwd, *pwd);
       WRAPPER_LOG_WRITE_INTO_READ_LOG(getpwuid_r, buf, buflen);
@@ -244,9 +244,9 @@ extern "C" int getgrnam_r(const char *name, struct group *grp,
     *result = GET_FIELD(my_entry, getgrnam_r, ret_result);
     WRAPPER_REPLAY_END(getgrnam_r);
   } else if (SYNC_IS_RECORD) {
-    isOptionalEvent = true;
+    dmtcp::ThreadInfo::setOptionalEvent();
     retval = _real_getgrnam_r(name, grp, buf, buflen, result);
-    isOptionalEvent = false;
+    dmtcp::ThreadInfo::unsetOptionalEvent();
     if (retval == 0 && result != NULL) {
       SET_FIELD2(my_entry, getgrnam_r, ret_grp, *grp);
       WRAPPER_LOG_WRITE_INTO_READ_LOG(getgrnam_r, buf, buflen);
@@ -271,9 +271,9 @@ extern "C" int getgrgid_r(gid_t gid, struct group *grp,
     *result = GET_FIELD(my_entry, getgrgid_r, ret_result);
     WRAPPER_REPLAY_END(getgrgid_r);
   } else if (SYNC_IS_RECORD) {
-    isOptionalEvent = true;
+    dmtcp::ThreadInfo::setOptionalEvent();
     retval = _real_getgrgid_r(gid, grp, buf, buflen, result);
-    isOptionalEvent = false;
+    dmtcp::ThreadInfo::unsetOptionalEvent();
     if (retval == 0 && result != NULL) {
       SET_FIELD2(my_entry, getgrgid_r, ret_grp, *grp);
       WRAPPER_LOG_WRITE_INTO_READ_LOG(getgrgid_r, buf, buflen);
@@ -305,7 +305,7 @@ extern "C" int getlogin_r(char *name, size_t bufsize)
   int res;
   char buf[buflen];
 
-  ok_to_log_next_func = true;
+  dmtcp::ThreadInfo::setOkToLogNextFnc();
   res = getpwuid_r(uid, &pwd, buf, buflen, &tpwd);
   JASSERT(res == 0 || errno != ERANGE);
 
@@ -359,9 +359,9 @@ extern "C" int getaddrinfo(const char *node, const char *service,
     }
     WRAPPER_REPLAY_END(getaddrinfo);
   } else if (SYNC_IS_RECORD) {
-    isOptionalEvent = true;
+    dmtcp::ThreadInfo::setOptionalEvent();
     retval = _real_getaddrinfo(node, service, hints, res);
-    isOptionalEvent = false;
+    dmtcp::ThreadInfo::unsetOptionalEvent();
 
     if (retval == 0) {
       SET_FIELD2(my_entry, getaddrinfo, ret_res, *res);
@@ -396,9 +396,9 @@ extern "C" void freeaddrinfo(struct addrinfo *res)
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_VOID(freeaddrinfo);
   } else if (SYNC_IS_RECORD) {
-    isOptionalEvent = true;
+    dmtcp::ThreadInfo::setOptionalEvent();
     _real_freeaddrinfo(res);
-    isOptionalEvent = false;
+    dmtcp::ThreadInfo::unsetOptionalEvent();
     WRAPPER_LOG_WRITE_ENTRY_VOID(my_entry);
   }
 }
@@ -419,9 +419,9 @@ extern "C" int getnameinfo(const struct sockaddr *sa, socklen_t salen,
     }
     WRAPPER_REPLAY_END(getnameinfo);
   } else if (SYNC_IS_RECORD) {
-    isOptionalEvent = true;
+    dmtcp::ThreadInfo::setOptionalEvent();
     retval = _real_getnameinfo(sa, salen, host, hostlen, serv, servlen, flags);
-    isOptionalEvent = false;
+    dmtcp::ThreadInfo::unsetOptionalEvent();
 
     if (retval == 0 && host != NULL) {
       strncpy(GET_FIELD(my_entry, getnameinfo, ret_host), host, hostlen);

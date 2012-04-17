@@ -26,6 +26,7 @@
 #include "trampolines.h"
 #include "fred_wrappers.h"
 #include "synchronizationlogging.h"
+#include "threadinfo.h"
 
 static trampoline_info_t mmap_trampoline_info;
 
@@ -42,7 +43,7 @@ static void *mmap_wrapper(void *addr, size_t length, int prot,
                           int flags, int fd, off_t offset)
 {
   void *retval;
-  if (IN_MMAP_WRAPPER || MMAP_NO_SYNC) {
+  if (dmtcp::ThreadInfo::isInMmapWrapper()) {
     retval = _real_mmap(addr,length,prot,flags,fd,offset);
   } else {
     retval = mmap(addr,length,prot,flags,fd,offset);

@@ -76,9 +76,9 @@ int accept ( int sockfd, struct sockaddr *addr, socklen_t *addrlen )
     }
     WRAPPER_REPLAY_END(accept);
   } else if (SYNC_IS_RECORD) {
-    isOptionalEvent = true;
+    dmtcp::ThreadInfo::setOptionalEvent();
     retval = _real_accept(sockfd, addr, addrlen);
-    isOptionalEvent = false;
+    dmtcp::ThreadInfo::unsetOptionalEvent();
     if (retval != -1) {
       SET_FIELD2(my_entry, accept, ret_addr, *addr);
       SET_FIELD2(my_entry, accept, ret_addrlen, *addrlen);
@@ -113,7 +113,7 @@ int accept4 ( int sockfd, struct sockaddr *addr, socklen_t *addrlen, int flags )
 
 extern "C" int pipe(int fds[2])
 {
-  ok_to_log_next_func = true;
+  dmtcp::ThreadInfo::setOkToLogNextFnc();
   return socketpair ( AF_UNIX, SOCK_STREAM, 0, fds );
 }
 
@@ -125,7 +125,7 @@ extern "C" int pipe2 ( int fds[2], int flags )
   int newFlags = 0;
   if ((flags & O_NONBLOCK) != 0) newFlags |= SOCK_NONBLOCK;
   if ((flags & O_CLOEXEC)  != 0) newFlags |= SOCK_CLOEXEC;
-  ok_to_log_next_func = true;
+  dmtcp::ThreadInfo::setOkToLogNextFnc();
   return socketpair ( AF_UNIX, SOCK_STREAM | newFlags, 0, fds );
 }
 #endif
@@ -158,9 +158,9 @@ int setsockopt ( int sockfd, int  level,  int  optname,  const  void  *optval,
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY(setsockopt);
   } else if (SYNC_IS_RECORD) {
-    isOptionalEvent = true;
+    dmtcp::ThreadInfo::setOptionalEvent();
     retval = _real_setsockopt(sockfd, level, optname, optval, optlen);
-    isOptionalEvent = false;
+    dmtcp::ThreadInfo::unsetOptionalEvent();
     WRAPPER_LOG_WRITE_ENTRY(my_entry);
   }
   return retval;
@@ -179,9 +179,9 @@ int getsockopt ( int sockfd, int  level,  int  optname,  void  *optval,
     }
     WRAPPER_REPLAY_END(getsockopt);
   } else if (SYNC_IS_RECORD) {
-    isOptionalEvent = true;
+    dmtcp::ThreadInfo::setOptionalEvent();
     retval = _real_getsockopt(sockfd, level, optname, optval, optlen);
-    isOptionalEvent = false;
+    dmtcp::ThreadInfo::unsetOptionalEvent();
     if (retval == 0 && optval != NULL) {
       WRAPPER_LOG_WRITE_INTO_READ_LOG(getsockopt, optval, *optlen);
       SET_FIELD2(my_entry, getsockopt, ret_optlen, *optlen);
@@ -193,7 +193,7 @@ int getsockopt ( int sockfd, int  level,  int  optname,  void  *optval,
 
 extern "C" ssize_t send(int sockfd, const void *buf, size_t len, int flags)
 {
-  ok_to_log_next_func = true;
+  dmtcp::ThreadInfo::setOkToLogNextFnc();
   return sendto(sockfd, buf, len, flags, NULL, 0);
 }
 
@@ -211,7 +211,7 @@ extern "C" ssize_t sendmsg(int sockfd, const struct msghdr *msg, int flags)
 
 extern "C" ssize_t recv(int sockfd, void *buf, size_t len, int flags)
 {
-  ok_to_log_next_func = true;
+  dmtcp::ThreadInfo::setOkToLogNextFnc();
   return recvfrom(sockfd, buf, len, flags, NULL, NULL);
 }
 

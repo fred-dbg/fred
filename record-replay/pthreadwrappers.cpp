@@ -38,6 +38,7 @@
 #include "synchronizationlogging.h"
 #include "log.h"
 #include "fred_wrappers.h"
+#include "threadinfo.h"
 
 static void *thread_reaper(void *arg);
 static void create_reaper_thread();
@@ -286,9 +287,9 @@ static int internal_pthread_cond_signal(pthread_cond_t *cond)
     }
     WRAPPER_REPLAY_END(pthread_cond_signal);
   } else  if (SYNC_IS_RECORD) {
-    isOptionalEvent = true;
+    dmtcp::ThreadInfo::setOptionalEvent();
     retval = _real_pthread_cond_signal(cond);
-    isOptionalEvent = false;
+    dmtcp::ThreadInfo::unsetOptionalEvent();
     if (retval == 0) {
       SET_FIELD2(my_entry, pthread_cond_signal, cond, *cond);
     }
@@ -342,9 +343,9 @@ static int internal_pthread_cond_wait(pthread_cond_t *cond,
     }
     WRAPPER_REPLAY_END(pthread_cond_wait);
   } else if (SYNC_IS_RECORD) {
-    isOptionalEvent = true;
+    dmtcp::ThreadInfo::setOptionalEvent();
     retval = _real_pthread_cond_wait(cond, mutex);
-    isOptionalEvent = false;
+    dmtcp::ThreadInfo::unsetOptionalEvent();
     if (retval == 0) {
       SET_FIELD2(my_entry, pthread_cond_wait, cond, *cond);
       SET_FIELD2(my_entry, pthread_cond_wait, mutex, *mutex);
@@ -395,10 +396,8 @@ static int internal_pthread_create(pthread_t *thread,
     WRAPPER_REPLAY_END(pthread_create);
 
     ACQUIRE_THREAD_CREATE_DESTROY_LOCK();
-    //sem_t sem;
     clone_id_t tid = global_clone_counter;
-    //(*clone_id_to_sem_table)[tid] = sem;
-    sem_init(&(*clone_id_to_sem_table)[tid], 0, 0);
+    dmtcp::ThreadInfo::initThread(tid);
     // Set up thread stacks to how they were at record time.
     pthread_attr_init(&the_attr);
 
@@ -412,7 +411,7 @@ static int internal_pthread_create(pthread_t *thread,
     RELEASE_THREAD_CREATE_DESTROY_LOCK();
     pthread_attr_destroy(&the_attr);
 
-  } else  if (SYNC_IS_RECORD) {
+  } else if (SYNC_IS_RECORD) {
     WRAPPER_LOG_WRITE_ENTRY(my_entry);
 
     ACQUIRE_THREAD_CREATE_DESTROY_LOCK();
@@ -507,9 +506,9 @@ extern "C" int pthread_cond_broadcast(pthread_cond_t *cond)
     }
     WRAPPER_REPLAY_END(pthread_cond_broadcast);
   } else if (SYNC_IS_RECORD) {
-    isOptionalEvent = true;
+    dmtcp::ThreadInfo::setOptionalEvent();
     retval = _real_pthread_cond_broadcast(cond);
-    isOptionalEvent = false;
+    dmtcp::ThreadInfo::unsetOptionalEvent();
     if (retval == 0) {
       SET_FIELD2(my_entry, pthread_cond_broadcast, cond, *cond);
     }
@@ -545,9 +544,9 @@ extern "C" int pthread_cond_timedwait(pthread_cond_t *cond,
     }
     WRAPPER_REPLAY_END(pthread_cond_timedwait);
   } else if (SYNC_IS_RECORD) {
-    isOptionalEvent = true;
+    dmtcp::ThreadInfo::setOptionalEvent();
     retval = _real_pthread_cond_timedwait(cond, mutex, abstime);
-    isOptionalEvent = false;
+    dmtcp::ThreadInfo::unsetOptionalEvent();
     if (retval == 0) {
       SET_FIELD2(my_entry, pthread_cond_timedwait, cond, *cond);
       SET_FIELD2(my_entry, pthread_cond_timedwait, mutex, *mutex);
@@ -670,15 +669,8 @@ static void reapThread()
   pthread_join_retvals[thread_to_reap] = join_retval;
   teardownThreadStack(stack_addr, stack_size);
 
-  if (tid_to_clone_id_table->find(thread_to_reap) !=
-      tid_to_clone_id_table->end()) {
-    cid_to_reap = tid_to_clone_id_table->find(thread_to_reap)->second;
-    clone_id_to_tid_table->erase(cid_to_reap);
-    clone_id_to_sem_table->erase(cid_to_reap);
-  }
-  tid_to_clone_id_table->erase(thread_to_reap);
+  dmtcp::ThreadInfo::destroyThread(thread_to_reap);
 
-  //mtcpFuncPtrs.process_pthread_join ( thread_to_reap );
   // Reset for next thread:
   thread_to_reap = 0;
   RELEASE_THREAD_CREATE_DESTROY_LOCK(); // End of thread destruction.
@@ -832,8 +824,9 @@ static void *signal_thread(void *arg)
       if (signal_sent_on != global_log.currentEntryIndex()) {
         // Only send one signal per sig_handler entry.
         signal_sent_on = global_log.currentEntryIndex();
-        _real_pthread_kill((*clone_id_to_tid_table)[GET_COMMON(temp_entry,clone_id)],
-            GET_FIELD(temp_entry, signal_handler, sig));
+        clone_id_t clone_id = GET_COMMON(temp_entry, clone_id);
+        _real_pthread_kill(dmtcp::ThreadInfo::cloneIdToPthreadId(clone_id),
+                           GET_FIELD(temp_entry, signal_handler, sig));
       }
     }
     usleep(20);
@@ -938,7 +931,7 @@ extern "C" int pthread_join (pthread_t thread, void **value_ptr)
 
 extern "C" long int random()
 {
-  ok_to_log_next_func = true;
+  dmtcp::ThreadInfo::setOkToLogNextFnc();
   return rand();
 }
 
@@ -967,13 +960,13 @@ extern "C" void srandom(unsigned int seed)
 
 extern "C" int rand_r(unsigned int *seedp)
 {
-  ok_to_log_next_func = true;
+  dmtcp::ThreadInfo::setOkToLogNextFnc();
   return rand();
 }
 
 extern "C" int random_r(struct random_data *buf, int32_t *result)
 {
-  ok_to_log_next_func = true;
+  dmtcp::ThreadInfo::setOkToLogNextFnc();
   *result = rand();
   return 0;
 }
@@ -1043,7 +1036,7 @@ extern "C" int lutimes(const char *filename, const struct timeval tv[2])
 extern "C" struct tm *localtime(const time_t *timep)
 {
   static struct tm result;
-  ok_to_log_next_func = true;
+  dmtcp::ThreadInfo::setOkToLogNextFnc();
   return localtime_r(timep, &result);
 }
 
@@ -1060,9 +1053,9 @@ extern "C" struct tm *localtime_r(const time_t *timep, struct tm *result)
     }
     WRAPPER_REPLAY_END(localtime_r);
   } else if (SYNC_IS_RECORD) {
-    isOptionalEvent = true;
+    dmtcp::ThreadInfo::setOptionalEvent();
     retval = _real_localtime_r(timep, result);
-    isOptionalEvent = false;
+    dmtcp::ThreadInfo::unsetOptionalEvent();
     if (retval != NULL) {
       SET_FIELD2(my_entry, localtime_r, ret_result, *retval);
     }

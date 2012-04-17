@@ -68,10 +68,9 @@ extern "C" int fclose(FILE *fp)
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_TYPED(int, fclose);
   } else if (SYNC_IS_RECORD) {
-    bool savedIsOptionalEvent = isOptionalEvent;
-    isOptionalEvent = true;
+    dmtcp::ThreadInfo::setOptionalEvent();
     retval = _real_fclose(fp);
-    isOptionalEvent = savedIsOptionalEvent;
+    dmtcp::ThreadInfo::unsetOptionalEvent();
     WRAPPER_LOG_WRITE_ENTRY(my_entry);
   }
   return retval;
@@ -126,9 +125,9 @@ extern "C" FILE *fdopen(int fd, const char *mode)
     }
     WRAPPER_REPLAY_END(fdopen);
   } else if (SYNC_IS_RECORD) {
-    isOptionalEvent = true;
+    dmtcp::ThreadInfo::setOptionalEvent();
     retval = _real_fdopen(fd, mode);
-    isOptionalEvent = false;
+    dmtcp::ThreadInfo::unsetOptionalEvent();
     if (retval != NULL) {
       SET_FIELD2(my_entry, fdopen, fdopen_retval, *retval);
     }
@@ -155,9 +154,9 @@ extern "C" DIR *opendir(const char *name)
     WRAPPER_REPLAY_TYPED(DIR*, opendir);
     //TODO: May be we should restore data in *retval;
   } else if (SYNC_IS_RECORD) {
-    isOptionalEvent = true;
+    dmtcp::ThreadInfo::setOptionalEvent();
     retval = _real_opendir(name);
-    isOptionalEvent = false;
+    dmtcp::ThreadInfo::unsetOptionalEvent();
     WRAPPER_LOG_WRITE_ENTRY(my_entry);
   }
   return retval;
@@ -174,9 +173,9 @@ extern "C" DIR *fdopendir(int fd)
     WRAPPER_REPLAY_TYPED(DIR*, fdopendir);
     //TODO: May be we should restore data in *retval;
   } else if (SYNC_IS_RECORD) {
-    isOptionalEvent = true;
+    dmtcp::ThreadInfo::setOptionalEvent();
     retval = _real_fdopendir(fd);
-    isOptionalEvent = false;
+    dmtcp::ThreadInfo::unsetOptionalEvent();
     WRAPPER_LOG_WRITE_ENTRY(my_entry);
   }
   return retval;
@@ -189,9 +188,9 @@ extern "C" int closedir(DIR *dirp)
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY(closedir);
   } else if (SYNC_IS_RECORD) {
-    isOptionalEvent = true;
+    dmtcp::ThreadInfo::setOptionalEvent();
     retval = _real_closedir(dirp);
-    isOptionalEvent = false;
+    dmtcp::ThreadInfo::unsetOptionalEvent();
     WRAPPER_LOG_WRITE_ENTRY(my_entry);
   }
   return retval;
@@ -209,9 +208,9 @@ extern "C" ssize_t __getdelim(char **lineptr, size_t *n, int delim, FILE *stream
     }
     WRAPPER_REPLAY_END(getdelim);
   } else if (SYNC_IS_RECORD) {
-    isOptionalEvent = true;
+    dmtcp::ThreadInfo::setOptionalEvent();
     retval = _real_getdelim(lineptr, n, delim, stream);
-    isOptionalEvent = false;
+    dmtcp::ThreadInfo::unsetOptionalEvent();
     if (retval != -1) {
       SET_FIELD2(my_entry, getdelim, new_lineptr, *lineptr);
       SET_FIELD2(my_entry, getdelim, new_n, *n);
@@ -224,7 +223,7 @@ extern "C" ssize_t __getdelim(char **lineptr, size_t *n, int delim, FILE *stream
 
 extern "C" ssize_t getdelim(char **lineptr, size_t *n, int delim, FILE *stream)
 {
-  ok_to_log_next_func = true;
+  dmtcp::ThreadInfo::setOkToLogNextFnc();
   return __getdelim(lineptr, n, delim, stream);
 }
 
@@ -243,9 +242,9 @@ extern "C" ssize_t getline(char **lineptr, size_t *n, FILE *stream)
     }
     WRAPPER_REPLAY_END(getline);
   } else if (SYNC_IS_RECORD) {
-    isOptionalEvent = true;
+    dmtcp::ThreadInfo::setOptionalEvent();
     retval = _real_getline(lineptr, n, stream);
-    isOptionalEvent = false;
+    dmtcp::ThreadInfo::unsetOptionalEvent();
     if (retval != -1) {
       SET_FIELD2(my_entry, getline, new_lineptr, *lineptr);
       SET_FIELD2(my_entry, getline, new_n, *n);
@@ -468,9 +467,9 @@ extern "C" char *fgets(char *s, int size, FILE *stream)
     }
     WRAPPER_REPLAY_END(fgets);
   } else if (SYNC_IS_RECORD) {
-    isOptionalEvent = true;
+    dmtcp::ThreadInfo::setOptionalEvent();
     retval = _real_fgets(s, size, stream);
-    isOptionalEvent = false;
+    dmtcp::ThreadInfo::unsetOptionalEvent();
     if (retval != NULL) {
       WRAPPER_LOG_WRITE_INTO_READ_LOG(fgets, s, size);
     }
@@ -524,9 +523,9 @@ extern "C" int __fprintf_chk (FILE *stream, int flag, const char *format, ...)
     retval = (int)(unsigned long)GET_COMMON(my_entry,
                                             retval);
   } else if (SYNC_IS_RECORD) {
-    isOptionalEvent = true;
+    dmtcp::ThreadInfo::setOptionalEvent();
     retval = _fprintf(stream, format, arg);
-    isOptionalEvent = false;
+    dmtcp::ThreadInfo::unsetOptionalEvent();
     WRAPPER_LOG_WRITE_ENTRY(my_entry);
   }
   return retval;
@@ -551,9 +550,9 @@ extern "C" int fprintf (FILE *stream, const char *format, ...)
     retval = (int)(unsigned long)GET_COMMON(my_entry, retval);
     WRAPPER_REPLAY_END(fprintf);
   } else if (SYNC_IS_RECORD) {
-    isOptionalEvent = true;
+    dmtcp::ThreadInfo::setOptionalEvent();
     retval = _fprintf(stream, format, arg);
-    isOptionalEvent = false;
+    dmtcp::ThreadInfo::unsetOptionalEvent();
     WRAPPER_LOG_WRITE_ENTRY(my_entry);
   }
   return retval;
@@ -565,9 +564,9 @@ extern "C" int fseek(FILE *stream, long offset, int whence)
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_TYPED(int, fseek);
   } else if (SYNC_IS_RECORD) {
-    isOptionalEvent = true;
+    dmtcp::ThreadInfo::setOptionalEvent();
     retval = _real_fseek(stream, offset, whence);
-    isOptionalEvent = false;
+    dmtcp::ThreadInfo::unsetOptionalEvent();
     WRAPPER_LOG_WRITE_ENTRY(my_entry);
   }
   return retval;
@@ -579,9 +578,9 @@ extern "C" int _IO_getc(FILE *stream)
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_TYPED(int, getc);
   } else if (SYNC_IS_RECORD) {
-    isOptionalEvent = true;
+    dmtcp::ThreadInfo::setOptionalEvent();
     retval = _real_getc(stream);
-    isOptionalEvent = false;
+    dmtcp::ThreadInfo::unsetOptionalEvent();
     WRAPPER_LOG_WRITE_ENTRY(my_entry);
   }
   return retval;
@@ -590,7 +589,7 @@ extern "C" int _IO_getc(FILE *stream)
 extern "C" int __uflow(FILE *stream)
 {
   JASSERT(isProcessGDB()). Text("Not Implemented: *_unlocked fstream functions");
-  ok_to_log_next_func = true;
+  dmtcp::ThreadInfo::setOkToLogNextFnc();
   return _IO_getc(stream);
 }
 
@@ -600,9 +599,9 @@ extern "C" int fgetc(FILE *stream)
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_TYPED(int, fgetc);
   } else if (SYNC_IS_RECORD) {
-    isOptionalEvent = true;
+    dmtcp::ThreadInfo::setOptionalEvent();
     retval = _real_fgetc(stream);
-    isOptionalEvent = false;
+    dmtcp::ThreadInfo::unsetOptionalEvent();
     WRAPPER_LOG_WRITE_ENTRY(my_entry);
   }
   return retval;
@@ -630,9 +629,9 @@ extern "C" char *getcwd(char *buf, size_t size)
     }
     WRAPPER_REPLAY_END(getcwd);
   } else if (SYNC_IS_RECORD) {
-    isOptionalEvent = true;
+    dmtcp::ThreadInfo::setOptionalEvent();
     retval = _real_getcwd(buf, size);
-    isOptionalEvent = false;
+    dmtcp::ThreadInfo::unsetOptionalEvent();
     if (retval != NULL) {
       /* retval will be a pointer to whatever buffer was used. If the
          user provided a NULL buffer, _real_getcwd will allocate one
@@ -652,9 +651,9 @@ extern "C" int fputs(const char *s, FILE *stream)
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_TYPED(int, fputs);
   } else if (SYNC_IS_RECORD) {
-    isOptionalEvent = true;
+    dmtcp::ThreadInfo::setOptionalEvent();
     retval = _real_fputs(s, stream);
-    isOptionalEvent = false;
+    dmtcp::ThreadInfo::unsetOptionalEvent();
     WRAPPER_LOG_WRITE_ENTRY(my_entry);
   }
   return retval;
@@ -666,9 +665,9 @@ extern "C" int fputc(int c, FILE *stream)
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_TYPED(int, fputc);
   } else if (SYNC_IS_RECORD) {
-    isOptionalEvent = true;
+    dmtcp::ThreadInfo::setOptionalEvent();
     retval = _real_fputc(c, stream);
-    isOptionalEvent = false;
+    dmtcp::ThreadInfo::unsetOptionalEvent();
     WRAPPER_LOG_WRITE_ENTRY(my_entry);
   }
   return retval;
@@ -697,9 +696,9 @@ extern "C" size_t fwrite(const void *ptr, size_t size, size_t nmemb,
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_TYPED(size_t, fwrite);
   } else if (SYNC_IS_RECORD) {
-    isOptionalEvent = true;
+    dmtcp::ThreadInfo::setOptionalEvent();
     retval = _real_fwrite(ptr, size, nmemb, stream);
-    isOptionalEvent = false;
+    dmtcp::ThreadInfo::unsetOptionalEvent();
     WRAPPER_LOG_WRITE_ENTRY(my_entry);
   }
   return retval;
@@ -716,9 +715,9 @@ extern "C" size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream)
     }
     WRAPPER_REPLAY_END(fread);
   } else if (SYNC_IS_RECORD) {
-    isOptionalEvent = true;
+    dmtcp::ThreadInfo::setOptionalEvent();
     retval = _real_fread(ptr, size, nmemb, stream);
-    isOptionalEvent = false;
+    dmtcp::ThreadInfo::unsetOptionalEvent();
     if (retval != 0) {
       // fread() returns the number of items (NOT bytes) read.
       WRAPPER_LOG_WRITE_INTO_READ_LOG(fread, ptr, retval*size);
@@ -760,7 +759,7 @@ extern "C" long ftell(FILE *stream)
 
 extern "C" int fgetpos(FILE *stream, fpos_t *pos)
 {
-  ok_to_log_next_func = true;
+  dmtcp::ThreadInfo::setOkToLogNextFnc();
   long res = ftell(stream);
   if (res != -1) {
     pos->__pos = (off_t) res;
@@ -770,13 +769,13 @@ extern "C" int fgetpos(FILE *stream, fpos_t *pos)
 
 extern "C" int fsetpos(FILE *stream, const fpos_t *pos)
 {
-  ok_to_log_next_func = true;
+  dmtcp::ThreadInfo::setOkToLogNextFnc();
   return fseek(stream, (long) pos->__pos, SEEK_SET);
 }
 
 extern "C" int fgetpos64(FILE *stream, fpos64_t *pos)
 {
-  ok_to_log_next_func = true;
+  dmtcp::ThreadInfo::setOkToLogNextFnc();
   long res = ftell(stream);
   if (res != -1) {
     pos->__pos = (off64_t) res;
@@ -786,7 +785,7 @@ extern "C" int fgetpos64(FILE *stream, fpos64_t *pos)
 
 extern "C" int fsetpos64(FILE *stream, const fpos64_t *pos)
 {
-  ok_to_log_next_func = true;
+  dmtcp::ThreadInfo::setOkToLogNextFnc();
   return fseek(stream, (long)pos->__pos, SEEK_SET);
 }
 
@@ -800,10 +799,9 @@ extern "C" FILE *fopen (const char* path, const char* mode)
     }
     WRAPPER_REPLAY_END(fopen);
   } else if (SYNC_IS_RECORD) {
-    bool savedIsOptionalEvent = isOptionalEvent;
-    isOptionalEvent = true;
+    dmtcp::ThreadInfo::setOptionalEvent();
     retval = _real_fopen(path, mode);
-    isOptionalEvent = savedIsOptionalEvent;
+    dmtcp::ThreadInfo::unsetOptionalEvent();
     if (retval != NULL) {
       SET_FIELD2(my_entry, fopen, fopen_retval, *retval);
     }
@@ -822,9 +820,9 @@ extern "C" FILE *fopen64 (const char* path, const char* mode)
     }
     WRAPPER_REPLAY_END(fopen64);
   } else if (SYNC_IS_RECORD) {
-    isOptionalEvent = true;
+    dmtcp::ThreadInfo::setOptionalEvent();
     retval = _real_fopen64(path, mode);
-    isOptionalEvent = false;
+    dmtcp::ThreadInfo::unsetOptionalEvent();
     if (retval != NULL) {
       SET_FIELD2(my_entry, fopen64, fopen64_retval, *retval);
     }
@@ -843,9 +841,9 @@ extern "C" FILE *freopen(const char* path, const char* mode, FILE *stream)
     }
     WRAPPER_REPLAY_END(freopen);
   } else if (SYNC_IS_RECORD) {
-    isOptionalEvent = true;
+    dmtcp::ThreadInfo::setOptionalEvent();
     retval = _real_freopen(path, mode, stream);
-    isOptionalEvent = false;
+    dmtcp::ThreadInfo::unsetOptionalEvent();
     if (retval != NULL) {
       SET_FIELD2(my_entry, freopen, freopen_retval, *retval);
     }
@@ -864,9 +862,9 @@ extern "C" FILE *tmpfile()
     }
     WRAPPER_REPLAY_END(tmpfile);
   } else if (SYNC_IS_RECORD) {
-    isOptionalEvent = true;
+    dmtcp::ThreadInfo::setOptionalEvent();
     retval = _real_tmpfile();
-    isOptionalEvent = false;
+    dmtcp::ThreadInfo::unsetOptionalEvent();
     if (retval != NULL) {
       SET_FIELD2(my_entry, tmpfile, tmpfile_retval, *retval);
     }
@@ -994,9 +992,9 @@ extern "C" char *realpath(const char *path, char *resolved_path)
     }
     WRAPPER_REPLAY_END(realpath);
   } else if (SYNC_IS_RECORD) {
-    isOptionalEvent = true;
+    dmtcp::ThreadInfo::setOptionalEvent();
     retval = _real_realpath(path, resolved_path);
-    isOptionalEvent = false;
+    dmtcp::ThreadInfo::unsetOptionalEvent();
     if (retval != NULL) {
       int len = strlen(retval);
       SET_FIELD(my_entry, realpath, len);
@@ -1070,7 +1068,7 @@ extern "C" int poll(struct pollfd *fds, nfds_t nfds, int time)
     timeout_ts->tv_sec = time/1000;
     timeout_ts->tv_nsec = (time % 1000) * 1000000;
   }
-  ok_to_log_next_func = true;
+  dmtcp::ThreadInfo::setOkToLogNextFnc();
   return ppoll(fds, nfds, timeout_ts, NULL);
 }
 
@@ -1286,7 +1284,7 @@ extern "C" struct dirent * /*__attribute__ ((optimize(0)))*/ readdir(DIR *dirp)
   struct dirent *ptr;
   int res = 0;
 
-  ok_to_log_next_func = true;
+  dmtcp::ThreadInfo::setOkToLogNextFnc();
   res = readdir_r(dirp, &buf, &ptr);
 
   if (res == 0) {
@@ -1396,19 +1394,19 @@ extern "C" int fflush(FILE *stream)
 
 extern "C" void setbuf(FILE *stream, char *buf)
 {
-  ok_to_log_next_func = true;
+  dmtcp::ThreadInfo::setOkToLogNextFnc();
   setvbuf(stream, buf, buf ? _IOFBF : _IONBF, BUFSIZ);
 }
 
 extern "C" void setbuffer(FILE *stream, char *buf, size_t size)
 {
-  ok_to_log_next_func = true;
+  dmtcp::ThreadInfo::setOkToLogNextFnc();
   setvbuf(stream, buf, buf ? _IOFBF : _IONBF, size);
 }
 
 extern "C" void setlinebuf(FILE *stream)
 {
-  ok_to_log_next_func = true;
+  dmtcp::ThreadInfo::setOkToLogNextFnc();
   setvbuf(stream, (char*) NULL, _IOLBF, 0);
 }
 
@@ -1564,13 +1562,13 @@ extern "C" int ioctl(int d,  unsigned long int request, ...)
 
 extern "C" pid_t wait (__WAIT_STATUS stat_loc)
 {
-  ok_to_log_next_func = true;
+  dmtcp::ThreadInfo::setOkToLogNextFnc();
   return wait4(-1, stat_loc, 0, NULL);
 }
 
 extern "C" pid_t waitpid(pid_t pid, int *status, int options)
 {
-  ok_to_log_next_func = true;
+  dmtcp::ThreadInfo::setOkToLogNextFnc();
   return wait4(pid, status, options, NULL);
 }
 
@@ -1595,7 +1593,7 @@ extern "C" int waitid(idtype_t idtype, id_t id, siginfo_t *infop, int options)
 
 extern "C" pid_t wait3(__WAIT_STATUS status, int options, struct rusage *rusage)
 {
-  ok_to_log_next_func = true;
+  dmtcp::ThreadInfo::setOkToLogNextFnc();
   return wait4 (-1, status, options, rusage);
 }
 

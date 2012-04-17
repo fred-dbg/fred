@@ -50,6 +50,7 @@
 #include "fred_wrappers.h"
 #include "synchronizationlogging.h"
 #include "log.h"
+#include "threadinfo.h"
 
 static pthread_mutex_t allocation_lock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t mmap_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -211,7 +212,7 @@ static void my_free_hook (void *ptr, const void *caller)
   if ((!shouldSynchronize(return_addr) && !log_all_allocs) ||           \
       isProcessGDB()) {                                                 \
     void *retval = _real_ ## name (__VA_ARGS__);                        \
-    UNSET_IN_MMAP_WRAPPER();                                            \
+    dmtcp::ThreadInfo::unsetInMmapWrapper();                            \
     return retval;                                                      \
   }                                                                     \
   log_entry_t my_entry = create_ ## name ## _entry(my_clone_id,         \
@@ -263,10 +264,9 @@ static void my_free_hook (void *ptr, const void *caller)
     } else if (SYNC_IS_RECORD) {                                        \
       _real_pthread_mutex_lock(&allocation_lock);                       \
       WRAPPER_LOG_WRITE_ENTRY(my_entry);                                \
-      bool savedIsOptionalEvent = isOptionalEvent;                      \
-      isOptionalEvent = true;                                           \
+      dmtcp::ThreadInfo::setOptionalEvent();                            \
       retval = _real_ ## name(__VA_ARGS__);                             \
-      isOptionalEvent = savedIsOptionalEvent;                           \
+      dmtcp::ThreadInfo::unsetOptionalEvent();                            \
       SET_COMMON2(my_entry, retval, (void *)retval);                    \
       SET_COMMON2(my_entry, my_errno, errno);                           \
       WRAPPER_LOG_UPDATE_ENTRY(my_entry);                               \
@@ -391,7 +391,7 @@ static bool isPartOfAddrRangeAlreadyMmapped(void *addr, size_t length)
 extern "C" void *mmap(void *addr, size_t length, int prot, int flags,
                       int fd, off_t offset)
 {
-  SET_IN_MMAP_WRAPPER();
+  dmtcp::ThreadInfo::setInMmapWrapper();
   MMAP_WRAPPER_HEADER(mmap, addr, length, prot, flags, fd, offset);
   if (SYNC_IS_REPLAY) {
     bool mmap_read_from_readlog = false;
@@ -430,14 +430,14 @@ extern "C" void *mmap(void *addr, size_t length, int prot, int flags,
     WRAPPER_LOG_WRITE_ENTRY(my_entry);
     _real_pthread_mutex_unlock(&mmap_lock);
   }
-  UNSET_IN_MMAP_WRAPPER();
+  dmtcp::ThreadInfo::unsetInMmapWrapper();
   return retval;
 }
 
 extern "C" void *mmap64 (void *addr, size_t length, int prot, int flags,
                          int fd, off64_t offset)
 {
-  SET_IN_MMAP_WRAPPER();
+  dmtcp::ThreadInfo::setInMmapWrapper();                            \
   MMAP_WRAPPER_HEADER(mmap64, addr, length, prot, flags, fd, offset);
   if (SYNC_IS_REPLAY) {
     bool mmap_read_from_readlog = false;
@@ -474,7 +474,7 @@ extern "C" void *mmap64 (void *addr, size_t length, int prot, int flags,
     WRAPPER_LOG_WRITE_ENTRY(my_entry);
     _real_pthread_mutex_unlock(&mmap_lock);
   }
-  UNSET_IN_MMAP_WRAPPER();
+  dmtcp::ThreadInfo::unsetInMmapWrapper();
   return retval;
 }
 

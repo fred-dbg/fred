@@ -50,13 +50,12 @@
 #include "dmtcpplugin.h"
 #include "jfilesystem.h"
 #include "fred_wrappers.h"
+#include "threadinfo.h"
 
 #undef WRAPPER_EXECUTION_ENABLE_CKPT
 #undef WRAPPER_EXECUTION_DISABLE_CKPT
 #define WRAPPER_EXECUTION_ENABLE_CKPT DMTCP_PLUGIN_ENABLE_CKPT
 #define WRAPPER_EXECUTION_DISABLE_CKPT DMTCP_PLUGIN_DISABLE_CKPT
-typedef long int clone_id_t;
-typedef unsigned long int log_off_t;
 
 namespace dmtcp { class SynchronizationLog; }
 
@@ -77,15 +76,6 @@ static inline bool isProcessGDB() {
 #define SYNC_IS_RECORD    (sync_logging_branch == SYNC_RECORD)
 #define SYNC_IS_NOOP      (sync_logging_branch == SYNC_NOOP)
 #define GET_RETURN_ADDRESS() __builtin_return_address(0)
-#define SET_IN_MMAP_WRAPPER()   (in_mmap_wrapper = 1)
-#define UNSET_IN_MMAP_WRAPPER() (in_mmap_wrapper = 0)
-#define IN_MMAP_WRAPPER         (in_mmap_wrapper == 1)
-
-#define SET_MMAP_NO_SYNC()   (mmap_no_sync = 1)
-#define UNSET_MMAP_NO_SYNC() (mmap_no_sync = 0)
-#define MMAP_NO_SYNC         (mmap_no_sync == 1)
-// Defined in dmtcpworker.cpp:
-LIB_PRIVATE extern __thread int mmap_no_sync;
 
 #define TURN_CHECK_P(name) int name(log_entry_t *e1, log_entry_t *e2)
 
@@ -249,7 +239,8 @@ LIB_PRIVATE extern __thread int mmap_no_sync;
 #define WRAPPER_LOG_WRITE_ENTRY_VOID(my_entry)                      \
   do {                                                              \
     SET_COMMON2(my_entry, my_errno, errno);                         \
-    SET_COMMON2(my_entry, isOptional, isOptionalEvent);             \
+    SET_COMMON2(my_entry, isOptional,                               \
+                dmtcp::ThreadInfo::isOptionalEvent());              \
     addNextLogEntry(my_entry);                                      \
     errno = GET_COMMON(my_entry, my_errno);                         \
   } while (0)
@@ -1506,9 +1497,6 @@ LIB_PRIVATE extern dmtcp::SynchronizationLog global_log;
 
 /* Thread locals: */
 LIB_PRIVATE extern __thread clone_id_t my_clone_id;
-LIB_PRIVATE extern __thread int in_mmap_wrapper;
-LIB_PRIVATE extern __thread unsigned char isOptionalEvent;
-LIB_PRIVATE extern __thread bool ok_to_log_next_func;
 
 /* Volatiles: */
 LIB_PRIVATE extern volatile clone_id_t    global_clone_counter;

@@ -37,6 +37,7 @@
 
 #include "synchronizationlogging.h"
 #include "log.h"
+#include "threadinfo.h"
 
 static inline void memfence() {  asm volatile ("mfence" ::: "memory"); }
 void fred_setup_trampolines();
@@ -67,17 +68,10 @@ static void recordReplayInit()
   global_clone_counter = GLOBAL_CLONE_COUNTER_INIT;
   my_clone_id = get_next_clone_id();
 
-  clone_id_to_tid_table = new dmtcp::map<clone_id_t, pthread_t>;
-  tid_to_clone_id_table = new dmtcp::map<pthread_t, clone_id_t>;
-  clone_id_to_sem_table = new dmtcp::map<clone_id_t, sem_t>;
-
-  clone_id_to_tid_table->clear();
-  tid_to_clone_id_table->clear();
-  clone_id_to_sem_table->clear();
+  dmtcp::ThreadInfo::init();
+  dmtcp::ThreadInfo::initThread(my_clone_id);
 
   initialize_thread();
-  clone_id_t ckpt_thread_id = get_next_clone_id();
-  sem_init(&(*clone_id_to_sem_table)[my_clone_id], 0, 0);
 
   /* Other initialization for sync log/replay specific to this process. */
   initializeLogNames();
@@ -156,22 +150,7 @@ void fred_post_suspend ()
   global_log.destroy(sync_mode_pre_ckpt);
   close_read_log();
 
-  // Remove the threads which aren't alive anymore.
-  {
-    dmtcp::map<clone_id_t, pthread_t>::iterator it;
-    dmtcp::vector<clone_id_t> stale_clone_ids;
-    for (it = clone_id_to_tid_table->begin();
-         it != clone_id_to_tid_table->end();
-         it++) {
-      if (_real_pthread_kill(it->second, 0) != 0) {
-        stale_clone_ids.push_back(it->first);
-      }
-    }
-    for (size_t i = 0; i < stale_clone_ids.size(); i++) {
-      clone_id_to_tid_table->erase(stale_clone_ids[i]);
-      clone_id_to_sem_table->erase(stale_clone_ids[i]);
-    }
-  }
+  dmtcp::ThreadInfo::postSuspend();
 }
 
 void fred_post_checkpoint_resume()
@@ -185,7 +164,6 @@ void fred_post_checkpoint_resume()
 
 void fred_post_restart_resume()
 {
-  log_entry_t temp_entry;
   initSyncAddresses();
   set_sync_mode(SYNC_REPLAY);
   sync_mode_pre_ckpt = SYNC_NOOP;
@@ -194,18 +172,9 @@ void fred_post_restart_resume()
     // If no log entries, go back to RECORD.
     set_sync_mode(SYNC_RECORD);
   } else {
-    dmtcp::map<clone_id_t, pthread_t>::iterator it;
-    for (it = clone_id_to_tid_table->begin();
-         it != clone_id_to_tid_table->end();
-         it++) {
-      clone_id_t id = it->first;
-      sem_t sem;
-      sem_init(&(*clone_id_to_sem_table)[id], 0, 0);
-    }
-    temp_entry = global_log.getCurrentEntry();
-    clone_id_t clone_id = GET_COMMON(temp_entry, clone_id);
-    JNOTE("Posting") (clone_id) (my_clone_id);
-    sem_post(&(*clone_id_to_sem_table)[clone_id]);
+    dmtcp::ThreadInfo::postRestartResume();
+    log_entry_t temp_entry = global_log.getCurrentEntry();
+    dmtcp::ThreadInfo::wakeUpThread(GET_COMMON(temp_entry, clone_id));
   }
   log_all_allocs = 1;
 }
@@ -222,6 +191,13 @@ void fred_reset_on_fork()
   // Perform other initialization for sync log/replay specific to this process.
   initSyncAddresses();
   initializeLogNames();
+}
+
+static void fred_process_thread_start()
+{
+  if (my_clone_id == -1) {
+    initialize_thread();
+  }
 }
 
 EXTERNC void dmtcp_process_event(DmtcpEvent_t event, void* data)
@@ -241,6 +217,9 @@ EXTERNC void dmtcp_process_event(DmtcpEvent_t event, void* data)
       break;
     case DMTCP_EVENT_POST_RESTART_RESUME:
       fred_post_restart_resume();
+      break;
+    case DMTCP_EVENT_THREAD_START:
+      fred_process_thread_start();
       break;
     case DMTCP_EVENT_PRE_EXIT:
     case DMTCP_EVENT_PRE_CKPT:

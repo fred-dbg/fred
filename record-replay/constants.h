@@ -39,5 +39,7 @@
 #define ENABLE_MALLOC_WRAPPER
 #define ENV_VAR_LOG_REPLAY "DMTCP_LOG_REPLAY"
 
+typedef long int clone_id_t;
+typedef unsigned long int log_off_t;
 #endif
 

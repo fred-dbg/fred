@@ -22,6 +22,7 @@
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/syscall.h>
+#include <sys/resource.h>
 #include <string.h>
 #include <stdio.h>
 #include <fcntl.h>
@@ -36,15 +37,12 @@
 #include <sys/select.h>
 #include "synchronizationlogging.h"
 #include "log.h"
-#include <sys/resource.h>
+#include "threadinfo.h"
 
 
 // TODO: Do we need LIB_PRIVATE again here if we had already specified it in
 // the header file?
 /* Library private: */
-LIB_PRIVATE dmtcp::map<clone_id_t, pthread_t> *clone_id_to_tid_table = NULL;
-LIB_PRIVATE dmtcp::map<pthread_t, clone_id_t> *tid_to_clone_id_table = NULL;
-LIB_PRIVATE dmtcp::map<clone_id_t, sem_t>     *clone_id_to_sem_table = NULL;
 LIB_PRIVATE dmtcp::map<pthread_t, pthread_join_retval_t> pthread_join_retvals;
 LIB_PRIVATE char RECORD_LOG_PATH[RECORD_LOG_PATH_MAX];
 LIB_PRIVATE char RECORD_READ_DATA_LOG_PATH[RECORD_LOG_PATH_MAX];
@@ -60,10 +58,6 @@ LIB_PRIVATE dmtcp::SynchronizationLog global_log;
 
 /* Thread locals: */
 LIB_PRIVATE __thread clone_id_t my_clone_id = -1;
-LIB_PRIVATE __thread int in_mmap_wrapper = 0;
-LIB_PRIVATE __thread unsigned char isOptionalEvent = 0;
-LIB_PRIVATE __thread bool ok_to_log_next_func = false;
-
 
 /* Volatiles: */
 LIB_PRIVATE volatile clone_id_t global_clone_counter = 0;
@@ -142,8 +136,8 @@ int shouldSynchronize(void *return_addr)
   if (isProcessGDB()) {
     return 0;
   }
-  if (ok_to_log_next_func) {
-    ok_to_log_next_func = false;
+  if (dmtcp::ThreadInfo::isOkToLogNextFnc()) {
+    dmtcp::ThreadInfo::unsetOkToLogNextFnc();
     return 1;
   }
   if (!validAddress(return_addr)) {
@@ -319,17 +313,13 @@ LIB_PRIVATE void initialize_thread()
   }
   JTRACE ( "Thread start initialization." ) ( my_clone_id );
 
-  pid_t clone_id = my_clone_id;
-  pthread_t pthread_id = pthread_self();
-
-  (*clone_id_to_tid_table)[clone_id] = pthread_id;
-  (*tid_to_clone_id_table)[pthread_id] = clone_id;
+  dmtcp::ThreadInfo::updateThread(my_clone_id, pthread_self());
 
   if (SYNC_IS_RECORD) {
     global_log.incrementNumberThreads();
   }
 
-  JTRACE ( "Thread Initialized" ) ( my_clone_id ) ( pthread_id );
+  JTRACE ( "Thread Initialized" ) ( my_clone_id ) ( pthread_self() );
 }
 
 /* Close the "read log", which is done before a checkpoint is taken. */
@@ -352,7 +342,6 @@ void addNextLogEntry(log_entry_t& e)
   }
 }
 
-clone_id_t nextThread = -1;
 void getNextLogEntry()
 {
   if (my_clone_id == -1) {
@@ -369,13 +358,7 @@ void getNextLogEntry()
     memfence();
     const log_entry_t& temp_entry = global_log.getCurrentEntry();
     clone_id_t clone_id = GET_COMMON(temp_entry, clone_id);
-    nextThread = clone_id;
-    sem_t& sem = (*clone_id_to_sem_table)[clone_id];
-    JTRACE("Posting") (clone_id) (my_clone_id);
-    sem_post(&sem);
-    int val;
-    sem_getvalue(&sem, &val);
-    JTRACE("After Posting") (clone_id) (val);
+    dmtcp::ThreadInfo::wakeUpThread(clone_id);
   }
 }
 
@@ -3195,23 +3178,21 @@ static void execute_optional_event(int opt_event_num)
   } else if (opt_event_num == fopen_event) {
     char *name = GET_FIELD(temp_entry, fopen, name);
     char *mode = GET_FIELD(temp_entry, fopen, mode);
-    ok_to_log_next_func = true;
+    dmtcp::ThreadInfo::setOkToLogNextFnc();
     FILE *fp = fopen(name, mode);
   } else if (opt_event_num == fclose_event) {
     FILE *fp = GET_FIELD(temp_entry, fclose, fp);
-    ok_to_log_next_func = true;
+    dmtcp::ThreadInfo::setOkToLogNextFnc();
     fclose(fp);
   } else if (opt_event_num == ftell_event) {
     FILE *fp = GET_FIELD(temp_entry, ftell, stream);
-    ok_to_log_next_func = true;
+    dmtcp::ThreadInfo::setOkToLogNextFnc();
     // No need to execute ftell().  It has no side effects.
     long int offset = ftell(fp);
   } else {
     JASSERT (false)(opt_event_num).Text("No action known for optional event.");
   }
 }
-
-clone_id_t waitThread=-1;
 
 /* Waits until the head of the log contains an entry matching pertinent fields
    of 'my_entry'. When it does, 'my_entry' is modified to point to the head of
@@ -3225,27 +3206,9 @@ void waitForTurn(log_entry_t *my_entry, turn_pred_t pred)
     SET_COMMON_PTR2(my_entry, clone_id, my_clone_id);
   }
   while (1) {
-    struct timespec ts;
-    struct timespec ts_ms = {0, 1 * 1000 * 1000};
-    JASSERT(clone_id_to_sem_table->find(my_clone_id) != clone_id_to_sem_table->end())
-      (my_clone_id);
-    sem_t& sem = (*clone_id_to_sem_table)[my_clone_id];
-    do {
-      _real_clock_gettime(CLOCK_REALTIME, &ts);
-      TIMESPEC_ADD(&ts, &ts_ms, &ts);
-    } while (sem_timedwait(&sem, &ts) != 0);
-      memfence();
-    JTRACE("WAIT REturned") (my_clone_id);
-    waitThread = my_clone_id;
+    dmtcp::ThreadInfo::waitForTurn();
+    memfence();
     log_entry_t& temp_entry = global_log.getCurrentEntry();
-#if 0
-    if (GET_COMMON(temp_entry, clone_id) != my_clone_id) {
-      int x = 0;
-      JNOTE("ERROR********************")
-        (GET_COMMON(temp_entry, clone_id)) (my_clone_id);
-      while(!x);
-    }
-#endif
     JASSERT(GET_COMMON(temp_entry, clone_id) == my_clone_id)
       (GET_COMMON(temp_entry, clone_id)) (my_clone_id);
     if ((*pred)(&temp_entry, my_entry))
@@ -3259,7 +3222,7 @@ void waitForTurn(log_entry_t *my_entry, turn_pred_t pred)
         JASSERT(false);
       }
       memfence();
-      sem_post(&sem);
+      dmtcp::ThreadInfo::wakeUpThread(my_clone_id);
       execute_optional_event(GET_COMMON(temp_entry, event));
     }
   }
