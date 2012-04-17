@@ -94,7 +94,7 @@ void dmtcp::SynchronizationLog::initialize(const char *path, size_t size)
     _entryIndexMarker = 0;
   }
 
-  if (!global_log.isEndOfLog() && SYNC_IS_REPLAY) {
+  if (!isEndOfLog() && SYNC_IS_REPLAY) {
     // Load the new entry.
     getEntryAtOffset(_currentEntry, getIndex());
   }

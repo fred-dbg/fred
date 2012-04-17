@@ -1209,6 +1209,7 @@ void rewriteLog(char *log_path)
   log.initialize(log_path, LOG_OFFSET_FROM_START);
   size_t logSize = log.getDataSize();
   log.destroy(SYNC_IS_RECORD);
+  sync_logging_branch = SYNC_REPLAY;
   log.initialize(log_path, logSize + LOG_OFFSET_FROM_START + 1);
   printf("Metadata: dataSize=%zu, numEntries=%zu\n",
          log.getDataSize(), log.numEntries());
