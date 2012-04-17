@@ -366,6 +366,7 @@ void getNextLogEntry()
     JTRACE ( "Switching back to record." );
     set_sync_mode(SYNC_RECORD);
   } else {
+    memfence();
     const log_entry_t& temp_entry = global_log.getCurrentEntry();
     clone_id_t clone_id = GET_COMMON(temp_entry, clone_id);
     nextThread = clone_id;
@@ -3233,6 +3234,7 @@ void waitForTurn(log_entry_t *my_entry, turn_pred_t pred)
       _real_clock_gettime(CLOCK_REALTIME, &ts);
       TIMESPEC_ADD(&ts, &ts_ms, &ts);
     } while (sem_timedwait(&sem, &ts) != 0);
+      memfence();
     JTRACE("WAIT REturned") (my_clone_id);
     waitThread = my_clone_id;
     log_entry_t& temp_entry = global_log.getCurrentEntry();
@@ -3256,6 +3258,7 @@ void waitForTurn(log_entry_t *my_entry, turn_pred_t pred)
                                  false)) {
         JASSERT(false);
       }
+      memfence();
       sem_post(&sem);
       execute_optional_event(GET_COMMON(temp_entry, event));
     }
