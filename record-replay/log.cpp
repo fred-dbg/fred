@@ -53,6 +53,13 @@ static size_t getLogEventSize(const log_entry_t& entry)
   return log_event_size[entry.header.event];
 }
 
+static void fred_interface_get_shm_file_name(char *name)
+{
+  dmtcp::ostringstream o;
+  o << dmtcp_get_tmpdir() << "/fred-shm." << getpid();
+  strcpy(name, o.str().c_str());
+}
+
 void dmtcp::SynchronizationLog::initialize(const char *path, size_t size)
 {
   bool mapWithNoReserveFlag = SYNC_IS_RECORD;
@@ -106,7 +113,8 @@ void dmtcp::SynchronizationLog::init_shm()
   char name[PATH_MAX];
   int fd, retval;
   void *mmapAddr = (void*) _sharedInterfaceInfo;
-  sprintf(name, FRED_INTERFACE_SHM_FILE_FMT, dmtcp_get_tmpdir(), getpid());
+
+  fred_interface_get_shm_file_name(name);
 
   JASSERT((void*)_sharedInterfaceInfo != NULL || SYNC_IS_RECORD);
 
@@ -149,7 +157,7 @@ void dmtcp::SynchronizationLog::destroy_shm()
   }
 
   char name[PATH_MAX];
-  sprintf(name, FRED_INTERFACE_SHM_FILE_FMT, dmtcp_get_tmpdir(), getpid());
+  fred_interface_get_shm_file_name(name);
 
   munmap(_sharedInterfaceInfo, FRED_INTERFACE_SHM_SIZE);
   unlink(name);

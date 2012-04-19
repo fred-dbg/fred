@@ -23,6 +23,7 @@
 #define _FRED_INTERFACE_H
 
 #include "synchronizationlogging.h"
+#include "dmtcpalloc.h"
 
 typedef struct {
   clone_id_t current_clone_id;
@@ -41,5 +42,4 @@ enum {
   /* Indicates that the set breakpoint has been hit. */
   FRED_INTERFACE_BP_HIT = -2
 };
-
 #endif
