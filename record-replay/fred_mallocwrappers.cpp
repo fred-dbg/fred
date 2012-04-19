@@ -325,6 +325,9 @@ extern "C" void free(void *ptr)
     JASSERT(ptr == wrapper_init_buf);
     return;
   }
+  if (ptr == NULL) {
+    return;
+  }
   void *return_addr = GET_RETURN_ADDRESS();
   if ((!shouldSynchronize(return_addr) && !log_all_allocs) ||
       ptr == NULL || isProcessGDB()) {
