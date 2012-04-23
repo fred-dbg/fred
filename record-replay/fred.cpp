@@ -61,17 +61,8 @@ static void recordReplayInit()
   // NOTe: This comment may not be true anymore.
   fred_setup_trampolines();
 
-  /* This is called only on exec(). We reset the global clone counter for this
-     process, assign the first thread (this one) clone_id 1, and increment the
-     counter. */
-  JTRACE ( "resetting global clone counter." );
-  global_clone_counter = GLOBAL_CLONE_COUNTER_INIT;
-  my_clone_id = get_next_clone_id();
-
   dmtcp::ThreadInfo::init();
-  dmtcp::ThreadInfo::initThread(my_clone_id);
-
-  initialize_thread();
+  dmtcp::ThreadInfo::initThread();
 
   /* Other initialization for sync log/replay specific to this process. */
   initializeLogNames();
@@ -181,13 +172,7 @@ void fred_post_restart_resume()
 
 void fred_reset_on_fork()
 {
-  // This is called only on fork() by the new child process. We reset the
-  // global clone counter for this process, assign the first thread (this one)
-  // clone_id 1, and increment the counter.
-  JTRACE ( "resetting global counter in new process." );
-  global_clone_counter = GLOBAL_CLONE_COUNTER_INIT;
-  my_clone_id = get_next_clone_id();
-
+  dmtcp::ThreadInfo::resetOnFork();
   // Perform other initialization for sync log/replay specific to this process.
   initSyncAddresses();
   initializeLogNames();
@@ -196,7 +181,7 @@ void fred_reset_on_fork()
 static void fred_process_thread_start()
 {
   if (my_clone_id == -1) {
-    initialize_thread();
+    dmtcp::ThreadInfo::initThread();
   }
 }
 

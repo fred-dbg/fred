@@ -117,9 +117,7 @@ static void remove_reaped_thread(pthread_t thd)
 
 static void *start_wrapper(void *arg)
 {
-  if (my_clone_id == -1) {
-    initialize_thread();
-  }
+  JASSERT(my_clone_id != -1);
   /*
    This start function calls the user's start function. We need this so that we
    gain control immediately after the user's start function terminates, but
@@ -396,8 +394,8 @@ static int internal_pthread_create(pthread_t *thread,
     WRAPPER_REPLAY_END(pthread_create);
 
     ACQUIRE_THREAD_CREATE_DESTROY_LOCK();
-    clone_id_t tid = global_clone_counter;
-    dmtcp::ThreadInfo::initThread(tid);
+    // Register a new thread with ThreadInfo.
+    dmtcp::ThreadInfo::registerThread();
     // Set up thread stacks to how they were at record time.
     pthread_attr_init(&the_attr);
 

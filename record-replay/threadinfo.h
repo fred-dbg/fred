@@ -68,9 +68,10 @@ namespace dmtcp {
   namespace ThreadInfo {
 
     void init();
-    void initThread(clone_id_t id);
+    void registerThread(clone_id_t id = -1);
     void destroyThread(pthread_t pth);
-    void updateThread(clone_id_t id, pthread_t pth);
+    void initThread();
+    void resetOnFork();
 
     ThreadLocalData* getThreadLocalData(pthread_t pth);
     ThreadLocalData* getThreadLocalData(clone_id_t id);

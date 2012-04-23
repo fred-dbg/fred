@@ -56,11 +56,7 @@ LIB_PRIVATE pthread_mutex_t read_data_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 LIB_PRIVATE dmtcp::SynchronizationLog global_log;
 
-/* Thread locals: */
-LIB_PRIVATE __thread clone_id_t my_clone_id = -1;
-
 /* Volatiles: */
-LIB_PRIVATE volatile clone_id_t global_clone_counter = 0;
 LIB_PRIVATE volatile off_t         read_log_pos = 0;
 
 static inline void memfence() {  asm volatile ("mfence" ::: "memory"); }
@@ -116,11 +112,6 @@ inline void set_sync_mode(int mode)
 int get_sync_mode()
 {
   return sync_logging_branch;
-}
-
-clone_id_t get_next_clone_id()
-{
-  return __sync_fetch_and_add (&global_clone_counter, 1);
 }
 
 int shouldSynchronize(void *return_addr)
@@ -305,23 +296,6 @@ void copyFdSet(fd_set *src, fd_set *dest)
   }
 }
 
-LIB_PRIVATE void initialize_thread()
-{
-  /* Assigning my_clone_id should be the very first thing.*/
-  if (my_clone_id == -1) {
-    my_clone_id = get_next_clone_id();
-  }
-  JTRACE ( "Thread start initialization." ) ( my_clone_id );
-
-  dmtcp::ThreadInfo::updateThread(my_clone_id, pthread_self());
-
-  if (SYNC_IS_RECORD) {
-    global_log.incrementNumberThreads();
-  }
-
-  JTRACE ( "Thread Initialized" ) ( my_clone_id ) ( pthread_self() );
-}
-
 /* Close the "read log", which is done before a checkpoint is taken. */
 void close_read_log()
 {
@@ -331,10 +305,7 @@ void close_read_log()
 
 void addNextLogEntry(log_entry_t& e)
 {
-  if (my_clone_id == -1) {
-    initialize_thread();
-    SET_COMMON2(e, clone_id, my_clone_id);
-  }
+  JASSERT(my_clone_id != -1);
   if (GET_COMMON(e, log_offset) == INVALID_LOG_OFFSET) {
     global_log.appendEntry(e);
   } else {
@@ -344,9 +315,7 @@ void addNextLogEntry(log_entry_t& e)
 
 void getNextLogEntry()
 {
-  if (my_clone_id == -1) {
-    initialize_thread();
-  }
+  JASSERT(my_clone_id != -1);
   // If log is empty, don't do anything
   if (global_log.numEntries() == 0) {
     return;
@@ -3201,10 +3170,7 @@ void waitForTurn(log_entry_t *my_entry, turn_pred_t pred)
 {
   memfence();
 
-  if (my_clone_id == -1) {
-    initialize_thread();
-    SET_COMMON_PTR2(my_entry, clone_id, my_clone_id);
-  }
+  JASSERT(my_clone_id != -1);
   while (1) {
     dmtcp::ThreadInfo::waitForTurn();
     memfence();

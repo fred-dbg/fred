@@ -1474,7 +1474,6 @@ typedef struct {
 static const int         CLONE_ID_ANYONE = -2;
 static const log_entry_t EMPTY_LOG_ENTRY = {{empty_event, 0, 0, 0, 0, 0}};
 // Number to start clone_ids at:
-static const int         GLOBAL_CLONE_COUNTER_INIT = 1;
 static const int         RECORD_LOG_PATH_MAX = 256;
 
 /* Library private: */
@@ -1492,21 +1491,16 @@ LIB_PRIVATE extern pthread_mutex_t read_data_mutex;
 
 LIB_PRIVATE extern dmtcp::SynchronizationLog global_log;
 
-// TODO: rename this, since a log entry is not a char. maybe log_event_TYPE_SIZE?
-#define LOG_ENTRY_SIZE sizeof(char)
-
 /* Thread locals: */
 LIB_PRIVATE extern __thread clone_id_t my_clone_id;
 
 /* Volatiles: */
-LIB_PRIVATE extern volatile clone_id_t    global_clone_counter;
 LIB_PRIVATE extern volatile off_t         read_log_pos;
 
 /* Functions */
 LIB_PRIVATE void   addNextLogEntry(log_entry_t&);
 LIB_PRIVATE void   set_sync_mode(int mode);
 LIB_PRIVATE int    get_sync_mode();
-LIB_PRIVATE clone_id_t get_next_clone_id();
 LIB_PRIVATE void   copyFdSet(fd_set *src, fd_set *dest);
 LIB_PRIVATE void   getNextLogEntry();
 LIB_PRIVATE void   initializeLogNames();
