@@ -176,6 +176,8 @@ void dmtcp::ThreadInfo::postRestartResume()
 clone_id_t nextThread = -1;
 void dmtcp::ThreadInfo::wakeUpThread(clone_id_t id)
 {
+  global_log.checkForBreakpoint();
+
   dmtcp::ThreadLocalData *thrInfo = getThreadLocalData(id);
   JNOTE("Posting") (id) (my_clone_id);
   nextThread = id;
@@ -195,6 +197,7 @@ void dmtcp::ThreadInfo::waitForTurn()
     TIMESPEC_ADD(&ts, &ts_ms, &ts);
   } while (sem_timedwait(&sem, &ts) != 0);
   JTRACE("WAIT REturned") (my_clone_id);
+
   waitThread = my_clone_id;
 }
 

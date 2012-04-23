@@ -291,16 +291,8 @@ void dmtcp::SynchronizationLog::map_in()
 int dmtcp::SynchronizationLog::advanceToNextEntry()
 {
   if (_sharedInterfaceInfo->breakpoint_at_index == _entryIndex + 1) {
-    // A breakpoint has been hit. Don't advance the log yet.
+    // A breakpoint has been hit. The next thread should wait
     _sharedInterfaceInfo->breakpoint_at_index = FRED_INTERFACE_BP_HIT;
-    // XXX: Can this be a condition variable wait instead?
-    while (1) {
-      // Wait until the breakpoint has been cleared.
-      if (_sharedInterfaceInfo->breakpoint_at_index == FRED_INTERFACE_NO_BP) {
-        break;
-      }
-      usleep(1);
-    }
   }
 
   int entrySize = log_event_common_size + getLogEventSize(_currentEntry);
@@ -320,6 +312,21 @@ int dmtcp::SynchronizationLog::advanceToNextEntry()
   _sharedInterfaceInfo->current_log_entry_index = _entryIndex;
 
   return 1;
+}
+
+void dmtcp::SynchronizationLog::checkForBreakpoint()
+{
+  // A breakpoint has been hit. wait here.
+  if (_sharedInterfaceInfo->breakpoint_at_index == FRED_INTERFACE_BP_HIT) {
+    // XXX: Can this be a condition variable wait instead?
+    while (1) {
+      // Wait until the breakpoint has been cleared.
+      if (_sharedInterfaceInfo->breakpoint_at_index == FRED_INTERFACE_NO_BP) {
+        break;
+      }
+      usleep(1);
+    }
+  }
 }
 
 log_entry_t& dmtcp::SynchronizationLog::getCurrentEntry()

@@ -107,6 +107,7 @@ namespace dmtcp
       void   mergeLogs(dmtcp::vector<clone_id_t> clone_ids);
 
       int    advanceToNextEntry();
+      void   checkForBreakpoint();
       log_entry_t& getCurrentEntry();
       void   appendEntry(log_entry_t& entry);
       void   updateEntry(const log_entry_t& entry);
