@@ -65,17 +65,22 @@ static int _wrappers_initialized = 0;
     _exit(0);                                                               \
   } while(0)
 
-#define GET_FUNC_ADDR(type, name, ...) \
+#define GET_FUNC_ADDR_1(type, name, ...) \
   _real_func_addr[ENUM(name)] = _real_dlsym(RTLD_NEXT, #name);
+
 #define GET_FUNC_ADDR_2(type, name, ...) \
+  _real_func_addr[ENUM(name)] = dlvsym(RTLD_NEXT, #name, "GLIBC_2.3.2");
+
+#define GET_FUNC_ADDR_3(type, name, ...) \
   _real_func_addr[ENUM(name)] = _real_dlsym(RTLD_NEXT, "__" #name);
 
 LIB_PRIVATE
 void initialize_wrappers()
 {
   if (!_wrappers_initialized) {
-    FOREACH_RECORD_REPLAY_WRAPPER_1(GET_FUNC_ADDR);
+    FOREACH_RECORD_REPLAY_WRAPPER_1(GET_FUNC_ADDR_1);
     FOREACH_RECORD_REPLAY_WRAPPER_2(GET_FUNC_ADDR_2);
+    FOREACH_RECORD_REPLAY_WRAPPER_3(GET_FUNC_ADDR_3);
     _wrappers_initialized = 1;
   }
 }

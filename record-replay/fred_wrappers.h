@@ -149,11 +149,6 @@ extern "C"
   MACRO(int, putc, int c, FILE *stream) \
   MACRO(ssize_t, pwrite, int fd, const void *buf, size_t count, off_t offset) \
   MACRO(ssize_t, pwritev, int fd, const struct iovec *iov, int iovcnt, off_t offset) \
-  MACRO(int, pthread_cond_broadcast, pthread_cond_t *cond) \
-  MACRO(int, pthread_cond_signal, pthread_cond_t *cond) \
-  MACRO(int, pthread_cond_wait, pthread_cond_t *cond, pthread_mutex_t *mutex) \
-  MACRO(int, pthread_cond_timedwait, pthread_cond_t *cond, pthread_mutex_t *mutex, const struct timespec *abstime) \
-  MACRO(int, pthread_cond_destroy, pthread_cond_t *cond) \
   MACRO(int, pthread_rwlock_unlock, pthread_rwlock_t *rwlock) \
   MACRO(int, pthread_rwlock_rdlock, pthread_rwlock_t *rwlock) \
   MACRO(int, pthread_rwlock_wrlock, pthread_rwlock_t *rwlock) \
@@ -219,6 +214,13 @@ extern "C"
   MACRO(sighandler_t, sigset, int sig, sighandler_t disp)
 
 #define FOREACH_RECORD_REPLAY_WRAPPER_2(MACRO) \
+  MACRO(int, pthread_cond_broadcast, pthread_cond_t *cond) \
+  MACRO(int, pthread_cond_signal, pthread_cond_t *cond) \
+  MACRO(int, pthread_cond_wait, pthread_cond_t *cond, pthread_mutex_t *mutex) \
+  MACRO(int, pthread_cond_timedwait, pthread_cond_t *cond, pthread_mutex_t *mutex, const struct timespec *abstime) \
+  MACRO(int, pthread_cond_destroy, pthread_cond_t *cond) \
+
+#define FOREACH_RECORD_REPLAY_WRAPPER_3(MACRO) \
   MACRO(int, fxstat, int vers, int fd, struct stat *buf) \
   MACRO(int, fxstat64, int vers, int fd, struct stat64 *buf) \
   MACRO(int, lxstat, int vers, const char *path, struct stat *buf) \
@@ -227,11 +229,11 @@ extern "C"
   MACRO(int, xstat64, int vers, const char *path, struct stat64 *buf) \
   MACRO(void*, libc_memalign, size_t boundary, size_t size)
 
-#define FOREACH_RECORD_REPLAY_WRAPPER_3(MACRO) \
+#define FOREACH_RECORD_REPLAY_WRAPPER_4(MACRO) \
   MACRO(int, fprintf, FILE *stream, const char *format, va_list ap) \
   MACRO(int, fscanf, FILE *stream, const char *format, va_list ap)
 
-#define FOREACH_RECORD_REPLAY_WRAPPER_4(MACRO) \
+#define FOREACH_RECORD_REPLAY_WRAPPER_5(MACRO) \
   MACRO(void, exec_barrier) \
   MACRO(void, signal_handler, int sig, siginfo_t *info, void *data) \
   MACRO(void, user)
@@ -240,7 +242,8 @@ extern "C"
   FOREACH_RECORD_REPLAY_WRAPPER_1(MACRO) \
   FOREACH_RECORD_REPLAY_WRAPPER_2(MACRO) \
   FOREACH_RECORD_REPLAY_WRAPPER_3(MACRO) \
-  FOREACH_RECORD_REPLAY_WRAPPER_4(MACRO)
+  FOREACH_RECORD_REPLAY_WRAPPER_4(MACRO) \
+  FOREACH_RECORD_REPLAY_WRAPPER_5(MACRO)
 
 # define ENUM(x) enum_ ## x
 # define GEN_ENUM(type, name, ...) ENUM(name),
