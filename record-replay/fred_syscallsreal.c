@@ -81,6 +81,7 @@ void initialize_wrappers()
     FOREACH_RECORD_REPLAY_WRAPPER_1(GET_FUNC_ADDR_1);
     FOREACH_RECORD_REPLAY_WRAPPER_2(GET_FUNC_ADDR_2);
     FOREACH_RECORD_REPLAY_WRAPPER_3(GET_FUNC_ADDR_3);
+    FOREACH_NON_RECORD_REPLAY_WRAPPER(GET_FUNC_ADDR_1);
     _wrappers_initialized = 1;
   }
 }
@@ -478,25 +479,30 @@ void _real_free(void *ptr) {
 LIB_PRIVATE
 void *_real_mmap(void *addr, size_t length, int prot, int flags,
     int fd, off_t offset) {
-  REAL_FUNC_PASSTHROUGH_TYPED (void*, mmap) (addr,length,prot,flags,fd,offset);
+  return (void*) _real_syscall(SYS_mmap, addr, length, prot, flags, fd, offset);
+  //REAL_FUNC_PASSTHROUGH_TYPED (void*, mmap) (addr,length,prot,flags,fd,offset);
 }
 
 LIB_PRIVATE
 void *_real_mmap64(void *addr, size_t length, int prot, int flags,
     int fd, off64_t offset) {
-  REAL_FUNC_PASSTHROUGH_TYPED (void*,mmap64) (addr,length,prot,flags,fd,offset);
+  return (void*) _real_syscall(SYS_mmap, addr, length, prot, flags, fd, offset);
+  //REAL_FUNC_PASSTHROUGH_TYPED (void*,mmap64) (addr,length,prot,flags,fd,offset);
 }
 
 LIB_PRIVATE
 void *_real_mremap(void *old_address, size_t old_size, size_t new_size,
     int flags, void *new_address) {
-  REAL_FUNC_PASSTHROUGH_TYPED (void*, mremap)
-    (old_address, old_size, new_size, flags, new_address);
+  return (void*) _real_syscall(SYS_mremap, old_address, old_size, new_size,
+                               flags, new_address);
+  //REAL_FUNC_PASSTHROUGH_TYPED (void*, mremap)
+    //(old_address, old_size, new_size, flags, new_address);
 }
 
 LIB_PRIVATE
 int _real_munmap(void *addr, size_t length) {
-  REAL_FUNC_PASSTHROUGH_TYPED (int, munmap) (addr, length);
+  return (int) _real_syscall(SYS_munmap, addr, length);
+  //REAL_FUNC_PASSTHROUGH_TYPED (int, munmap) (addr, length);
 }
 
 LIB_PRIVATE
@@ -929,4 +935,22 @@ int  _real_ftrylockfile(FILE *filehandle) {
 LIB_PRIVATE
 void _real_funlockfile(FILE *filehandle) {
   REAL_FUNC_PASSTHROUGH_VOID (funlockfile) (filehandle);
+}
+
+/* See comments for syscall wrapper */
+LIB_PRIVATE
+long int _real_syscall(long int sys_num, ... ) {
+  int i;
+  void * arg[7];
+  va_list ap;
+
+  va_start(ap, sys_num);
+  for (i = 0; i < 7; i++)
+    arg[i] = va_arg(ap, void *);
+  va_end(ap);
+
+  // /usr/include/unistd.h says syscall returns long int (contrary to man page)
+  REAL_FUNC_PASSTHROUGH_TYPED ( long int, syscall ) ( sys_num, arg[0], arg[1],
+                                                      arg[2], arg[3], arg[4],
+                                                      arg[5], arg[6] );
 }

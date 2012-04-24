@@ -71,6 +71,12 @@ extern "C"
 # define READLINK_RET_TYPE int
 #endif
 
+  void *fred_mmap(void *addr, size_t length, int prot, int flags,
+                  int fd, off_t offset);
+  void *fred_mremap(void *old_address, size_t old_size,
+                    size_t new_size, int flags, ...);
+  int fred_munmap(void *addr, size_t length);
+
 
 #define FOREACH_RECORD_REPLAY_WRAPPER_1(MACRO) \
   MACRO(void, empty) \
@@ -238,6 +244,10 @@ extern "C"
   MACRO(void, signal_handler, int sig, siginfo_t *info, void *data) \
   MACRO(void, user)
 
+// Wrappers for functions that we are not record-replaying
+#define FOREACH_NON_RECORD_REPLAY_WRAPPER(MACRO) \
+  MACRO(long int, syscall, int num, void *a1, void *a2, void *a3, void *a4, void *a5, void *a6, void *a7)
+
 #define FOREACH_RECORD_REPLAY_WRAPPER(MACRO) \
   FOREACH_RECORD_REPLAY_WRAPPER_1(MACRO) \
   FOREACH_RECORD_REPLAY_WRAPPER_2(MACRO) \
@@ -249,6 +259,7 @@ extern "C"
 # define GEN_ENUM(type, name, ...) ENUM(name),
   typedef enum {
     FOREACH_RECORD_REPLAY_WRAPPER(GEN_ENUM)
+    FOREACH_NON_RECORD_REPLAY_WRAPPER(GEN_ENUM)
     numTotalWrappers
   } LibcWrapperOffset;
 
@@ -256,6 +267,8 @@ extern "C"
   type _real_##name (__VA_ARGS__);
 
   FOREACH_RECORD_REPLAY_WRAPPER(DECLARE_REAL_FUNCTION);
+
+  long int _real_syscall(long int sys_num, ... );
 
 #ifdef __cplusplus
 }

@@ -38,7 +38,6 @@
 #include <linux/version.h>
 #include <limits.h>
 #include "constants.h"
-#include "fred_wrappers.h"
 #include "util.h"
 #include  "jassert.h"
 #include  "jfilesystem.h"
@@ -1621,12 +1620,6 @@ extern "C" pid_t wait4(pid_t pid, __WAIT_STATUS status, int options,
     WRAPPER_LOG_WRITE_ENTRY(my_entry);
   }
   return retval;
-}
-
-extern "C" int shmget(key_t key, size_t size, int shmflg)
-{
-  errno = ENOMEM;
-  return -1;
 }
 
 extern "C" int eventfd(unsigned int initval, int flags)

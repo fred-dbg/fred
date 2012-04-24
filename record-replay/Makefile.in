@@ -18,7 +18,8 @@ HEADERS = constants.h fred_interface.h fred_wrappers.h log.h \
 # As you add new files to your hijack library, add the object file names here.
 FREDHIJACK_OBJS = fred_signalwrappers.o fred_epollwrappers.o \
 	fred_mallocwrappers.o fred_filewrappers.o fred_syscallsreal.o \
-	fred_socketwrappers.o pthreadwrappers.o netwrappers.o fred.o
+	fred_socketwrappers.o pthreadwrappers.o netwrappers.o fred.o \
+	fred_miscwrappers.o
 
 LIBFREDINTERNAL_OBJS = synchronizationlogging.o log.o fred_trampolines.o threadinfo.o
 

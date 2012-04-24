@@ -29,47 +29,20 @@
 #include "threadinfo.h"
 
 static trampoline_info_t mmap_trampoline_info;
-
-/* Used by _mmap_no_sync(). */
-__attribute__ ((visibility ("hidden"))) __thread int mmap_no_sync = 0;
-
-/* This could either be a normal dmtcp wrapper, or a hook function which calls
-   a normal dmtcp wrapper. In this case, this is just a hook function which
-   calls the real mmap wrapper (in mallocwrappers.cpp). I did it this way so
-   that the real mmap wrapper could be relatively unchanged. Also, this way the
-   default is to go through the regular mmap wrapper, and only if a call to
-   mmap misses the wrapper does it go through the trampoline maze. */
-static void *mmap_wrapper(void *addr, size_t length, int prot,
-                          int flags, int fd, off_t offset)
-{
-  void *retval;
-  if (dmtcp::ThreadInfo::isInMmapWrapper()) {
-    retval = _real_mmap(addr,length,prot,flags,fd,offset);
-  } else {
-    retval = mmap(addr,length,prot,flags,fd,offset);
-  }
-  return retval;
-}
-
-/* Calls to mmap will land here. */
-static void *mmap_trampoline(void *addr, size_t length, int prot,
-                             int flags, int fd, off_t offset)
-{
-  /* Interesting note: we get the arguments set up for free, since mmap is
-     patched to jump directly to this function. */
-  /* Unpatch mmap. */
-  UNINSTALL_TRAMPOLINE(mmap_trampoline_info);
-  /* Call mmap mini trampoline, which will eventually call _real_mmap. */
-  void *retval = mmap_wrapper(addr,length,prot,flags,fd,offset);
-  /* Repatch mmap. */
-  INSTALL_TRAMPOLINE(mmap_trampoline_info);
-  return retval;
-}
+static trampoline_info_t mmap64_trampoline_info;
+static trampoline_info_t mremap_trampoline_info;
+static trampoline_info_t munmap_trampoline_info;
 
 /* Any trampolines which should be installed are done so via this function.
    Called from DmtcpWorker constructor. */
 void fred_setup_trampolines()
 {
-  dmtcp_setup_trampoline("mmap", (void*) &mmap_trampoline,
+  dmtcp_setup_trampoline("mmap", (void*) &fred_mmap,
                          &mmap_trampoline_info);
+  dmtcp_setup_trampoline("mmap64", (void*) &fred_mmap,
+                         &mmap64_trampoline_info);
+  dmtcp_setup_trampoline("mremap", (void*) &fred_mremap,
+                         &mremap_trampoline_info);
+  dmtcp_setup_trampoline("munmap", (void*) &fred_munmap,
+                         &munmap_trampoline_info);
 }

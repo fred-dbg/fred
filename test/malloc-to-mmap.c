@@ -3,7 +3,7 @@
 #include <pthread.h>
 #include <stdlib.h>
 
-#define NUM_ITERS 1000
+#define NUM_ITERS 200
 #define NUM_THREADS 8
 
 static volatile unsigned start = 0;

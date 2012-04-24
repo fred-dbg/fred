@@ -83,10 +83,6 @@ namespace dmtcp {
     void wakeUpThread(clone_id_t id);
     void waitForTurn();
 
-    void setInMmapWrapper();
-    void unsetInMmapWrapper();
-    bool isInMmapWrapper();
-
     void setOptionalEvent();
     void unsetOptionalEvent();
     bool isOptionalEvent();

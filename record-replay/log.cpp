@@ -267,12 +267,10 @@ void dmtcp::SynchronizationLog::map_in(const char *path, size_t size,
   }
   _real_munmap(tempAddr, LOG_OFFSET_FROM_START);
 
-  dmtcp::ThreadInfo::setInMmapWrapper();
   _startAddr = (char*) _real_mmap(mmapAddr, size, mmapProt, mmapFlags, fd, 0);
   if (mmapAddr != NULL) {
     JASSERT ( (void *)_startAddr == mmapAddr );
   }
-  dmtcp::ThreadInfo::unsetInMmapWrapper();
 
   _real_close(fd);
   _path = path == NULL ? "" : path;

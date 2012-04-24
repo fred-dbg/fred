@@ -179,7 +179,7 @@ void dmtcp::ThreadInfo::wakeUpThread(clone_id_t id)
   global_log.checkForBreakpoint();
 
   dmtcp::ThreadLocalData *thrInfo = getThreadLocalData(id);
-  JNOTE("Posting") (id) (my_clone_id);
+  JTRACE("Posting") (id) (my_clone_id);
   nextThread = id;
   sem_post(&thrInfo->sem);
 }
@@ -205,36 +205,6 @@ pthread_t dmtcp::ThreadInfo::cloneIdToPthreadId(clone_id_t clone_id)
 {
   dmtcp::ThreadLocalData *tdata = getThreadLocalData(clone_id);
   return tdata->pthreadId;
-}
-
-void dmtcp::ThreadInfo::setInMmapWrapper()
-{
-  if (cloneIdTbl == NULL) {
-    return;
-  }
-  if (my_clone_id == -1) initThread();
-  dmtcp::ThreadLocalData *thrInfo = getThreadLocalData(my_clone_id);
-  thrInfo->in_mmap_wrapper = 1;
-}
-
-void dmtcp::ThreadInfo::unsetInMmapWrapper()
-{
-  if (cloneIdTbl == NULL) {
-    return;
-  }
-  if (my_clone_id == -1) initThread();
-  dmtcp::ThreadLocalData *thrInfo = getThreadLocalData(my_clone_id);
-  thrInfo->in_mmap_wrapper = 0;
-}
-
-bool dmtcp::ThreadInfo::isInMmapWrapper()
-{
-  if (cloneIdTbl == NULL) {
-    return false;
-  }
-  if (my_clone_id == -1) initThread();
-  dmtcp::ThreadLocalData *thrInfo = getThreadLocalData(my_clone_id);
-  thrInfo->in_mmap_wrapper == 1;
 }
 
 void dmtcp::ThreadInfo::setOptionalEvent()
