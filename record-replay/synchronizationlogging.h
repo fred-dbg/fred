@@ -1418,13 +1418,19 @@ typedef struct {
   } edata;
 } log_entry_t;
 
-#define log_event_common_size                                          \
+#define NO_LOG_ENTRY_TO_BUFFER
+
+#ifdef NO_LOG_ENTRY_TO_BUFFER
+# define log_event_common_size (sizeof(log_entry_header_t))
+#else
+# define log_event_common_size                                         \
   (sizeof(event_code_t)  +  /* event */                                \
    sizeof(unsigned char) +  /* isOptional */                           \
    sizeof(log_off_t)     +  /* log_offset */                           \
    sizeof(clone_id_t)    +  /* clone_id */                             \
    sizeof(int)           +  /* my_errno */                             \
    sizeof(void *))          /* retval */
+#endif
 
 
 #define GET_FIELD(entry, event, field) \

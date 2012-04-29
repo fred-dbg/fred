@@ -127,7 +127,7 @@ void dmtcp::SynchronizationLog::init_shm()
   JTRACE ( "Opened shared memory region." ) ( name );
 
   _sharedInterfaceInfo =
-    (fred_interface_info_t *) mmap(mmapAddr, FRED_INTERFACE_SHM_SIZE,
+    (fred_interface_info_t *) _real_mmap(mmapAddr, FRED_INTERFACE_SHM_SIZE,
                                    PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
   JASSERT((void*)_sharedInterfaceInfo != MAP_FAILED);
   JTRACE ( "Mapped shared memory region." ) ( _sharedInterfaceInfo );
@@ -160,7 +160,7 @@ void dmtcp::SynchronizationLog::destroy_shm()
   char name[PATH_MAX];
   fred_interface_get_shm_file_name(name);
 
-  munmap(_sharedInterfaceInfo, FRED_INTERFACE_SHM_SIZE);
+  _real_munmap(_sharedInterfaceInfo, FRED_INTERFACE_SHM_SIZE);
   unlink(name);
 }
 
