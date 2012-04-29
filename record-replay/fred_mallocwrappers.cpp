@@ -365,6 +365,7 @@ static bool isPartOfAddrRangeAlreadyMmapped(void *addr, size_t length)
   dmtcp::Util::ProcMapsArea area;
   char *startAddr = (char*) addr;
   char *endAddr = startAddr + length;
+  bool result = false;
 
   if ((mapsFd = _real_open("/proc/self/maps", O_RDONLY, S_IRUSR)) == -1) {
     perror("open");
@@ -374,11 +375,12 @@ static bool isPartOfAddrRangeAlreadyMmapped(void *addr, size_t length)
   while (dmtcp::Util::readProcMapsLine(mapsFd, &area)) {
     if ((startAddr >= area.addr && startAddr < area.endAddr) ||
         (endAddr > area.addr && endAddr <= area.endAddr)) {
-      return (area.prot & PROT_EXEC) != 0;
+      result = (area.prot & PROT_EXEC) != 0;
+      break;
     }
   }
   _real_close(mapsFd);
-  return false;
+  return result;
 }
 
 /* mmap/mmap64
