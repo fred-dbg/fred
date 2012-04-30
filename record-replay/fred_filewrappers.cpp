@@ -1279,57 +1279,23 @@ extern "C" int mkdir(const char *pathname, mode_t mode)
 
 extern "C" struct dirent * /*__attribute__ ((optimize(0)))*/ readdir(DIR *dirp)
 {
-  static __thread struct dirent buf;
-  struct dirent *ptr;
-  int res = 0;
-
-  dmtcp::ThreadInfo::setOkToLogNextFnc();
-  res = readdir_r(dirp, &buf, &ptr);
-
-  if (res == 0) {
-    return ptr;
-  }
-
-  return NULL;
-}
-#if 0
-
-
-
-  //WRAPPER_HEADER(struct dirent*, readdir, _real_readdir, dirp);
-  void *return_addr = GET_RETURN_ADDRESS();
-  do {
-    if (!shouldSynchronize(return_addr) || isProcessGDB()) {
-      return _real_readdir(dirp);
-    }
-  } while(0);
-  struct dirent* retval = NULL;
-  log_entry_t my_entry = create_readdir_entry(my_clone_id,
-                                              readdir_event, dirp);
+  WRAPPER_HEADER(struct dirent*, readdir, _real_readdir, dirp);
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_START_TYPED(struct dirent*, readdir);
     if (retval != NULL) {
-      buf = GET_FIELD(my_entry, readdir, retval);
+      *retval = GET_FIELD(my_entry, readdir, retval);
     }
     WRAPPER_REPLAY_END(readdir);
   } else if (SYNC_IS_RECORD) {
     retval = _real_readdir(dirp);
     if (retval != NULL) {
-      buf = *retval;
-      SET_FIELD2(my_entry, readdir, retval, buf);
+      JASSERT(retval->d_reclen < 256);
+      SET_FIELD2(my_entry, readdir, retval, *retval);
     }
-    //WRAPPER_LOG_WRITE_ENTRY(my_entry);
-    do {
-      SET_COMMON2(my_entry, retval, (void*)retval);
-      SET_COMMON2(my_entry, my_errno, errno);
-      SET_COMMON2(my_entry, isOptional, isOptionalEvent);
-      addNextLogEntry(my_entry);
-      errno = GET_COMMON(my_entry, my_errno);
-    } while (0);
+    WRAPPER_LOG_WRITE_ENTRY(my_entry);
   }
-  return retval == NULL ? retval : &buf;
+  return retval;
 }
-#endif // if 0
 
 extern "C" int readdir_r(DIR *dirp, struct dirent *entry,
                          struct dirent **result)
