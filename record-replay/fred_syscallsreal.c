@@ -42,6 +42,7 @@
 #include <ctype.h>
 #include <assert.h>
 #include "fred_wrappers.h"
+#include "trampolines.h"
 #include <sys/mman.h>
 #include <dirent.h>
 #include <time.h>
@@ -74,10 +75,32 @@ static int _wrappers_initialized = 0;
 #define GET_FUNC_ADDR_3(type, name, ...) \
   _real_func_addr[ENUM(name)] = _real_dlsym(RTLD_NEXT, "__" #name);
 
+
+static char wrapper_init_buf[1024];
+static trampoline_info_t pthread_getspecific_trampoline_info;
+void *_fred_pthread_getspecific(pthread_key_t key)
+{
+  if (_wrappers_initialized) {
+    fprintf(stderr, "DMTCP INTERNAL ERROR\n\n");
+    abort();
+  }
+  pthread_setspecific(key, wrapper_init_buf);
+  UNINSTALL_TRAMPOLINE(pthread_getspecific_trampoline_info);
+  return pthread_getspecific(key);
+}
+
+static _fred_PreparePthreadGetSpecific()
+{
+  dmtcp_setup_trampoline_by_addr(&pthread_getspecific,
+                                 (void*) &_fred_pthread_getspecific,
+                                 &pthread_getspecific_trampoline_info);
+}
+
 LIB_PRIVATE
 void initialize_wrappers()
 {
   if (!_wrappers_initialized) {
+    _fred_PreparePthreadGetSpecific();
     FOREACH_RECORD_REPLAY_WRAPPER_1(GET_FUNC_ADDR_1);
     FOREACH_RECORD_REPLAY_WRAPPER_2(GET_FUNC_ADDR_2);
     FOREACH_RECORD_REPLAY_WRAPPER_3(GET_FUNC_ADDR_3);
@@ -954,3 +977,30 @@ long int _real_syscall(long int sys_num, ... ) {
                                                       arg[2], arg[3], arg[4],
                                                       arg[5], arg[6] );
 }
+
+LIB_PRIVATE
+int _real_epoll_create(int size) {
+  REAL_FUNC_PASSTHROUGH (epoll_create) (size);
+}
+
+LIB_PRIVATE
+int _real_epoll_create1(int flags) {
+  REAL_FUNC_PASSTHROUGH (epoll_create1) (flags);
+}
+
+LIB_PRIVATE
+int _real_epoll_ctl(int epfd, int op, int fd, struct epoll_event *event) {
+  REAL_FUNC_PASSTHROUGH (epoll_ctl) (epfd, op, fd, event);
+}
+
+LIB_PRIVATE
+int _real_epoll_wait(int epfd, struct epoll_event *events,
+                     int maxevents, int timeout) {
+  REAL_FUNC_PASSTHROUGH (epoll_wait) (epfd, events, maxevents, timeout);
+}
+
+//LIB_PRIVATE
+//int _real_epoll_pwait(int epfd, struct epoll_event *events,
+//                      int maxevents, int timeout, const sigset_t *sigmask) {
+//  REAL_FUNC_PASSTHROUGH (epoll_pwait) (epfd, events, maxevents, timeout, sigmask);
+//}
