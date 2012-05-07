@@ -26,6 +26,7 @@
 //# include "config.h"
 //#endif
 #include "linux/version.h"
+#include "config.h"
 
 #define RECORD_REPLAY
 

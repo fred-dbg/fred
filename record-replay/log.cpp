@@ -126,6 +126,13 @@ void dmtcp::SynchronizationLog::init_shm()
   JASSERT ( retval != -1 ) ( strerror(errno) );
   JTRACE ( "Opened shared memory region." ) ( name );
 
+  if (mmapAddr == NULL) {
+    JASSERT(SYNC_IS_RECORD);
+#ifdef FIREFOX_SUPPORT
+    mmapAddr = (void*) 0x2f000000000L;
+#endif
+  }
+
   _sharedInterfaceInfo =
     (fred_interface_info_t *) _real_mmap(mmapAddr, FRED_INTERFACE_SHM_SIZE,
                                    PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
@@ -139,8 +146,7 @@ void dmtcp::SynchronizationLog::init_shm()
 
   LogMetadata *metadata = (LogMetadata *) _startAddr;
 
-  if (mmapAddr == NULL) {
-    JASSERT(SYNC_IS_RECORD);
+  if (SYNC_IS_RECORD) {
     JTRACE("RECORD; filling in recordedSharedInterfaceInfoMapAddr.")
       ((long)(void*)_sharedInterfaceInfo);
 
@@ -262,6 +268,14 @@ void dmtcp::SynchronizationLog::map_in(const char *path, size_t size,
   JASSERT(tempAddr != MAP_FAILED);
   tempMetadata = (LogMetadata *) tempAddr;
   mmapAddr = tempMetadata->recordedStartAddr;
+
+#ifdef FIREFOX_SUPPORT
+  if (mmapAddr == NULL) {
+    JASSERT(SYNC_IS_RECORD);
+    mmapAddr = (void*) 0x3f000000000L;
+  }
+#endif
+
   if (mmapAddr != NULL) {
     mmapFlags |= MAP_FIXED;
   }
