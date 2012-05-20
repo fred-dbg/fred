@@ -340,7 +340,7 @@ extern "C" int getaddrinfo(const char *node, const char *service,
     WRAPPER_REPLAY_START(getaddrinfo);
     if (retval == 0) {
       *res = GET_FIELD(my_entry, getaddrinfo, ret_res);
-      numResults = GET_FIELD(my_entry, getaddrinfo, num_res);
+      numResults = GET_FIELD(my_entry, getaddrinfo, num_results);
 
       WRAPPER_REPLAY_READ_FROM_READ_LOG(getaddrinfo, (void*) addrinfo_res,
                                         (numResults *
@@ -383,7 +383,7 @@ extern "C" int getaddrinfo(const char *node, const char *service,
                                       (numResults *
                                        sizeof (struct addrinfo_extended)));
     }
-    SET_FIELD2(my_entry, getaddrinfo, num_res, numResults);
+    SET_FIELD2(my_entry, getaddrinfo, num_results, numResults);
 
     WRAPPER_LOG_WRITE_ENTRY(my_entry);
   }

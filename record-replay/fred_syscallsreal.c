@@ -49,16 +49,6 @@
 #define open _libc_open
 #include <fcntl.h>
 #undef open
-typedef int ( *funcptr_t ) ();
-typedef pid_t ( *funcptr_pid_t ) ();
-typedef funcptr_t ( *signal_funcptr_t ) ();
-
-extern void *dmtcp_get_libc_dlsym_addr();
-extern void prepareFredWrappers();
-void * _real_dlsym ( void *handle, const char *symbol );
-
-static void *_real_func_addr[numTotalWrappers];
-static int _wrappers_initialized = 0;
 
 #define NOT_IMPLEMENTED()                                                   \
   do {                                                                      \
@@ -66,15 +56,11 @@ static int _wrappers_initialized = 0;
     _exit(0);                                                               \
   } while(0)
 
-#define GET_FUNC_ADDR_1(type, name, ...) \
-  _real_func_addr[ENUM(name)] = _real_dlsym(RTLD_NEXT, #name);
+LIB_PRIVATE void *get_real_func_addr(event_code_t e, const char *name);
+LIB_PRIVATE void fred_get_libc_func_addr();
 
-#define GET_FUNC_ADDR_2(type, name, ...) \
-  _real_func_addr[ENUM(name)] = dlvsym(RTLD_NEXT, #name, "GLIBC_2.3.2");
-
-#define GET_FUNC_ADDR_3(type, name, ...) \
-  _real_func_addr[ENUM(name)] = _real_dlsym(RTLD_NEXT, "__" #name);
-
+static int _wrappers_initialized = 0;
+LIB_PRIVATE void *_real_func_addr[numTotalWrappers];
 
 static char wrapper_init_buf[1024];
 static trampoline_info_t pthread_getspecific_trampoline_info;
@@ -89,7 +75,7 @@ void *_fred_pthread_getspecific(pthread_key_t key)
   return pthread_getspecific(key);
 }
 
-static _fred_PreparePthreadGetSpecific()
+static void _fred_PreparePthreadGetSpecific()
 {
   dmtcp_setup_trampoline_by_addr(&pthread_getspecific,
                                  (void*) &_fred_pthread_getspecific,
@@ -101,52 +87,28 @@ void initialize_wrappers()
 {
   if (!_wrappers_initialized) {
     _fred_PreparePthreadGetSpecific();
-    FOREACH_RECORD_REPLAY_WRAPPER_1(GET_FUNC_ADDR_1);
-    FOREACH_RECORD_REPLAY_WRAPPER_2(GET_FUNC_ADDR_2);
-    FOREACH_RECORD_REPLAY_WRAPPER_3(GET_FUNC_ADDR_3);
-    FOREACH_NON_RECORD_REPLAY_WRAPPER(GET_FUNC_ADDR_1);
+    fred_get_libc_func_addr();
     _wrappers_initialized = 1;
   }
 }
 
-//////////////////////////
-//// FIRST DEFINE REAL VERSIONS OF NEEDED FUNCTIONS
-
-#define REAL_FUNC_PASSTHROUGH(name)  REAL_FUNC_PASSTHROUGH_TYPED(int, name)
-
-#define REAL_FUNC_PASSTHROUGH_TYPED(type,name) \
-  static type (*fn)() = NULL; \
-  if (fn == NULL) { \
-    if (_real_func_addr[ENUM(name)] == NULL) prepareFredWrappers(); \
-    fn = _real_func_addr[ENUM(name)]; \
-    if (fn == NULL) { \
-      fprintf(stderr, "*** DMTCP: Error: lookup failed for %s.\n" \
-                      "           The symbol wasn't found in current library" \
-                      " loading sequence.\n" \
-                      "    Aborting.\n", #name); \
-      abort(); \
-    } \
-  } \
-  return (*fn)
-
-#define REAL_FUNC_PASSTHROUGH_VOID(name) \
-  static void (*fn)() = NULL; \
-  if (fn == NULL) { \
-    if (_real_func_addr[ENUM(name)] == NULL) prepareFredWrappers(); \
-    fn = _real_func_addr[ENUM(name)]; \
-    if (fn == NULL) { \
-      fprintf(stderr, "*** DMTCP: Error: lookup failed for %s.\n" \
-                      "           The symbol wasn't found in current library" \
-                      " loading sequence.\n" \
-                      "    Aborting.\n", #name); \
-      abort(); \
-    } \
-  } \
-  (*fn)
-
+LIB_PRIVATE
+void *get_real_func_addr(event_code_t e, const char *name) {
+  if (_real_func_addr[e] == NULL) {
+    prepareFredWrappers();
+  }
+  if (_real_func_addr[e] == NULL) {
+    fprintf(stderr, "*** DMTCP: Error: lookup failed for %s.\n"
+                    "           The symbol wasn't found in current library"
+                    " loading sequence.\n"
+                    "    Aborting.\n", name);
+    abort();
+  }
+  return _real_func_addr[e];
+}
 
 LIB_PRIVATE
-void *_real_dlsym ( void *handle, const char *symbol ) {
+void *_real_dlsym(void *handle, const char *symbol) {
   typedef void* ( *fncptr ) (void *handle, const char *symbol);
   fncptr dlsym_fptr = NULL;
 
@@ -160,6 +122,26 @@ void *_real_dlsym ( void *handle, const char *symbol ) {
 
   return (*dlsym_fptr) ( handle, symbol );
 }
+
+//////////////////////////
+//// FIRST DEFINE REAL VERSIONS OF NEEDED FUNCTIONS
+
+#define REAL_FUNC_PASSTHROUGH(name)  REAL_FUNC_PASSTHROUGH_TYPED(int, name)
+
+#define REAL_FUNC_PASSTHROUGH_TYPED(type,name) \
+  static type (*fn)() = NULL; \
+  if (fn == NULL) { \
+    fn = get_real_func_addr(name##_event, #name); \
+  } \
+  return (*fn)
+
+#define REAL_FUNC_PASSTHROUGH_VOID(name) \
+  static void (*fn)() = NULL; \
+  if (fn == NULL) { \
+    fn = get_real_func_addr(name##_event, #name); \
+  } \
+  (*fn)
+
 
 LIB_PRIVATE
 int _real_pthread_mutex_lock(pthread_mutex_t *mutex) {
@@ -682,6 +664,27 @@ LIB_PRIVATE
 long _real_ftell(FILE *stream) {
   REAL_FUNC_PASSTHROUGH_TYPED ( long, ftell ) ( stream );
 }
+
+LIB_PRIVATE
+int _real_fgetpos(FILE *stream, fpos_t *pos) {
+  REAL_FUNC_PASSTHROUGH ( fgetpos ) ( stream, pos );
+ }
+
+LIB_PRIVATE
+int _real_fgetpos64(FILE *stream, fpos64_t *pos) {
+  REAL_FUNC_PASSTHROUGH ( fgetpos64 ) ( stream, pos );
+}
+
+LIB_PRIVATE
+int _real_fsetpos(FILE *stream, const fpos_t *pos) {
+  REAL_FUNC_PASSTHROUGH ( fsetpos ) ( stream, pos );
+}
+
+LIB_PRIVATE
+int _real_fsetpos64(FILE *stream, const fpos64_t *pos) {
+  REAL_FUNC_PASSTHROUGH ( fsetpos64 ) ( stream, pos );
+}
+
 
 LIB_PRIVATE
 int _real_fputs(const char *s, FILE *stream) {

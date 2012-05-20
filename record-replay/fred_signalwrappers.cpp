@@ -172,13 +172,13 @@ EXTERNC int sigwait(const sigset_t *set, int *sig)
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_START(sigwait);
     if (sig != NULL) {
-      *sig = GET_FIELD(my_entry, sigwait, sig);
+      *sig = GET_FIELD(my_entry, sigwait, ret_sig);
     }
     WRAPPER_REPLAY_END(sigwait);
   } else if (SYNC_IS_RECORD) {
     retval = _real_sigwait(set, sig);
     if (sig != NULL) {
-      SET_FIELD2(my_entry, sigwait, sig, *sig);
+      SET_FIELD2(my_entry, sigwait, ret_sig, *sig);
     }
     WRAPPER_LOG_WRITE_ENTRY(my_entry);
   }
