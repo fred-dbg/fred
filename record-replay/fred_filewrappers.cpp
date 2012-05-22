@@ -201,8 +201,8 @@ extern "C" ssize_t __getdelim(char **lineptr, size_t *n, int delim, FILE *stream
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_START_TYPED(ssize_t, getdelim);
     if (retval != -1) {
-      *lineptr = GET_FIELD(my_entry, getdelim, new_lineptr);
-      *n       = GET_FIELD(my_entry, getdelim, new_n);
+      *lineptr = GET_FIELD(my_entry, getdelim, ret_lineptr);
+      *n       = GET_FIELD(my_entry, getdelim, ret_n);
       WRAPPER_REPLAY_READ_FROM_READ_LOG(getdelim, *lineptr, *n);
     }
     WRAPPER_REPLAY_END(getdelim);
@@ -211,8 +211,8 @@ extern "C" ssize_t __getdelim(char **lineptr, size_t *n, int delim, FILE *stream
     retval = _real_getdelim(lineptr, n, delim, stream);
     dmtcp::ThreadInfo::unsetOptionalEvent();
     if (retval != -1) {
-      SET_FIELD2(my_entry, getdelim, new_lineptr, *lineptr);
-      SET_FIELD2(my_entry, getdelim, new_n, *n);
+      SET_FIELD2(my_entry, getdelim, ret_lineptr, *lineptr);
+      SET_FIELD2(my_entry, getdelim, ret_n, *n);
       WRAPPER_LOG_WRITE_INTO_READ_LOG(getdelim, *lineptr, *n);
     }
     WRAPPER_LOG_WRITE_ENTRY(my_entry);
@@ -235,8 +235,8 @@ extern "C" ssize_t getline(char **lineptr, size_t *n, FILE *stream)
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_START_TYPED(ssize_t, getline);
     if (retval != -1) {
-      *lineptr = GET_FIELD(my_entry, getline, new_lineptr);
-      *n       = GET_FIELD(my_entry, getline, new_n);
+      *lineptr = GET_FIELD(my_entry, getline, ret_lineptr);
+      *n       = GET_FIELD(my_entry, getline, ret_n);
       WRAPPER_REPLAY_READ_FROM_READ_LOG(getline, *lineptr, *n);
     }
     WRAPPER_REPLAY_END(getline);
@@ -245,8 +245,8 @@ extern "C" ssize_t getline(char **lineptr, size_t *n, FILE *stream)
     retval = _real_getline(lineptr, n, stream);
     dmtcp::ThreadInfo::unsetOptionalEvent();
     if (retval != -1) {
-      SET_FIELD2(my_entry, getline, new_lineptr, *lineptr);
-      SET_FIELD2(my_entry, getline, new_n, *n);
+      SET_FIELD2(my_entry, getline, ret_lineptr, *lineptr);
+      SET_FIELD2(my_entry, getline, ret_n, *n);
       WRAPPER_LOG_WRITE_INTO_READ_LOG(getline, *lineptr, *n);
     }
     WRAPPER_LOG_WRITE_ENTRY(my_entry);
@@ -420,20 +420,20 @@ extern "C" int __isoc99_fscanf (FILE *stream, const char *format, ...)
   va_list arg;
   va_start (arg, format);
 
-  WRAPPER_HEADER(int, fscanf, vfscanf, stream, format, arg);
+  WRAPPER_HEADER(int, vfscanf, vfscanf, stream, format, arg);
 
   if (SYNC_IS_REPLAY) {
-    WRAPPER_REPLAY_START(fscanf);
+    WRAPPER_REPLAY_START(vfscanf);
     if (retval != EOF) {
       if (__builtin_expect(read_data_fd == -1, 0)) {
         read_data_fd = _real_open(RECORD_READ_DATA_LOG_PATH, O_RDONLY, 0);
       }
       JASSERT ( read_data_fd != -1 );
-      lseek(read_data_fd, GET_FIELD(my_entry,fscanf,data_offset), SEEK_SET);
+      lseek(read_data_fd, GET_FIELD(my_entry,vfscanf,data_offset), SEEK_SET);
       read_data_from_log_into_va_list (arg, format);
       va_end(arg);
     }
-    WRAPPER_REPLAY_END(fscanf);
+    WRAPPER_REPLAY_END(vfscanf);
   } else if (SYNC_IS_RECORD) {
     errno = 0;
     retval = vfscanf(stream, format, arg);
@@ -441,11 +441,11 @@ extern "C" int __isoc99_fscanf (FILE *stream, const char *format, ...)
     va_end (arg);
     if (retval != EOF) {
       _real_pthread_mutex_lock(&read_data_mutex);
-      SET_FIELD2(my_entry, fscanf, data_offset, read_log_pos);
+      SET_FIELD2(my_entry, vfscanf, data_offset, read_log_pos);
       va_start (arg, format);
       int bytes = parse_va_list_and_log(arg, format);
       va_end (arg);
-      SET_FIELD(my_entry, fscanf, bytes);
+      SET_FIELD(my_entry, vfscanf, bytes);
       _real_pthread_mutex_unlock(&read_data_mutex);
     }
     errno = saved_errno;
@@ -505,12 +505,12 @@ extern "C" int __fprintf_chk (FILE *stream, int flag, const char *format, ...)
 {
   va_list arg;
   va_start (arg, format);
-  WRAPPER_HEADER(int, fprintf, _fprintf, stream, format, arg);
+  WRAPPER_HEADER(int, vfprintf, _fprintf, stream, format, arg);
 
   if (SYNC_IS_REPLAY) {
     // XXX: FIXME: why are we calling WRAPPER_REPLAY instead of
     // WRAPPER_REPLAY_START and _END?
-    WRAPPER_REPLAY(fprintf);
+    WRAPPER_REPLAY(vfprintf);
     /* If we're writing to stdout, we want to see the data to screen.
      * Thus execute the real system call. */
     // XXX We can't do this so easily. If we make the _real_printf call here,
@@ -534,10 +534,10 @@ extern "C" int fprintf (FILE *stream, const char *format, ...)
 {
   va_list arg;
   va_start (arg, format);
-  WRAPPER_HEADER(int, fprintf, _fprintf, stream, format, arg);
+  WRAPPER_HEADER(int, vfprintf, _fprintf, stream, format, arg);
 
   if (SYNC_IS_REPLAY) {
-    WRAPPER_REPLAY_START(fprintf);
+    WRAPPER_REPLAY_START(vfprintf);
     /* If we're writing to stdout, we want to see the data to screen.
      * Thus execute the real system call. */
     // XXX We can't do this so easily. If we make the _real_printf call here,
@@ -547,7 +547,7 @@ extern "C" int fprintf (FILE *stream, const char *format, ...)
       retval = _fprintf(stream, format, arg);
       }*/
     retval = (int)(unsigned long)GET_COMMON(my_entry, retval);
-    WRAPPER_REPLAY_END(fprintf);
+    WRAPPER_REPLAY_END(vfprintf);
   } else if (SYNC_IS_RECORD) {
     dmtcp::ThreadInfo::setOptionalEvent();
     retval = _fprintf(stream, format, arg);
@@ -888,7 +888,7 @@ extern "C" int chown(const char *path, uid_t owner, gid_t group)
       WRAPPER_REPLAY_START(name);                                           \
       int saved_errno = GET_COMMON(my_entry, my_errno);                     \
       if (retval == 0 && buf != NULL) {                                     \
-        *buf = GET_FIELD(my_entry, name, buf);                              \
+        *buf = GET_FIELD(my_entry, name, ret_buf);                          \
       }                                                                     \
       WRAPPER_REPLAY_END(name);                                             \
       if (saved_errno != 0) {                                               \
@@ -897,7 +897,7 @@ extern "C" int chown(const char *path, uid_t owner, gid_t group)
     } else if (SYNC_IS_RECORD) {                                            \
       retval = _real_ ## name(__VA_ARGS__);                                 \
       if (retval != -1 && buf != NULL) {                                    \
-        SET_FIELD2(my_entry, name, buf, *buf);                              \
+        SET_FIELD2(my_entry, name, ret_buf, *buf);                          \
       }                                                                     \
       WRAPPER_LOG_WRITE_ENTRY(my_entry);                                    \
     }                                                                       \
@@ -1011,8 +1011,8 @@ extern "C" int select(int nfds, fd_set *readfds, fd_set *writefds,
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_START(select);
     if (retval != -1) {
-      copyFdSet(&GET_FIELD(my_entry, select, readfds), readfds);
-      copyFdSet(&GET_FIELD(my_entry, select, writefds), writefds);
+      copyFdSet(&GET_FIELD(my_entry, select, ret_readfds), readfds);
+      copyFdSet(&GET_FIELD(my_entry, select, ret_writefds), writefds);
     }
     WRAPPER_REPLAY_END(select);
   } else if (SYNC_IS_RECORD) {
@@ -1021,8 +1021,8 @@ extern "C" int select(int nfds, fd_set *readfds, fd_set *writefds,
     if (retval != -1) {
       // Note that we're logging the *changed* fd set, so on replay we can
       // just read that from the log, load it into user's location and return.
-      copyFdSet(readfds, &GET_FIELD(my_entry, select, readfds));
-      copyFdSet(writefds, &GET_FIELD(my_entry, select, writefds));
+      copyFdSet(readfds, &GET_FIELD(my_entry, select, ret_readfds));
+      copyFdSet(writefds, &GET_FIELD(my_entry, select, ret_writefds));
     }
     errno = saved_errno;
     WRAPPER_LOG_WRITE_ENTRY(my_entry);
@@ -1283,14 +1283,14 @@ extern "C" struct dirent * /*__attribute__ ((optimize(0)))*/ readdir(DIR *dirp)
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_START_TYPED(struct dirent*, readdir);
     if (retval != NULL) {
-      *retval = GET_FIELD(my_entry, readdir, retval);
+      *retval = GET_FIELD(my_entry, readdir, readdir_retval);
     }
     WRAPPER_REPLAY_END(readdir);
   } else if (SYNC_IS_RECORD) {
     retval = _real_readdir(dirp);
     if (retval != NULL) {
       JASSERT(retval->d_reclen < 256);
-      SET_FIELD2(my_entry, readdir, retval, *retval);
+      SET_FIELD2(my_entry, readdir, readdir_retval, *retval);
     }
     WRAPPER_LOG_WRITE_ENTRY(my_entry);
   }
@@ -1569,7 +1569,7 @@ extern "C" pid_t wait4(pid_t pid, __WAIT_STATUS status, int options,
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_START_TYPED(pid_t, wait4);
     if (retval != -1 && status != NULL) {
-      *(int*)status = GET_FIELD(my_entry, wait4, ret_status);
+      *(int*)status = (int) (unsigned long) GET_FIELD(my_entry, wait4, ret_status);
     }
     if (retval != -1 && rusage != NULL) {
       *rusage = GET_FIELD(my_entry, wait4, ret_rusage);
@@ -1578,7 +1578,7 @@ extern "C" pid_t wait4(pid_t pid, __WAIT_STATUS status, int options,
   } else if (SYNC_IS_RECORD) {
     pid_t retval = _real_wait4(pid, status, options, rusage);
     if (retval != -1 && status != NULL) {
-      SET_FIELD2(my_entry, wait4, ret_status, *(int*)status);
+      SET_FIELD2(my_entry, wait4, ret_status, (void*) (unsigned long) *(int*)status);
     }
     if (retval != -1 && rusage != NULL) {
       SET_FIELD2(my_entry, wait4, ret_rusage, *rusage);

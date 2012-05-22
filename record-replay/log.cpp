@@ -39,20 +39,11 @@
 #include "fred_wrappers.h"
 #include "fred_interface.h"
 #include "threadinfo.h"
+#include "autogen/wrapper_util.h"
 #include "util.h"
 #include "jassert.h"
 
 static log_entry_t _currentEntry = EMPTY_LOG_ENTRY;
-
-#define EVENT_SIZE(type, name, ...) log_event_##name##_size,
-static size_t log_event_size[numTotalWrappers+1] = {
-  FOREACH_RECORD_REPLAY_WRAPPER(EVENT_SIZE)
-};
-
-static size_t getLogEventSize(const log_entry_t& entry)
-{
-  return log_event_size[entry.header.event];
-}
 
 static void fred_interface_get_shm_file_name(char *name)
 {
@@ -307,7 +298,7 @@ int dmtcp::SynchronizationLog::advanceToNextEntry()
     _sharedInterfaceInfo->breakpoint_at_index = FRED_INTERFACE_BP_HIT;
   }
 
-  int entrySize = log_event_common_size + getLogEventSize(_currentEntry);
+  int entrySize = log_event_common_size + getLogEventSize(&_currentEntry);
   JASSERT(entrySize > 0);
   atomicIncrementIndex(entrySize);
   atomicIncrementEntryIndex();
@@ -356,14 +347,14 @@ int dmtcp::SynchronizationLog::getEntryAtOffset(log_entry_t& entry, size_t index
   }
 
   JASSERT(GET_COMMON(entry, event) > 0);
-  size_t event_size = getLogEventSize(entry);
+  size_t event_size = getLogEventSize(&entry);
 
   if (index + log_event_common_size + event_size > currentDataSize) {
     JASSERT ((index + log_event_common_size + event_size) <= currentDataSize)
       (index) (log_event_common_size) (event_size) (currentDataSize);
   }
 
-  memcpy(&entry.edata, &_log[index + log_event_common_size], getLogEventSize(entry));
+  memcpy(&entry.edata, &_log[index + log_event_common_size], getLogEventSize(&entry));
   return log_event_common_size + event_size;
 }
 
@@ -372,7 +363,7 @@ void dmtcp::SynchronizationLog::appendEntry(log_entry_t& entry)
   int eventSize = -1;
   log_off_t offset;
 
-  eventSize = getLogEventSize(entry);
+  eventSize = getLogEventSize(&entry);
   JASSERT( eventSize > 0 );
   eventSize += log_event_common_size;
   offset = atomicIncrementOffset(eventSize);
@@ -431,7 +422,7 @@ int dmtcp::SynchronizationLog::writeEntryAtOffset(const log_entry_t& entry,
     JASSERT(false);
   }
 
-  int event_size = getLogEventSize(entry);
+  int event_size = getLogEventSize(&entry);
   JASSERT( event_size > 0 );
 
   JASSERT ((LOG_OFFSET_FROM_START + index +
@@ -441,7 +432,7 @@ int dmtcp::SynchronizationLog::writeEntryAtOffset(const log_entry_t& entry,
 
   writeEntryHeaderAtOffset(entry, index);
 
-  memcpy(&_log[index + log_event_common_size], &entry.edata, getLogEventSize(entry));
+  memcpy(&_log[index + log_event_common_size], &entry.edata, getLogEventSize(&entry));
   return log_event_common_size + event_size;
 }
 

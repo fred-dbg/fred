@@ -19,24 +19,11 @@
  * along with FReD.  If not, see <http://www.gnu.org/licenses/>.            *
  ****************************************************************************/
 
-#ifndef CONSTANTS_H
-#define CONSTANTS_H
+#ifndef FRED_TYPES_H
+#define FRED_TYPES_H
 
-//#ifdef HAVE_CONFIG_H
-//# include "config.h"
-//#endif
-#include "linux/version.h"
-#include "config.h"
+typedef long int clone_id_t;
+typedef unsigned long int log_off_t;
+typedef void* (*pthread_start_routine_t)(void *);
 
-#define RECORD_REPLAY
-
-#ifndef DMTCP
-#define DMTCP
-#endif
-
-#define LIBC_FILENAME "libc.so.6"
-#define LIBPTHREAD_FILENAME "libpthread.so.0"
-
-#define ENABLE_MALLOC_WRAPPER
-#define ENV_VAR_LOG_REPLAY "DMTCP_LOG_REPLAY"
 #endif
