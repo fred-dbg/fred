@@ -185,7 +185,7 @@ static void fred_process_thread_start()
   }
 }
 
-EXTERNC void dmtcp_process_event(DmtcpEvent_t event, void* data)
+EXTERNC void dmtcp_process_event(DmtcpEvent_t event, DmtcpEventData_t *data)
 {
   switch (event) {
     case DMTCP_EVENT_INIT:
