@@ -42,6 +42,11 @@
 static inline void memfence() {  asm volatile ("mfence" ::: "memory"); }
 void fred_setup_trampolines();
 
+extern "C"
+int fred_record_replay_enabled() {
+  return 1;
+}
+
 static int sync_mode_pre_ckpt = SYNC_NOOP;
 
 static void pthread_atfork_child()
@@ -194,24 +199,19 @@ EXTERNC void dmtcp_process_event(DmtcpEvent_t event, DmtcpEventData_t *data)
     case DMTCP_EVENT_RESET_ON_FORK:
       fred_reset_on_fork();
       break;
-    case DMTCP_EVENT_POST_SUSPEND:
+    case DMTCP_EVENT_SUSPENDED:
       fred_post_suspend();
       break;
-    case DMTCP_EVENT_POST_CKPT_RESUME:
-      fred_post_checkpoint_resume();
-      break;
-    case DMTCP_EVENT_POST_RESTART_RESUME:
-      fred_post_restart_resume();
+    case DMTCP_EVENT_RESUME:
+      if (data->resumeInfo.isRestart) {
+        fred_post_restart_resume();
+      } else {
+        fred_post_checkpoint_resume();
+      }
       break;
     case DMTCP_EVENT_THREAD_START:
       fred_process_thread_start();
       break;
-    case DMTCP_EVENT_PRE_EXIT:
-    case DMTCP_EVENT_PRE_CKPT:
-    case DMTCP_EVENT_POST_LEADER_ELECTION:
-    case DMTCP_EVENT_POST_DRAIN:
-    case DMTCP_EVENT_POST_CKPT:
-    case DMTCP_EVENT_POST_RESTART:
     default:
       break;
   }
