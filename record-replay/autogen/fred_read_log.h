@@ -389,7 +389,7 @@ void print_log_entry_lseek(int idx, log_entry_t *entry)  {
 }
 
 void print_log_entry_lseek64(int idx, log_entry_t *entry)  {
-  printf(" fd=%d offset=%l whence=%d\n" ,
+  printf(" fd=%d offset=%ld whence=%d\n" ,
          GET_FIELD_PTR(entry, lseek64, fd),
          GET_FIELD_PTR(entry, lseek64, offset),
          GET_FIELD_PTR(entry, lseek64, whence));
@@ -434,7 +434,7 @@ void print_log_entry_mmap(int idx, log_entry_t *entry)  {
 }
 
 void print_log_entry_mmap64(int idx, log_entry_t *entry)  {
-  printf(" addr=%p length=%zu prot=%d flags=%d fd=%d offset=%l\n" ,
+  printf(" addr=%p length=%zu prot=%d flags=%d fd=%d offset=%ld\n" ,
          GET_FIELD_PTR(entry, mmap64, addr),
          GET_FIELD_PTR(entry, mmap64, length),
          GET_FIELD_PTR(entry, mmap64, prot),
@@ -705,13 +705,13 @@ void print_log_entry_ftruncate(int idx, log_entry_t *entry)  {
 }
 
 void print_log_entry_truncate64(int idx, log_entry_t *entry)  {
-  printf(" path=%p length=%l\n" ,
+  printf(" path=%p length=%ld\n" ,
          GET_FIELD_PTR(entry, truncate64, path),
          GET_FIELD_PTR(entry, truncate64, length));
 }
 
 void print_log_entry_ftruncate64(int idx, log_entry_t *entry)  {
-  printf(" fd=%d length=%l\n" ,
+  printf(" fd=%d length=%ld\n" ,
          GET_FIELD_PTR(entry, ftruncate64, fd),
          GET_FIELD_PTR(entry, ftruncate64, length));
 }

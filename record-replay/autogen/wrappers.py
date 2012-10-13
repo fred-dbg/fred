@@ -600,7 +600,7 @@ class RetType:
                       'pid_t' : '%d',
                       'off_t' : '%d',
                       'loff_t' : '%lu',
-                      'off64_t' : '%l',
+                      'off64_t' : '%ld',
                       'unsigned' : '%u',
                       'unsigned int' : '%u',
                       'long' : '%ld',
