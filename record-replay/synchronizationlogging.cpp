@@ -338,8 +338,8 @@ void logReadData(void *buf, int count)
         "This is probably not intended.");
   }
   JASSERT(read_data_fd != -1);
-  int written = _real_write(read_data_fd, buf, count);
-  JASSERT ( written == count );
+  int written = dmtcp::Util::writeAll(read_data_fd, buf, count);
+  JASSERT ( written == count ) (count) (JASSERT_ERRNO);
   read_log_pos += written;
 }
 
@@ -452,6 +452,14 @@ static void execute_optional_event(int opt_event_num)
     dmtcp::ThreadInfo::setOkToLogNextFnc();
     // No need to execute ftell().  It has no side effects.
     long int offset = ftell(fp);
+  } else if (opt_event_num == pthread_mutex_lock_event) {
+    pthread_mutex_t *mutex = GET_FIELD(temp_entry, pthread_mutex_lock, mutex);
+    dmtcp::ThreadInfo::setOkToLogNextFnc();
+    pthread_mutex_lock(mutex);
+  } else if (opt_event_num == pthread_mutex_unlock_event) {
+    pthread_mutex_t *mutex = GET_FIELD(temp_entry, pthread_mutex_lock, mutex);
+    dmtcp::ThreadInfo::setOkToLogNextFnc();
+    pthread_mutex_unlock(mutex);
   } else {
     JASSERT (false)(opt_event_num).Text("No action known for optional event.");
   }
@@ -476,11 +484,13 @@ void waitForTurn(log_entry_t *my_entry, turn_pred_t pred)
     /* Also check for an optional event for this clone_id. */
     if (GET_COMMON(temp_entry, clone_id) == my_clone_id &&
         GET_COMMON(temp_entry, isOptional) == 1) {
+#if DEBUG
       if (!is_optional_event_for((event_code_t)GET_COMMON_PTR(my_entry, event),
                                  (event_code_t)GET_COMMON(temp_entry, event),
                                  false)) {
         JASSERT(false);
       }
+#endif
       memfence();
       dmtcp::ThreadInfo::wakeUpThread(my_clone_id);
       execute_optional_event(GET_COMMON(temp_entry, event));
