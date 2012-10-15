@@ -192,7 +192,7 @@ miscWrappers = [
   ('int', 'pthread_rwlock_unlock', [('pthread_rwlock_t*', 'rwlock', '__save_retval')]),
   ('int', 'pthread_rwlock_rdlock', [('pthread_rwlock_t*', 'rwlock', '__save_retval')]),
   ('int', 'pthread_rwlock_wrlock', [('pthread_rwlock_t*', 'rwlock', '__save_retval')]),
-  ('int', 'pthread_create', [('pthread_t*', 'thread'),
+  ('int', 'pthread_create', [('pthread_t*', 'thread', '__save_retval'),
                              ('const pthread_attr_t*', 'attr'),
                              ('pthread_start_routine_t', 'start_routine'),
                              ('void*', 'arg')],
@@ -422,6 +422,8 @@ fstreamWrappers = [
 
   ('int', 'fputs', [('const char*', 's'),
                     ('FILE*', 'stream')]),
+
+  ('int', 'puts', [('const char*', 's')]),
 
   ('int', 'fputc', [('int', 'c'),
                     ('FILE*', 'stream')]),
@@ -766,17 +768,19 @@ class WrapperInfo:
         sign = 'int %s_turn_check(log_entry_t *e1, log_entry_t *e2)' % (self._name)
         body = '\n{\n  return base_turn_check(e1,e2)'
         for arg in self.args:
-            body += '\n    && '
-            body += 'ARE_FIELDS_EQUAL_PTR (e1, e2, %s, %s)'  % (self._name, arg.name())
+            if not arg.dont_save():
+                body += '\n    && '
+                body += 'ARE_FIELDS_EQUAL_PTR (e1, e2, %s, %s)'  % (self._name, arg.name())
         body += ';\n}\n'
         return (sign, body)
 
     def get_struct_def(self):
         ret = 'typedef struct {\n'
         for arg in self.args:
-            ret += '  %s;\n' % (arg.arg_decl())
-            if arg.save_retval():
-                ret += '  %s %s;\n' % (arg.deref_type(), 'ret_' + arg.name())
+            if not arg.dont_save():
+                ret += '  %s;\n' % (arg.arg_decl())
+                if arg.save_retval():
+                    ret += '  %s %s;\n' % (arg.deref_type(), 'ret_' + arg.name())
         if self.decl_data_offset:
             ret += '  off_t data_offset;\n'
         if self.decl_retval:

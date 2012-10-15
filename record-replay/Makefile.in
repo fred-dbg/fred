@@ -20,10 +20,9 @@ HEADERS = constants.h fred_interface.h fred_wrappers.h log.h fred_types.h \
 FREDHIJACK_OBJS = fred_signalwrappers.o fred_epollwrappers.o \
 	fred_mallocwrappers.o fred_filewrappers.o fred_syscallsreal.o \
 	fred_socketwrappers.o pthreadwrappers.o netwrappers.o fred.o \
-	fred_miscwrappers.o syscallsreal_helper.o wrapper_util.o
-
-LIBFREDINTERNAL_OBJS = synchronizationlogging.o log.o fred_trampolines.o \
-		       threadinfo.o wrapper_util.o
+	fred_miscwrappers.o syscallsreal_helper.o \
+	synchronizationlogging.o log.o fred_trampolines.o \
+	threadinfo.o wrapper_util.o
 
 JALIB_OBJS = $(JALIB)/jassert.o $(JALIB)/jalib.o $(JALIB)/jalloc.o \
         $(JALIB)/jfilesystem.o
@@ -31,8 +30,8 @@ JALIB_OBJS = $(JALIB)/jassert.o $(JALIB)/jalib.o $(JALIB)/jalloc.o \
 j%.o: ${JALIB}/j%.o
 	cp $< $@
 
-FRED_READ_LOG_OBJS = fred_read_log.o nosyscallsreal.o util.o stubs.o \
-	${notdir ${JALIB_OBJS}}
+FRED_READ_LOG_OBJS = fred_read_log.o nosyscallsreal.o util.o stubs.o log.o \
+		     wrapper_util.o ${notdir ${JALIB_OBJS}}
 
 CFLAGS += -I${DMTCP_SRC} -DDMTCP -fPIC -DPIC -c --std=gnu99 -g
 CXXFLAGS += -I${DMTCP_SRC} -DDMTCP -fPIC -DPIC -c -g
@@ -48,17 +47,14 @@ endif
 
 all: ${LIBNAME}.so fred_command fred_read_log
 
-libfredinternal.a: ${LIBFREDINTERNAL_OBJS} ${HEADERS}
-	/usr/bin/ar cru $@ $^
-
-fred_command: fred_command.o libfredinternal.a
+fred_command: fred_command.o
 	${CXX} -o $@ $^
 
-fred_read_log: ${FRED_READ_LOG_OBJS} libfredinternal.a
+fred_read_log: ${FRED_READ_LOG_OBJS}
 	${CXX} -o $@ $^ -lpthread -lrt
 
 # We link the library using C++ for compatibility with the main dmtcphijack.so
-${LIBNAME}.so: ${FREDHIJACK_OBJS} ${LIBFREDINTERNAL_OBJS} libfredinternal.a
+${LIBNAME}.so: ${FREDHIJACK_OBJS} ${LIBFREDINTERNAL_OBJS}
 	${CXX} -shared -fPIC -o $@ $^
 
 %.o: autogen/%.c ${HEADERS}
@@ -80,7 +76,7 @@ tidy:
 clean:
 	rm -f ${FREDHIJACK_OBJS} ${LIBFREDINTERNAL_OBJS} \
 	  ${FRED_READ_LOG_OBJS} fred_command fred_command.o \
-	  libfredinternal.a fred_read_log \
+	  fred_read_log \
 	  ${LIBNAME}.so ${notdir ${JALIB_OBJS}}
 
 distclean: clean

@@ -146,6 +146,7 @@ static const char *log_event_str[] = {
   "setvbuf",
   "fseek",
   "fputs",
+  "puts",
   "fputc",
   "fsync",
   "ftell",
@@ -968,6 +969,11 @@ void print_log_entry_fputs(int idx, log_entry_t *entry)  {
          GET_FIELD_PTR(entry, fputs, stream));
 }
 
+void print_log_entry_puts(int idx, log_entry_t *entry)  {
+  printf(" s=%p\n" ,
+         GET_FIELD_PTR(entry, puts, s));
+}
+
 void print_log_entry_fputc(int idx, log_entry_t *entry)  {
   printf(" c=%d stream=%p\n" ,
          GET_FIELD_PTR(entry, fputc, c),
@@ -1466,6 +1472,8 @@ void printEntry(int idx, log_entry_t *entry)
     case fseek_event: print_log_entry_fseek(idx, entry); break;
 
     case fputs_event: print_log_entry_fputs(idx, entry); break;
+
+    case puts_event: print_log_entry_puts(idx, entry); break;
 
     case fputc_event: print_log_entry_fputc(idx, entry); break;
 

@@ -147,6 +147,7 @@ LIB_PRIVATE void fred_get_libc_func_addr() {
   _real_func_addr[setvbuf_event] = _real_dlsym(RTLD_NEXT, "setvbuf");
   _real_func_addr[fseek_event] = _real_dlsym(RTLD_NEXT, "fseek");
   _real_func_addr[fputs_event] = _real_dlsym(RTLD_NEXT, "fputs");
+  _real_func_addr[puts_event] = _real_dlsym(RTLD_NEXT, "puts");
   _real_func_addr[fputc_event] = _real_dlsym(RTLD_NEXT, "fputc");
   _real_func_addr[fsync_event] = _real_dlsym(RTLD_NEXT, "fsync");
   _real_func_addr[ftell_event] = _real_dlsym(RTLD_NEXT, "ftell");

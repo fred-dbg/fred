@@ -152,6 +152,7 @@ extern "C"
     setvbuf_event,
     fseek_event,
     fputs_event,
+    puts_event,
     fputc_event,
     fsync_event,
     ftell_event,
@@ -316,6 +317,7 @@ extern "C"
   int _real_setvbuf(FILE* stream, char* buf, int mode, size_t size);;
   int _real_fseek(FILE* stream, long offset, int whence);;
   int _real_fputs(const char* s, FILE* stream);;
+  int _real_puts(const char* s);;
   int _real_fputc(int c, FILE* stream);;
   int _real_fsync(int fd);;
   long _real_ftell(FILE* stream);;

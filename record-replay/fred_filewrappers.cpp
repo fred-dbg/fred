@@ -557,6 +557,34 @@ extern "C" int fprintf (FILE *stream, const char *format, ...)
   return retval;
 }
 
+extern "C" int printf (const char *format, ...)
+{
+  va_list arg;
+  va_start (arg, format);
+  FILE *stream = stdout;
+  WRAPPER_HEADER(int, vfprintf, _fprintf, stream, format, arg);
+
+  if (SYNC_IS_REPLAY) {
+    WRAPPER_REPLAY_START(vfprintf);
+    /* If we're writing to stdout, we want to see the data to screen.
+     * Thus execute the real system call. */
+    // XXX We can't do this so easily. If we make the _real_printf call here,
+    // it can call mmap() on replay at a different time as on record, since
+    // the other FILE related syscalls are NOT made on replay.
+    /*if (stream == stdout || stream == stderr) {
+      retval = _fprintf(stream, format, arg);
+      }*/
+    retval = (int)(unsigned long)GET_COMMON(my_entry, retval);
+    WRAPPER_REPLAY_END(vfprintf);
+  } else if (SYNC_IS_RECORD) {
+    dmtcp::ThreadInfo::setOptionalEvent();
+    retval = _fprintf(stream, format, arg);
+    dmtcp::ThreadInfo::unsetOptionalEvent();
+    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+  }
+  return retval;
+}
+
 extern "C" int fseek(FILE *stream, long offset, int whence)
 {
   WRAPPER_HEADER(int, fseek, _real_fseek, stream, offset, whence);
@@ -658,6 +686,34 @@ extern "C" int fputs(const char *s, FILE *stream)
   return retval;
 }
 
+extern "C" int _IO_puts(const char *s)
+{
+  WRAPPER_HEADER(int, puts, _real_puts, s);
+  if (SYNC_IS_REPLAY) {
+    WRAPPER_REPLAY_TYPED(int, puts);
+  } else if (SYNC_IS_RECORD) {
+    dmtcp::ThreadInfo::setOptionalEvent();
+    retval = _real_puts(s);
+    dmtcp::ThreadInfo::unsetOptionalEvent();
+    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+  }
+  return retval;
+}
+
+extern "C" int puts(const char *s)
+{
+  WRAPPER_HEADER(int, puts, _real_puts, s);
+  if (SYNC_IS_REPLAY) {
+    WRAPPER_REPLAY_TYPED(int, puts);
+  } else if (SYNC_IS_RECORD) {
+    dmtcp::ThreadInfo::setOptionalEvent();
+    retval = _real_puts(s);
+    dmtcp::ThreadInfo::unsetOptionalEvent();
+    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+  }
+  return retval;
+}
+
 extern "C" int fputc(int c, FILE *stream)
 {
   WRAPPER_HEADER(int, fputc, _real_fputc, c, stream);
@@ -674,7 +730,16 @@ extern "C" int fputc(int c, FILE *stream)
 
 extern "C" int _IO_putc(int c, FILE *stream)
 {
-  BASIC_SYNC_WRAPPER(int, putc, _real_putc, c, stream);
+  WRAPPER_HEADER(int, putc, _real_putc, c, stream);
+  if (SYNC_IS_REPLAY) {
+    WRAPPER_REPLAY_TYPED(int, putc);
+  } else if (SYNC_IS_RECORD) {
+    dmtcp::ThreadInfo::setOptionalEvent();
+    retval = _real_putc(c, stream);
+    dmtcp::ThreadInfo::unsetOptionalEvent();
+    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+  }
+  return retval;
 }
 
 // WARNING:  Early versions of glibc (e.g. glibc 2.3) define this
@@ -682,6 +747,7 @@ extern "C" int _IO_putc(int c, FILE *stream)
 # if __GLIBC_PREREQ (2,4)
 extern "C" int putchar(int c)
 {
+  dmtcp::ThreadInfo::setOkToLogNextFnc();
   return _IO_putc(c, stdout);
 }
 # else

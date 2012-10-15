@@ -47,7 +47,6 @@ LIB_PRIVATE dmtcp::map<pthread_t, pthread_join_retval_t> pthread_join_retvals;
 LIB_PRIVATE char RECORD_LOG_PATH[RECORD_LOG_PATH_MAX];
 LIB_PRIVATE char RECORD_READ_DATA_LOG_PATH[RECORD_LOG_PATH_MAX];
 LIB_PRIVATE int             read_data_fd = -1;
-LIB_PRIVATE int             sync_logging_branch = 0;
 
 /* Setting this will log/replay *ALL* malloc family
    functions (i.e. including ones from DMTCP, std C++ lib, etc.). */
@@ -364,7 +363,7 @@ static inline bool is_optional_event_for(event_code_t event,
     return query || opt_event == calloc_event;
   case closedir_event:
   case fclose_event:
-    return query || opt_event == free_event;
+    return query || opt_event == free_event || opt_event == munmap_event;
   case accept4_event:
   case accept_event:
   case fgets_event:
@@ -375,6 +374,7 @@ static inline bool is_optional_event_for(event_code_t event,
   case vfprintf_event:
   case fputc_event:
   case fputs_event:
+  case puts_event:
   case vfscanf_event:
   case fseek_event:
   case fwrite_event:
@@ -427,6 +427,10 @@ static void execute_optional_event(int opt_event_num)
     int fd        = GET_FIELD(temp_entry, mmap, fd);
     off_t offset  = GET_FIELD(temp_entry, mmap, offset);
     JASSERT(mmap(NULL, length, prot, flags, fd, offset) != MAP_FAILED);
+  } else if (opt_event_num == munmap_event) {
+    void *addr = GET_FIELD(temp_entry, munmap, addr);
+    size_t length = GET_FIELD(temp_entry, munmap, length);
+    JASSERT(munmap(addr, length) == 0);
   } else if (opt_event_num == malloc_event) {
     size_t size = GET_FIELD(temp_entry, malloc, size);
     JASSERT(malloc(size) != NULL);

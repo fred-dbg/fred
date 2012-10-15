@@ -691,6 +691,10 @@ int _real_fputs(const char *s, FILE *stream) {
   REAL_FUNC_PASSTHROUGH_TYPED ( int, fputs ) ( s, stream );
 }
 
+int _real_puts(const char *s) {
+  REAL_FUNC_PASSTHROUGH_TYPED ( int, puts ) ( s );
+}
+
 LIB_PRIVATE
 int _real_fputc(int c, FILE *stream) {
   REAL_FUNC_PASSTHROUGH_TYPED ( int, fputc ) ( c, stream );

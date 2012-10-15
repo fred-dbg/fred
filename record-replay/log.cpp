@@ -38,12 +38,12 @@
 #include "synchronizationlogging.h"
 #include "fred_wrappers.h"
 #include "fred_interface.h"
-#include "threadinfo.h"
 #include "autogen/wrapper_util.h"
 #include "util.h"
 #include "jassert.h"
 
 static log_entry_t _currentEntry = EMPTY_LOG_ENTRY;
+LIB_PRIVATE int sync_logging_branch = SYNC_NOOP;
 
 static void fred_interface_get_shm_file_name(char *name)
 {

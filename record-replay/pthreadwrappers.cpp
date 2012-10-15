@@ -432,6 +432,7 @@ static int internal_pthread_create(pthread_t *thread,
     pthread_attr_destroy(&the_attr);
     SET_FIELD(my_entry, pthread_create, stack_addr);
     SET_FIELD(my_entry, pthread_create, stack_size);
+    SET_FIELD2(my_entry, pthread_create, ret_thread, *thread);
 
     // Log annotation on the fly.
     WRAPPER_LOG_UPDATE_ENTRY(my_entry);

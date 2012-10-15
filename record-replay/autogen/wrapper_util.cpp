@@ -145,6 +145,7 @@ static size_t log_event_size[numTotalWrappers] = {
   sizeof(log_event_setvbuf_t),
   sizeof(log_event_fseek_t),
   sizeof(log_event_fputs_t),
+  sizeof(log_event_puts_t),
   sizeof(log_event_fputc_t),
   sizeof(log_event_fsync_t),
   sizeof(log_event_ftell_t),
@@ -1447,6 +1448,15 @@ log_entry_t create_fputs_entry(clone_id_t clone_id, event_code_t event,
   setupCommonFields(&e, clone_id, event);
   SET_FIELD(e, fputs, s);
   SET_FIELD(e, fputs, stream);
+  return e;
+}
+
+log_entry_t create_puts_entry(clone_id_t clone_id, event_code_t event,
+                              const char* s)
+{
+  log_entry_t e = EMPTY_LOG_ENTRY;
+  setupCommonFields(&e, clone_id, event);
+  SET_FIELD(e, puts, s);
   return e;
 }
 
@@ -2778,6 +2788,12 @@ int fputs_turn_check(log_entry_t *e1, log_entry_t *e2)
     && ARE_FIELDS_EQUAL_PTR (e1, e2, fputs, stream);
 }
 
+int puts_turn_check(log_entry_t *e1, log_entry_t *e2)
+{
+  return base_turn_check(e1,e2)
+    && ARE_FIELDS_EQUAL_PTR (e1, e2, puts, s);
+}
+
 int fputc_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
   return base_turn_check(e1,e2)
@@ -3039,16 +3055,14 @@ int vfprintf_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
   return base_turn_check(e1,e2)
     && ARE_FIELDS_EQUAL_PTR (e1, e2, vfprintf, stream)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, vfprintf, format)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, vfprintf, ap);
+    && ARE_FIELDS_EQUAL_PTR (e1, e2, vfprintf, format);
 }
 
 int vfscanf_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
   return base_turn_check(e1,e2)
     && ARE_FIELDS_EQUAL_PTR (e1, e2, vfscanf, stream)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, vfscanf, format)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, vfscanf, ap);
+    && ARE_FIELDS_EQUAL_PTR (e1, e2, vfscanf, format);
 }
 
 int exec_barrier_turn_check(log_entry_t *e1, log_entry_t *e2)

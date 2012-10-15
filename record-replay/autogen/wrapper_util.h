@@ -340,6 +340,7 @@ typedef struct {
 
 typedef struct {
   pthread_t* thread;
+  pthread_t ret_thread;
   const pthread_attr_t* attr;
   pthread_start_routine_t start_routine;
   void* arg;
@@ -770,6 +771,10 @@ typedef struct {
 } log_event_fputs_t;
 
 typedef struct {
+  const char* s;
+} log_event_puts_t;
+
+typedef struct {
   int c;
   FILE* stream;
 } log_event_fputc_t;
@@ -979,13 +984,11 @@ typedef struct {
 typedef struct {
   FILE* stream;
   const char* format;
-  va_list ap;
 } log_event_vfprintf_t;
 
 typedef struct {
   FILE* stream;
   const char* format;
-  va_list ap;
   off_t data_offset;
   int bytes;
 } log_event_vfscanf_t;
@@ -1133,6 +1136,7 @@ union log_entry_data {
   log_event_setvbuf_t log_event_setvbuf;
   log_event_fseek_t log_event_fseek;
   log_event_fputs_t log_event_fputs;
+  log_event_puts_t log_event_puts;
   log_event_fputc_t log_event_fputc;
   log_event_fsync_t log_event_fsync;
   log_event_ftell_t log_event_ftell;
@@ -1317,6 +1321,7 @@ int fflush_turn_check(log_entry_t *e1, log_entry_t *e2);
 int setvbuf_turn_check(log_entry_t *e1, log_entry_t *e2);
 int fseek_turn_check(log_entry_t *e1, log_entry_t *e2);
 int fputs_turn_check(log_entry_t *e1, log_entry_t *e2);
+int puts_turn_check(log_entry_t *e1, log_entry_t *e2);
 int fputc_turn_check(log_entry_t *e1, log_entry_t *e2);
 int fsync_turn_check(log_entry_t *e1, log_entry_t *e2);
 int ftell_turn_check(log_entry_t *e1, log_entry_t *e2);
@@ -1595,6 +1600,8 @@ log_entry_t create_fseek_entry(clone_id_t clone_id, event_code_t event,
                                FILE* stream, long offset, int whence);
 log_entry_t create_fputs_entry(clone_id_t clone_id, event_code_t event,
                                const char* s, FILE* stream);
+log_entry_t create_puts_entry(clone_id_t clone_id, event_code_t event,
+                              const char* s);
 log_entry_t create_fputc_entry(clone_id_t clone_id, event_code_t event,
                                int c, FILE* stream);
 log_entry_t create_fsync_entry(clone_id_t clone_id, event_code_t event,

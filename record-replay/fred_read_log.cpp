@@ -63,6 +63,7 @@ void print_log_entry_common(int idx, log_entry_t *entry) {
 void rewriteLog(char *log_path)
 {
   dmtcp::SynchronizationLog log;
+  sync_logging_branch = SYNC_RECORD;
   /* Only need enough room for the metadata. */
   log.initialize(log_path, LOG_OFFSET_FROM_START);
   size_t logSize = log.getDataSize();
@@ -100,6 +101,7 @@ void initializeJalib()
   INIT_JALIB_FPTR(fopen);
   INIT_JALIB_FPTR(close);
   INIT_JALIB_FPTR(fclose);
+  INIT_JALIB_FPTR(readlink);
 
   INIT_JALIB_FPTR(syscall);
   INIT_JALIB_FPTR(mmap);
