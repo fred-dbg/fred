@@ -155,6 +155,7 @@ void fred_post_checkpoint_resume()
   set_sync_mode(sync_mode_pre_ckpt);
   sync_mode_pre_ckpt = SYNC_NOOP;
   initLogsForRecordReplay();
+  dmtcp::ThreadInfo::postCkptResume();
   log_all_allocs = 1;
 }
 

@@ -158,12 +158,26 @@ void dmtcp::ThreadInfo::postSuspend()
   for (it = pthreadIdTbl->begin(); it != pthreadIdTbl->end(); it++) {
     if (_real_pthread_kill(it->first, 0) != 0) {
       stale_clone_ids.push_back(it->second);
+    } else {
+      dmtcp::ThreadLocalData *thrInfo = &(*cloneIdTbl)[it->second];
+      JASSERT(sem_getvalue(&thrInfo->sem, &thrInfo->semValue) == 0);
+      thrInfo->destroy();
     }
   }
   for (size_t i = 0; i < stale_clone_ids.size(); i++) {
     dmtcp::ThreadLocalData *thrInfo = &(*cloneIdTbl)[stale_clone_ids[i]];
     cloneIdTbl->erase(stale_clone_ids[i]);
     pthreadIdTbl->erase(stale_clone_ids[i]);
+  }
+}
+
+void dmtcp::ThreadInfo::postCkptResume()
+{
+  CloneIdTblIt it;
+  for (it = cloneIdTbl->begin(); it != cloneIdTbl->end(); it++) {
+    clone_id_t id = it->first;
+    dmtcp::ThreadLocalData *thrInfo = getThreadLocalData(id);
+    sem_init(&thrInfo->sem, 0, thrInfo->semValue);
   }
 }
 
@@ -174,11 +188,15 @@ void dmtcp::ThreadInfo::postRestartResume()
   for (it = cloneIdTbl->begin(); it != cloneIdTbl->end(); it++) {
     clone_id_t id = it->first;
     thrInfo = getThreadLocalData(id);
-    sem_init(&thrInfo->sem, 0, 0);
+    sem_init(&thrInfo->sem, 0, thrInfo->semValue);
   }
 
   log_entry_t temp_entry = global_log.getCurrentEntry();
-  dmtcp::ThreadInfo::wakeUpThread(GET_COMMON(temp_entry, clone_id));
+  thrInfo = getThreadLocalData(GET_COMMON(temp_entry, clone_id));
+  if (thrInfo->semValue == 0) {
+    //JASSERT (global_log.currentEntryIndex() == 0);
+    dmtcp::ThreadInfo::wakeUpThread(GET_COMMON(temp_entry, clone_id));
+  }
 }
 
 clone_id_t nextThread = -1;
@@ -195,16 +213,20 @@ void dmtcp::ThreadInfo::wakeUpThread(clone_id_t id)
 clone_id_t waitThread=-1;
 void dmtcp::ThreadInfo::waitForTurn()
 {
+  int res;
   struct timespec ts;
   struct timespec ts_ms = {0, 1 * 1000 * 1000};
   JASSERT(cloneIdTbl->find(my_clone_id) != cloneIdTbl->end()) (my_clone_id);
   dmtcp::ThreadLocalData *thrInfo = getThreadLocalData(my_clone_id);
   sem_t& sem = thrInfo->sem;
   do {
+    //DMTCP_PLUGIN_DISABLE_CKPT();
     _real_clock_gettime(CLOCK_REALTIME, &ts);
     TIMESPEC_ADD(&ts, &ts_ms, &ts);
-  } while (sem_timedwait(&sem, &ts) != 0);
-  JTRACE("WAIT REturned") (my_clone_id);
+    res = sem_timedwait(&sem, &ts);
+    //DMTCP_PLUGIN_ENABLE_CKPT();
+  } while (res != 0);
+  JTRACE("sem_wait returned") (my_clone_id);
 
   waitThread = my_clone_id;
 }

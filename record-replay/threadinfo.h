@@ -41,7 +41,8 @@ namespace dmtcp {
       in_mmap_wrapper = 0;
       isOptionalEvent = 0;
       isOkToLogNextFnc = 0;
-      sem_init(&sem, 0 , 0);
+      semValue = 0;
+      sem_init(&sem, 0 , semValue);
     }
 
     void update(clone_id_t _id, pthread_t _pth) {
@@ -63,6 +64,7 @@ namespace dmtcp {
     // Semaphore used for waiting-for-turn and waking up threads according to
     // log entry.
     sem_t sem;
+    int   semValue;
   };
 
   namespace ThreadInfo {
@@ -78,6 +80,7 @@ namespace dmtcp {
     pthread_t cloneIdToPthreadId(clone_id_t clone_id);
 
     void postSuspend();
+    void postCkptResume();
     void postRestartResume();
 
     void wakeUpThread(clone_id_t id);
