@@ -169,8 +169,6 @@ void fred_post_restart_resume()
     set_sync_mode(SYNC_RECORD);
   } else {
     dmtcp::ThreadInfo::postRestartResume();
-    log_entry_t temp_entry = global_log.getCurrentEntry();
-    dmtcp::ThreadInfo::wakeUpThread(GET_COMMON(temp_entry, clone_id));
   }
   log_all_allocs = 1;
 }

@@ -395,7 +395,8 @@ static int internal_pthread_create(pthread_t *thread,
 
     ACQUIRE_THREAD_CREATE_DESTROY_LOCK();
     // Register a new thread with ThreadInfo.
-    dmtcp::ThreadInfo::registerThread();
+    pthread_t newPthreadId = GET_FIELD(my_entry, pthread_create, ret_thread);
+    dmtcp::ThreadInfo::registerThread(-1, newPthreadId);
     // Set up thread stacks to how they were at record time.
     pthread_attr_init(&the_attr);
 
