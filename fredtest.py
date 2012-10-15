@@ -242,6 +242,30 @@ def gdb_syscall_tester(n_count=1):
             print GS_FAILED_STRING
         end_session()
 
+def gdb_many_threads(n_count=1):
+    """Run a test on deterministic record/replay on many-threads example."""
+    global GS_TEST_PROGRAMS_DIRECTORY
+    l_cmd = ["gdb", GS_TEST_PROGRAMS_DIRECTORY + "/many-threads"]
+    for i in range(0, n_count):
+        print_test_name("gdb many-threads %d" % i)
+        start_session(l_cmd)
+        execute_commands(["b main", "r", "fred-ckpt", "c",
+                          "fred-restart", "c"])
+        print GS_PASSED_STRING
+        end_session()
+
+def gdb_many_threads2(n_count=1):
+    """Run a test on deterministic record/replay on many-threads2 example."""
+    global GS_TEST_PROGRAMS_DIRECTORY
+    l_cmd = ["gdb", GS_TEST_PROGRAMS_DIRECTORY + "/many-threads2"]
+    for i in range(0, n_count):
+        print_test_name("gdb many-threads-2 %d" % i)
+        start_session(l_cmd)
+        execute_commands(["b main", "r", "fred-ckpt", "c",
+                          "fred-restart", "c"])
+        print GS_PASSED_STRING
+        end_session()
+
 def gdb_reverse_watch(n_count=1):
     """Run a reverse-watch test on test_list linked list example."""
     global GS_TEST_PROGRAMS_DIRECTORY
@@ -447,6 +471,8 @@ def run_integration_tests(n_iters):
     gdb_multiple_checkpoints_record_st(n_iters)
     gdb_multiple_checkpoints_replay_st(n_iters)
     gdb_syscall_tester(n_iters)
+    gdb_many_threads(n_iters)
+    gdb_many_threads2(n_iters)
     gdb_reverse_watch(n_iters)
     gdb_reverse_watch_n_rs(n_iters)
     gdb_reverse_watch_n_rn(n_iters)
@@ -551,6 +577,8 @@ def initialize_tests():
                  "gdb-record-replay-pthread-cond" : 
                  gdb_record_replay_pthread_cond,
                  "gdb-syscall-tester" : gdb_syscall_tester,
+                 "gdb-many-threads" : gdb_many_threads,
+                 "gdb-many-threads-2" : gdb_many_threads2,
                  "gdb-reverse-watch" : gdb_reverse_watch,
                  "gdb-reverse-watch-n-rs" : gdb_reverse_watch_n_rs,
                  "gdb-reverse-watch-n-rn" : gdb_reverse_watch_n_rn,
