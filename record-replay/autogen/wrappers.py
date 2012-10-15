@@ -600,7 +600,7 @@ class RetType:
                       'uid_t' : '%d',
                       'gid_t' : '%d',
                       'pid_t' : '%d',
-                      'off_t' : '%d',
+                      'off_t' : '%ld',
                       'loff_t' : '%lu',
                       'off64_t' : '%ld',
                       'unsigned' : '%u',
@@ -625,11 +625,11 @@ class RetType:
                       'idtype_t' : '%u',
                       'id_t' : '%u',
                       'mode_t' : '%u',
-                      '__WAIT_STATUS' : '%d',
+                      '__WAIT_STATUS' : '%p',
                       'pthread_start_routine_t' : '%p',
                       'sighandler_t' : '%p',
-                      'nfds_t' : '%p',
-                      'pthread_t' : '%p'
+                      'nfds_t' : '%lud',
+                      'pthread_t' : '%lud'
                       }
         fmt = format_map.get(self.ret_type_str)
         if fmt == None:

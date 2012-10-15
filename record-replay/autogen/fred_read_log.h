@@ -383,7 +383,7 @@ void print_log_entry_clock_settime(int idx, log_entry_t *entry)  {
 }
 
 void print_log_entry_lseek(int idx, log_entry_t *entry)  {
-  printf(" fd=%d offset=%d whence=%d\n" ,
+  printf(" fd=%d offset=%ld whence=%d\n" ,
          GET_FIELD_PTR(entry, lseek, fd),
          GET_FIELD_PTR(entry, lseek, offset),
          GET_FIELD_PTR(entry, lseek, whence));
@@ -425,7 +425,7 @@ void print_log_entry_mkstemp(int idx, log_entry_t *entry)  {
 }
 
 void print_log_entry_mmap(int idx, log_entry_t *entry)  {
-  printf(" addr=%p length=%zu prot=%d flags=%d fd=%d offset=%d\n" ,
+  printf(" addr=%p length=%zu prot=%d flags=%d fd=%d offset=%ld\n" ,
          GET_FIELD_PTR(entry, mmap, addr),
          GET_FIELD_PTR(entry, mmap, length),
          GET_FIELD_PTR(entry, mmap, prot),
@@ -481,7 +481,7 @@ void print_log_entry_openat(int idx, log_entry_t *entry)  {
 }
 
 void print_log_entry_pread(int idx, log_entry_t *entry)  {
-  printf(" fd=%d buf=%p count=%zu offset=%d\n" ,
+  printf(" fd=%d buf=%p count=%zu offset=%ld\n" ,
          GET_FIELD_PTR(entry, pread, fd),
          GET_FIELD_PTR(entry, pread, buf),
          GET_FIELD_PTR(entry, pread, count),
@@ -489,7 +489,7 @@ void print_log_entry_pread(int idx, log_entry_t *entry)  {
 }
 
 void print_log_entry_preadv(int idx, log_entry_t *entry)  {
-  printf(" fd=%d iov=%p iovcnt=%d offset=%d\n" ,
+  printf(" fd=%d iov=%p iovcnt=%d offset=%ld\n" ,
          GET_FIELD_PTR(entry, preadv, fd),
          GET_FIELD_PTR(entry, preadv, iov),
          GET_FIELD_PTR(entry, preadv, iovcnt),
@@ -497,7 +497,7 @@ void print_log_entry_preadv(int idx, log_entry_t *entry)  {
 }
 
 void print_log_entry_pwrite(int idx, log_entry_t *entry)  {
-  printf(" fd=%d buf=%p count=%zu offset=%d\n" ,
+  printf(" fd=%d buf=%p count=%zu offset=%ld\n" ,
          GET_FIELD_PTR(entry, pwrite, fd),
          GET_FIELD_PTR(entry, pwrite, buf),
          GET_FIELD_PTR(entry, pwrite, count),
@@ -505,7 +505,7 @@ void print_log_entry_pwrite(int idx, log_entry_t *entry)  {
 }
 
 void print_log_entry_pwritev(int idx, log_entry_t *entry)  {
-  printf(" fd=%d iov=%p iovcnt=%d offset=%d\n" ,
+  printf(" fd=%d iov=%p iovcnt=%d offset=%ld\n" ,
          GET_FIELD_PTR(entry, pwritev, fd),
          GET_FIELD_PTR(entry, pwritev, iov),
          GET_FIELD_PTR(entry, pwritev, iovcnt),
@@ -536,7 +536,7 @@ void print_log_entry_pthread_create(int idx, log_entry_t *entry)  {
 }
 
 void print_log_entry_pthread_detach(int idx, log_entry_t *entry)  {
-  printf(" thread=%p\n" ,
+  printf(" thread=%lud\n" ,
          GET_FIELD_PTR(entry, pthread_detach, thread));
 }
 
@@ -546,13 +546,13 @@ void print_log_entry_pthread_exit(int idx, log_entry_t *entry)  {
 }
 
 void print_log_entry_pthread_join(int idx, log_entry_t *entry)  {
-  printf(" thread=%p value_ptr=%p\n" ,
+  printf(" thread=%lud value_ptr=%p\n" ,
          GET_FIELD_PTR(entry, pthread_join, thread),
          GET_FIELD_PTR(entry, pthread_join, value_ptr));
 }
 
 void print_log_entry_pthread_kill(int idx, log_entry_t *entry)  {
-  printf(" thread=%p sig=%d\n" ,
+  printf(" thread=%lud sig=%d\n" ,
          GET_FIELD_PTR(entry, pthread_kill, thread),
          GET_FIELD_PTR(entry, pthread_kill, sig));
 }
@@ -630,7 +630,7 @@ void print_log_entry_select(int idx, log_entry_t *entry)  {
 }
 
 void print_log_entry_ppoll(int idx, log_entry_t *entry)  {
-  printf(" fds=%p nfds=%p timeout_ts=%p sigmask=%p\n" ,
+  printf(" fds=%p nfds=%lud timeout_ts=%p sigmask=%p\n" ,
          GET_FIELD_PTR(entry, ppoll, fds),
          GET_FIELD_PTR(entry, ppoll, nfds),
          GET_FIELD_PTR(entry, ppoll, timeout_ts),
@@ -694,13 +694,13 @@ void print_log_entry_time(int idx, log_entry_t *entry)  {
 }
 
 void print_log_entry_truncate(int idx, log_entry_t *entry)  {
-  printf(" path=%p length=%d\n" ,
+  printf(" path=%p length=%ld\n" ,
          GET_FIELD_PTR(entry, truncate, path),
          GET_FIELD_PTR(entry, truncate, length));
 }
 
 void print_log_entry_ftruncate(int idx, log_entry_t *entry)  {
-  printf(" fd=%d length=%d\n" ,
+  printf(" fd=%d length=%ld\n" ,
          GET_FIELD_PTR(entry, ftruncate, fd),
          GET_FIELD_PTR(entry, ftruncate, length));
 }
@@ -865,7 +865,7 @@ void print_log_entry_waitid(int idx, log_entry_t *entry)  {
 }
 
 void print_log_entry_wait4(int idx, log_entry_t *entry)  {
-  printf(" pid=%d status=%d options=%d rusage=%p\n" ,
+  printf(" pid=%d status=%p options=%d rusage=%p\n" ,
          GET_FIELD_PTR(entry, wait4, pid),
          GET_FIELD_PTR(entry, wait4, status),
          GET_FIELD_PTR(entry, wait4, options),
