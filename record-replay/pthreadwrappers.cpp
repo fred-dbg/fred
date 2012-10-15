@@ -718,6 +718,7 @@ static void create_reaper_thread()
 
 LIB_PRIVATE void reapThisThread()
 {
+  bool done = false;
   /*
     Called from two places:
      - pthread_exit() wrapper
@@ -730,10 +731,15 @@ LIB_PRIVATE void reapThisThread()
   */
   // Make sure reaper thread has called cond_wait() before we signal:
   while (!reaper_thread_ready) usleep(100);
-  internal_pthread_mutex_lock(&reap_mutex);
-  thread_to_reap = pthread_self();
-  internal_pthread_cond_signal(&reap_cv);
-  internal_pthread_mutex_unlock(&reap_mutex);
+  while (!done) {
+    internal_pthread_mutex_lock(&reap_mutex);
+    if (thread_to_reap == 0) {
+      thread_to_reap = pthread_self();
+      internal_pthread_cond_signal(&reap_cv);
+      done = true;
+    }
+    internal_pthread_mutex_unlock(&reap_mutex);
+  }
   // Wait for reaper thread to read the thread attributes before we return,
   // letting the thread terminate.
   while (1) {
