@@ -466,6 +466,11 @@ static void execute_optional_event(int opt_event_num)
     pthread_mutex_t *mutex = NULL;//GET_FIELD(temp_entry, pthread_mutex_lock, mutex);
     dmtcp::ThreadInfo::setOkToLogNextFnc();
     pthread_mutex_unlock(mutex);
+  } else if (opt_event_num == pthread_join_event) {
+    pthread_t thread = GET_FIELD(temp_entry, pthread_join, thread);
+    dmtcp::ThreadInfo::setOkToLogNextFnc();
+    pthread_join(thread, NULL);
+    dmtcp::ThreadInfo::reapThread(thread);
   } else {
     JASSERT (false)(opt_event_num).Text("No action known for optional event.");
   }

@@ -239,6 +239,8 @@ typedef struct {
 } log_event_pthread_exit_t;
 
 typedef struct {
+  pthread_t thread;
+  void* ret_value_ptr;
 } log_event_pthread_join_t;
 
 typedef struct {

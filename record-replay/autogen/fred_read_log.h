@@ -433,7 +433,8 @@ void print_log_entry_pthread_exit(int idx, log_entry_t *entry)  {
 }
 
 void print_log_entry_pthread_join(int idx, log_entry_t *entry)  {
-  printf("\n" );
+  printf(" thread=%lud\n" ,
+         GET_FIELD_PTR(entry, pthread_join, thread));
 }
 
 void print_log_entry_pthread_kill(int idx, log_entry_t *entry)  {

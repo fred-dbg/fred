@@ -40,124 +40,26 @@
 #include "fred_wrappers.h"
 #include "threadinfo.h"
 
-static void *thread_reaper(void *arg);
-static void create_reaper_thread();
-static pthread_t reaperThread;
-static int reaper_thread_alive = 0;
 static int signal_thread_alive = 0;
-static volatile int reaper_thread_ready = 0;
 static volatile int thread_create_destroy = 0;
-static volatile pthread_t attributes_were_read = 0;
-static volatile pthread_t arguments_were_decoded = 0;
-static pthread_mutex_t attributes_mutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t arguments_decode_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t create_destroy_guard = PTHREAD_MUTEX_INITIALIZER;
-static pthread_cond_t  reap_cv = PTHREAD_COND_INITIALIZER;
-static pthread_mutex_t reap_mutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_t       thread_to_reap = 0;
-static dmtcp::vector<pthread_t> threads_with_allocated_stack;
-static dmtcp::vector<pthread_t> detached_threads;
-typedef struct {
-  int retval;
-  int my_errno;
-  void *value_ptr;
-} pthread_join_retval_t;
-static dmtcp::map<pthread_t, pthread_join_retval_t> pthread_join_retvals;
 
-//static pthread_mutex_t read_mutex = PTHREAD_MUTEX_INITIALIZER;
 static inline void memfence() {  asm volatile ("mfence" ::: "memory"); }
 struct create_arg
 {
   void *(*fn)(void *);
   void *thread_arg;
+  void *userStack;
+  pthread_attr_t attr;
+  int   userDetachState;
 };
+
 static int internal_pthread_mutex_lock(pthread_mutex_t *);
 static int internal_pthread_mutex_unlock(pthread_mutex_t *);
 
-//extern MtcpFuncPtrs_t mtcpFuncPtrs;
-
-#define ACQUIRE_THREAD_CREATE_DESTROY_LOCK() \
-  int ready = 0;                                                \
-  while (1) {                                                   \
-    internal_pthread_mutex_lock(&create_destroy_guard);         \
-    memfence();                                                 \
-    if (thread_create_destroy == 0) {                           \
-      ready = 1;                                                \
-      thread_create_destroy = 1;                                \
-    }                                                           \
-    internal_pthread_mutex_unlock(&create_destroy_guard);       \
-    if (ready) break;                                           \
-    usleep(100);                                                \
-  }
-
-#define RELEASE_THREAD_CREATE_DESTROY_LOCK() \
-  internal_pthread_mutex_lock(&create_destroy_guard);   \
-  JASSERT ( thread_create_destroy == 1 );               \
-  thread_create_destroy = 0;                            \
-  internal_pthread_mutex_unlock(&create_destroy_guard); \
-
-static bool thread_has_allocated_stack(pthread_t thd)
-{
-  dmtcp::vector<pthread_t>::iterator it;
-  for (it = threads_with_allocated_stack.begin();
-       it < threads_with_allocated_stack.end();
-       it++) {
-    if (pthread_equal(*it, thd)) {
-      return true;
-    }
-  }
-  return false;
-}
-
-static void remove_thread_with_allocated_stack(pthread_t thd)
-{
-  dmtcp::vector<pthread_t>::iterator it;
-  for (it = threads_with_allocated_stack.begin();
-       it < threads_with_allocated_stack.end();
-       it++) {
-    if (pthread_equal(*it, thd)) {
-      threads_with_allocated_stack.erase(it);
-      break;
-    }
-  }
-}
-
-static void record_detached_thread(pthread_t thd)
-{
-  detached_threads.push_back(thd);
-}
-
-/* Note that no threads are actually detached (we disallow it). This
-   function returns True when the user program *thinks* a thread is
-   detached.*/
-static bool thread_is_detached(pthread_t thd)
-{
-  dmtcp::vector<pthread_t>::iterator it;
-  for (it = detached_threads.begin();
-       it < detached_threads.end();
-       it++) {
-    if (pthread_equal(*it, thd)) {
-      return true;
-    }
-  }
-  return false;
-}
-
-static void remove_detached_thread(pthread_t thd)
-{
-  dmtcp::vector<pthread_t>::iterator it;
-  for (it = detached_threads.begin();
-       it < detached_threads.end();
-       it++) {
-    if (pthread_equal(*it, thd)) {
-      detached_threads.erase(it);
-      break;
-    }
-  }
-}
-
 static void *start_wrapper(void *arg)
 {
+  dmtcp::ThreadInfo::postPthreadCreate();
   JASSERT(my_clone_id != -1);
   /*
    This start function calls the user's start function. We need this so that we
@@ -170,12 +72,14 @@ static void *start_wrapper(void *arg)
   struct create_arg *createArg = (struct create_arg *)arg;
   void *(*user_fnc) (void *) = createArg->fn;
   void *thread_arg = createArg->thread_arg;
+  dmtcp::ThreadInfo::updateState(pthread_self(), createArg->attr,
+                                 createArg->userStack,
+                                 createArg->userDetachState);
   JALLOC_HELPER_FREE(arg);
 
   retval = (*user_fnc)(thread_arg);
   JTRACE ( "User start function over." );
-  ACQUIRE_THREAD_CREATE_DESTROY_LOCK(); // For thread destruction.
-  reapThisThread();
+  dmtcp::ThreadInfo::reapThisThread();
   return retval;
 }
 
@@ -189,7 +93,7 @@ static void *start_wrapper(void *arg)
    size - If non-0, force new stack to this size.
 */
 static void setupThreadStack(pthread_attr_t *attr_out,
-    const pthread_attr_t *user_attr, size_t size)
+                             const pthread_attr_t *user_attr, size_t size)
 {
   size_t stack_size;
   void *stack_addr;
@@ -197,11 +101,18 @@ static void setupThreadStack(pthread_attr_t *attr_out,
   // If the user's attributes have specified a stack size, use that.
   if (user_attr != NULL) {
     pthread_attr_getstack(user_attr, &stack_addr, &stack_size);
-    if (stack_size != 0)
+    if (stack_size != 0) {
       userStack = 1;
-    // Copy the user's attributes:
-    *attr_out = *user_attr;
+    }
+    if (stack_addr != NULL) {
+      // User provided stack, Copy the user's attributes:
+      JASSERT(stack_size != 0);
+      *attr_out = *user_attr;
+      JASSERT(false);
+      return;
+    }
   }
+
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,27)
   int mmap_flags = MAP_PRIVATE | MAP_ANONYMOUS | MAP_STACK;
 #else
@@ -237,32 +148,13 @@ static void setupThreadStack(pthread_attr_t *attr_out,
   pthread_attr_setstack(attr_out, s, mmap_size);
 }
 
-static void teardownThreadStack(void *stack_addr, size_t stack_size)
+/* Disable the pthread_CREATE_DETACHED flag if present in the given
+   attributes. Returns the modified attributes. */
+static void disableDetachState(pthread_attr_t *attr)
 {
-  if (munmap(stack_addr, stack_size) == -1) {
-    JASSERT ( false ) ( strerror(errno) ) ( stack_addr ) ( stack_size )
-      .Text("Unable to munmap user thread stack.");
-  }
-}
-
-/* Disable the PTHREAD_CREATE_DETACHED flag if present in the given
-   attributes. Returns whether the flag was set, and modifies the
-   attributes in place.
-
-   If the thread was created detached, it means the user program won't
-   be calling pthread_join() on it. We must track that in order to
-   avoid adding the thread to the pthread_join_retvals list.  For
-   normal (joinable) threads, entries from that list are erased in
-   the pthread_join() wrapper.
-*/
-static int disableDetachState(pthread_attr_t *attr)
-{
-  int was_detached = 0;
-  JASSERT(pthread_attr_getdetachstate(attr, &was_detached) == 0);
   // The opposite and only alternative to PTHREAD_CREATE_DETACHED is
   // PTHREAD_CREATE_JOINABLE.
   pthread_attr_setdetachstate(attr, PTHREAD_CREATE_JOINABLE);
-  return was_detached;
 }
 
 /* Begin wrapper code */
@@ -383,9 +275,18 @@ static int internal_pthread_create(pthread_t *thread,
   pthread_attr_t the_attr;
   size_t stack_size;
   void *stack_addr;
-  struct create_arg *createArg = (struct create_arg*) JALLOC_HELPER_MALLOC(sizeof(*createArg));
+  struct create_arg *createArg =
+    (struct create_arg*) JALLOC_HELPER_MALLOC(sizeof(*createArg));
   createArg->fn = start_routine;
   createArg->thread_arg = arg;
+  if (attr != NULL) {
+    pthread_attr_getstack(attr, &createArg->userStack, &stack_size);
+    pthread_attr_getdetachstate(attr, &createArg->userDetachState);
+  } else {
+    createArg->userStack = NULL;
+    createArg->userDetachState = PTHREAD_CREATE_JOINABLE;
+  }
+
   log_entry_t my_entry = create_pthread_create_entry(my_clone_id,
                                                      pthread_create_event,
                                                      thread, attr,
@@ -394,44 +295,38 @@ static int internal_pthread_create(pthread_t *thread,
     WRAPPER_REPLAY_START(pthread_create);
     stack_addr = (void *)GET_FIELD(my_entry, pthread_create, stack_addr);
     stack_size = GET_FIELD(my_entry, pthread_create, stack_size);
+    dmtcp::ThreadInfo::prePthreadCreate();
     WRAPPER_REPLAY_END(pthread_create);
 
-    ACQUIRE_THREAD_CREATE_DESTROY_LOCK();
     // Register a new thread with ThreadInfo.
     pthread_t newPthreadId = GET_FIELD(my_entry, pthread_create, ret_thread);
-    dmtcp::ThreadInfo::registerThread(-1, newPthreadId);
     // Set up thread stacks to how they were at record time.
     pthread_attr_init(&the_attr);
 
     setupThreadStack(&the_attr, attr, stack_size);
     // Never let the user create a detached thread:
-    was_detached = disableDetachState(&the_attr);
+    disableDetachState(&the_attr);
+    createArg->attr = the_attr;
     retval = _real_pthread_create(thread, &the_attr,
                                   start_wrapper, (void *)createArg);
-    if (retval == 0 && was_detached) {
-      record_detached_thread(*thread);
-    }
-    RELEASE_THREAD_CREATE_DESTROY_LOCK();
     pthread_attr_destroy(&the_attr);
 
   } else if (SYNC_IS_RECORD) {
+    dmtcp::ThreadInfo::prePthreadCreate();
     WRAPPER_LOG_WRITE_ENTRY(my_entry);
 
-    ACQUIRE_THREAD_CREATE_DESTROY_LOCK();
     pthread_attr_init(&the_attr);
     // Possibly create a thread stack if the user has not provided one:
     setupThreadStack(&the_attr, attr, 0);
     // Never let the user create a detached thread:
-    was_detached = disableDetachState(&the_attr);
+    disableDetachState(&the_attr);
 
+    createArg->attr = the_attr;
     retval = _real_pthread_create(thread, &the_attr,
                                   start_wrapper, (void *)createArg);
     my_entry.setRetval((void*)(unsigned long)retval);
     my_entry.setSavedErrno(errno);
-    if (retval == 0 && was_detached) {
-      record_detached_thread(*thread);
-    }
-    RELEASE_THREAD_CREATE_DESTROY_LOCK();
+
     // Log whatever stack we ended up using:
     pthread_attr_getstack(&the_attr, &stack_addr, &stack_size);
     pthread_attr_destroy(&the_attr);
@@ -443,8 +338,9 @@ static int internal_pthread_create(pthread_t *thread,
     WRAPPER_LOG_UPDATE_ENTRY(my_entry);
   }
 
-  threads_with_allocated_stack.push_back(*thread);
-
+  if (retval != 0) {
+    dmtcp::ThreadInfo::postPthreadCreate();
+  }
   return retval;
 }
 
@@ -590,167 +486,92 @@ extern "C" int pthread_rwlock_wrlock(pthread_rwlock_t *rwlock)
   return retval;
 }
 
-/* Function to perform cleanup tasks for a user thread exit.
-   Caller is responsible for acquiring reap_mutex. */
-static void reapThread()
+static void *dummy_start_wrapper(void *arg) { return NULL; }
+
+static bool pthread_cancel_initialized = false;
+static void initialize_pthread_cancel()
 {
-  pthread_attr_t attr;
-  pthread_join_retval_t join_retval;
-  void *value_ptr = NULL;
-  size_t stack_size;
-  void *stack_addr;
-  int retval = 0;
-  clone_id_t cid_to_reap;
-
-  _real_pthread_mutex_lock(&attributes_mutex);
-  JASSERT ( attributes_were_read == 0 );
-  attributes_were_read = thread_to_reap;
-  _real_pthread_mutex_unlock(&attributes_mutex);
-  retval = _real_pthread_join(thread_to_reap, &value_ptr);
-
-  if (!thread_is_detached(thread_to_reap)) {
-    join_retval.my_errno = errno;
-    join_retval.retval = retval;
-    join_retval.value_ptr = value_ptr;
-    pthread_join_retvals[thread_to_reap] = join_retval;
-  } else {
-    // Detached thread; we don't need to know about it any more.
-    remove_detached_thread(thread_to_reap);
-  }
-
-  dmtcp::ThreadInfo::destroyThread(thread_to_reap);
-
-  /* Only destroy thread stacks created by us. */
-  if (thread_has_allocated_stack(thread_to_reap)) {
-    pthread_getattr_np(thread_to_reap, &attr); // calls realloc().
-    pthread_attr_getstack(&attr, &stack_addr, &stack_size);
-    pthread_attr_destroy(&attr);
-    teardownThreadStack(stack_addr, stack_size);
-    remove_thread_with_allocated_stack(thread_to_reap);
-  }
-
-  // Reset for next thread:
-  thread_to_reap = 0;
-  RELEASE_THREAD_CREATE_DESTROY_LOCK(); // End of thread destruction.
-}
-
-/* Thread to handle cleanup tasks associated with a user thread exiting.  Note
-   we are not using the _real_ versions of pthread calls -- we want to
-   synchronize these. */
-static void *thread_reaper(void *arg)
-{
-  /* Wait until mode is not SYNC_NOOP. */
-  while (SYNC_IS_NOOP) { usleep(1000); }
-  while (1) {
-    /* Wait until there is a thread that needs to be reaped.  We call the
-    internal_* versions here because we want them to be logged/replayed, but we
-    want to skip the shouldSynchronize() function. That function will refuse to
-    log/replay these because they are not coming from user code. */
-    internal_pthread_mutex_lock(&reap_mutex);
-    reaper_thread_ready = 1;
-    while (thread_to_reap == 0) {
-      internal_pthread_cond_wait(&reap_cv, &reap_mutex);
+  /* libpthread defines pthread_cancel_init() which initializes some internal
+   * data structures for future use. The function is called whenever a threads
+   * is cancelled (pthread_exit(), return from start etc.). The function makes
+   * internal calls to dlopen() etc. If pthread_cancel_init() is not called
+   * prior to starting logging, it may cause log divergence as we do not have a
+   * mechanism to capture and serialize calls to libc internal dlopen().
+   *
+   * The fix is to create a short lived thread which would eventually make a
+   * call to pthread_cancel_init() while exiting thus solving the problem.
+   * Notice that we do not want to create this thread before creating the
+   * checkpoint thread as this could lead to races withing libmtcp.so. The
+   * safest place is to create the thread after checkpoint thread is created
+   * and before starting user main().
+   */
+  if (!pthread_cancel_initialized) {
+    if (!isProcessGDB()) {
+      pthread_t pth;
+      JASSERT(_real_pthread_create(&pth, NULL, dummy_start_wrapper, NULL) == 0);
+      pthread_cancel(pth);
+      JASSERT(_real_pthread_join(pth, NULL) == 0);
+      dmtcp::ThreadInfo::destroyThread(pth);
+      pthread_cancel_initialized = true;
     }
-    reaper_thread_ready = 0;
-    reapThread();
-    internal_pthread_mutex_unlock(&reap_mutex);
   }
-  JASSERT(false) .Text("Unreachable");
-  return NULL;
-}
-
-static void create_reaper_thread()
-{
-  if (__builtin_expect(reaper_thread_alive, 1)) {
-    return;
-  }
-  reaper_thread_alive = 1;
-  if (SYNC_IS_RECORD || SYNC_IS_REPLAY) {
-    internal_pthread_create(&reaperThread, NULL, thread_reaper, NULL);
-    return;
-  }
-  JASSERT(SYNC_IS_NOOP);
-  int retval = 0;
-  retval = _real_pthread_create(&reaperThread, NULL, thread_reaper, NULL);
-  JASSERT( retval == 0 );
-}
-
-LIB_PRIVATE void reapThisThread()
-{
-  bool done = false;
-  /*
-    Called from two places:
-     - pthread_exit() wrapper
-     - end of start_wrapper() (which calls user's start function).
-
-    We call the internal_* versions here because we want them to be
-    logged/replayed, but we want to skip the shouldSynchronize() function. That
-    function will refuse to log/replay these because they are not coming from
-    user code.
-  */
-  // Make sure reaper thread has called cond_wait() before we signal:
-  while (!reaper_thread_ready) usleep(100);
-  while (!done) {
-    internal_pthread_mutex_lock(&reap_mutex);
-    if (thread_to_reap == 0) {
-      thread_to_reap = pthread_self();
-      internal_pthread_cond_signal(&reap_cv);
-      done = true;
-    }
-    internal_pthread_mutex_unlock(&reap_mutex);
-  }
-  // Wait for reaper thread to read the thread attributes before we return,
-  // letting the thread terminate.
-  while (1) {
-    _real_pthread_mutex_lock(&attributes_mutex);
-    if (attributes_were_read == pthread_self()) break;
-    _real_pthread_mutex_unlock(&attributes_mutex);
-    usleep(100);
-  }
-  attributes_were_read = 0;
-  _real_pthread_mutex_unlock(&attributes_mutex);
 }
 
 extern "C" int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
     void *(*start_routine)(void*), void *arg)
 {
+  /* Reap Existing Threads */
+  dmtcp::ThreadInfo::reapThreads();
+  int retval;
+
   /* Here I've split apart WRAPPER_HEADER_RAW because we need to create the
    * reaper thread even if the current mode is SYNC_IS_NOOP. */
   void *return_addr = GET_RETURN_ADDRESS();
   if (!dmtcp_is_running_state() ||
       !validAddress(return_addr) || isProcessGDB()) {
-    return _real_pthread_create(thread, attr, start_routine, arg);
-  }
-  /* Create the reaper thread always, even if we are not in SYNC_RECORD mode
-   * yet. */
-  create_reaper_thread();
-
-  int retval;
-  if (SYNC_IS_NOOP) {
-    struct create_arg *createArg = (struct create_arg*) JALLOC_HELPER_MALLOC(sizeof(*createArg));
+    retval =  _real_pthread_create(thread, attr, start_routine, arg);
+  } else if (SYNC_IS_NOOP) {
+    struct create_arg *createArg =
+      (struct create_arg*) JALLOC_HELPER_MALLOC(sizeof(*createArg));
     createArg->fn = start_routine;
     createArg->thread_arg = arg;
+    createArg->userStack = (void*) -1; // Make sure it is non-NULL
+    if (attr != NULL) {
+      createArg->attr = *attr;
+      pthread_attr_getdetachstate(attr, &createArg->userDetachState);
+    } else {
+      createArg->userDetachState = PTHREAD_CREATE_JOINABLE;
+    }
+    dmtcp::ThreadInfo::prePthreadCreate();
     retval = _real_pthread_create(thread, attr, start_wrapper, createArg);
+    if (retval != 0) {
+      dmtcp::ThreadInfo::postPthreadCreate();
+    }
   } else {
     retval = internal_pthread_create(thread, attr, start_routine, arg);
+  }
+  if (!pthread_cancel_initialized) {
+    initialize_pthread_cancel();
   }
   return retval;
 }
 
 extern "C" void pthread_exit(void *value_ptr)
 {
+  if (SYNC_IS_NOOP) {
+    dmtcp::ThreadInfo::reapThisThread();
+  }
   WRAPPER_HEADER_NO_RETURN(pthread_exit, _real_pthread_exit, value_ptr);
+
   if (SYNC_IS_REPLAY) {
     waitForTurn(&my_entry, &pthread_exit_turn_check);
     getNextLogEntry();
-    ACQUIRE_THREAD_CREATE_DESTROY_LOCK();
-    reapThisThread();
+    dmtcp::ThreadInfo::reapThisThread();
     _real_pthread_exit(value_ptr);
   } else  if (SYNC_IS_RECORD) {
     // Not restart; we should be logging.
     addNextLogEntry(my_entry);
-    ACQUIRE_THREAD_CREATE_DESTROY_LOCK();
-    reapThisThread();
+    dmtcp::ThreadInfo::reapThisThread();
     _real_pthread_exit(value_ptr);
   }
   while(1); // to suppress compiler warning about 'noreturn' function returning
@@ -758,18 +579,31 @@ extern "C" void pthread_exit(void *value_ptr)
 
 extern "C" int pthread_detach(pthread_t thread)
 {
-  WRAPPER_HEADER(int, pthread_detach, _real_pthread_detach, thread);
+  int retval = 0;
+  void *return_addr = GET_RETURN_ADDRESS();
+  if (!shouldSynchronize(return_addr)) {
+    int retval = _real_pthread_detach(thread);
+    if (retval == 0) {
+      dmtcp::ThreadInfo::markDetached(thread);
+    }
+    return retval;
+  }
+
+  log_entry_t my_entry = create_pthread_detach_entry(my_clone_id,
+                                                     pthread_detach_event,
+                                                     thread);
+
   //FIXME: We don't need to log/replay this event.
   if (SYNC_IS_REPLAY) {
-    waitForTurn(&my_entry, &pthread_detach_turn_check);
-    getNextLogEntry();
-    retval = 0;
+    WRAPPER_REPLAY(pthread_detach);
   } else  if (SYNC_IS_RECORD) {
-    // Not restart; we should be logging.
-    addNextLogEntry(my_entry);
-    retval = 0;
+    retval = _real_pthread_detach(thread);
+    WRAPPER_LOG_WRITE_ENTRY(my_entry);
   }
-  record_detached_thread(thread);
+
+  if (retval == 0) {
+    dmtcp::ThreadInfo::markDetached(thread);
+  }
   return retval;
 }
 
@@ -827,6 +661,9 @@ extern "C" int pthread_kill(pthread_t thread, int sig)
 
 extern "C" int pthread_join (pthread_t thread, void **value_ptr)
 {
+  /* Reap Existing Threads */
+  //dmtcp::ThreadInfo::reapThreads();
+
   /* We change things up a bit here. Since we don't allow the user's
      pthread_join() to have an effect, we don't call the mtcp
      "delete_thread_on_pthread_join()" function here unless we decide not to
@@ -834,9 +671,15 @@ extern "C" int pthread_join (pthread_t thread, void **value_ptr)
 
      We DO need to call it from the thread reaper reapThread(), however, which
      is in pthreadwrappers.cpp. */
+  //if (!dmtcp::ThreadInfo::isUserJoinable(thread)) {
+    //return EINVAL;
+  //}
   void *return_addr = GET_RETURN_ADDRESS();
   if (!shouldSynchronize(return_addr)) {
     int retval = _real_pthread_join(thread, value_ptr);
+    if (retval == 0) {
+      dmtcp::ThreadInfo::reapThread(thread);
+    }
     return retval;
   }
 
@@ -845,44 +688,20 @@ extern "C" int pthread_join (pthread_t thread, void **value_ptr)
       pthread_join_event, thread, value_ptr);
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_START(pthread_join);
-    while (pthread_join_retvals.find(thread) == pthread_join_retvals.end()) {
-      usleep(100);
-    }
-    if (pthread_join_retvals.find(thread) != pthread_join_retvals.end()) {
-      // We joined it as part of the thread reaping.
-      if (value_ptr != NULL) {
-        // If the user cares about the return value.
-        retval = pthread_join_retvals[thread].retval;
-        *value_ptr = pthread_join_retvals[thread].value_ptr;
-        if (retval == -1) {
-          errno = pthread_join_retvals[thread].my_errno;
-        }
-      }
-      pthread_join_retvals.erase(thread);
-    } else {
-      JASSERT ( false ) .Text("A thread was not joined by reaper thread.");
-    }
+    int saved_retval = (long) my_entry.retval();
     WRAPPER_REPLAY_END(pthread_join);
+    retval = _real_pthread_join(thread, value_ptr);
+    JASSERT(retval == saved_retval);
+    if (value_ptr != NULL) {
+      JASSERT(*value_ptr == GET_FIELD(my_entry, pthread_join, ret_value_ptr));
+    }
   } else if (SYNC_IS_RECORD) {
-    // Not restart; we should be logging.
-    while (pthread_join_retvals.find(thread) == pthread_join_retvals.end()) {
-      usleep(100);
-    }
-    if (pthread_join_retvals.find(thread) != pthread_join_retvals.end()) {
-      // We joined it as part of the thread reaping.
-      if (value_ptr != NULL) {
-        // If the user cares about the return value.
-        retval = pthread_join_retvals[thread].retval;
-        *value_ptr = pthread_join_retvals[thread].value_ptr;
-        if (retval == -1) {
-          errno = pthread_join_retvals[thread].my_errno;
-        }
-      }
-      pthread_join_retvals.erase(thread);
-    } else {
-      JASSERT ( false ) .Text("A thread was not joined by reaper thread.");
-    }
     WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    retval = _real_pthread_join(thread, value_ptr);
+    if (value_ptr != NULL) {
+      SET_FIELD2(my_entry, pthread_join, ret_value_ptr, *value_ptr);
+    }
+    WRAPPER_LOG_UPDATE_ENTRY(my_entry);
   }
   return retval;
 }

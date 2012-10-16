@@ -381,6 +381,7 @@ void dmtcp::SynchronizationLog::updateEntry(const log_entry_t& entry,
 
   // only allow it for pthread_create and malloc calls
   JASSERT(entry.eventId() == pthread_create_event ||
+	  entry.eventId() == pthread_join_event ||
 	  entry.eventId() == pthread_rwlock_unlock_event ||
 	  entry.eventId() == pthread_mutex_unlock_event ||
 	  entry.eventId() == malloc_event ||

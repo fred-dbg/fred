@@ -667,6 +667,7 @@ log_entry_t create_pthread_join_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
+  SET_FIELD(e, pthread_join, thread);
   return e;
 }
 
@@ -1829,7 +1830,8 @@ int pthread_exit_turn_check(log_entry_t *e1, log_entry_t *e2)
 
 int pthread_join_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2);
+  return base_turn_check(e1,e2)
+    && ARE_FIELDS_EQUAL_PTR (e1, e2, pthread_join, thread);
 }
 
 int pthread_kill_turn_check(log_entry_t *e1, log_entry_t *e2)
