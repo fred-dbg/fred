@@ -125,13 +125,14 @@ static void *start_wrapper(void *arg)
    involving a free() call and some low level locks. Since we can't control the
    low level locks, we must implement our own lock: thread_transition_mutex.
   */
+  void *retval;
   struct create_arg *createArg = (struct create_arg *)arg;
   void *(*user_fnc) (void *) = createArg->fn;
   void *thread_arg = createArg->thread_arg;
   _real_pthread_mutex_lock(&arguments_decode_mutex);
   arguments_were_decoded = 1;
   _real_pthread_mutex_unlock(&arguments_decode_mutex);
-  void *retval;
+  JALLOC_HELPER_FREE(arg);
 
   retval = (*user_fnc)(thread_arg);
   JTRACE ( "User start function over." );
@@ -380,9 +381,9 @@ static int internal_pthread_create(pthread_t *thread,
   pthread_attr_t the_attr;
   size_t stack_size;
   void *stack_addr;
-  struct create_arg createArg;
-  createArg.fn = start_routine;
-  createArg.thread_arg = arg;
+  struct create_arg *createArg = (struct create_arg*) JALLOC_HELPER_MALLOC(sizeof(*createArg));
+  createArg->fn = start_routine;
+  createArg->thread_arg = arg;
   log_entry_t my_entry = create_pthread_create_entry(my_clone_id,
                                                      pthread_create_event,
                                                      thread, attr,
@@ -404,7 +405,7 @@ static int internal_pthread_create(pthread_t *thread,
     // Never let the user create a detached thread:
     disableDetachState(&the_attr);
     retval = _real_pthread_create(thread, &the_attr,
-                                  start_wrapper, (void *)&createArg);
+                                  start_wrapper, (void *)createArg);
     waitForChildThreadToInitialize();
 
     RELEASE_THREAD_CREATE_DESTROY_LOCK();
@@ -421,7 +422,7 @@ static int internal_pthread_create(pthread_t *thread,
     disableDetachState(&the_attr);
 
     retval = _real_pthread_create(thread, &the_attr,
-                                  start_wrapper, (void *)&createArg);
+                                  start_wrapper, (void *)createArg);
     SET_COMMON2(my_entry, retval, (void*)(unsigned long)retval);
     SET_COMMON2(my_entry, my_errno, errno);
 
@@ -648,28 +649,26 @@ static void reapThread()
   void *stack_addr;
   int retval = 0;
   clone_id_t cid_to_reap;
-  /* Only reap threads for which we explicitly created a thread stack. */
-  if (!should_reap_thread(thread_to_reap)) {
-    thread_to_reap = 0;
-    //RELEASE_THREAD_CREATE_DESTROY_LOCK(); // End of thread destruction.
-    return;
-  }
-  pthread_getattr_np(thread_to_reap, &attr); // calls realloc().
-  pthread_attr_getstack(&attr, &stack_addr, &stack_size);
-  pthread_attr_destroy(&attr);
+
   _real_pthread_mutex_lock(&attributes_mutex);
   JASSERT ( attributes_were_read == 0 );
   attributes_were_read = thread_to_reap;
   _real_pthread_mutex_unlock(&attributes_mutex);
   retval = _real_pthread_join(thread_to_reap, &value_ptr);
-  //_real_pthread_join(thread_to_reap, NULL);
   join_retval.my_errno = errno;
   join_retval.retval = retval;
   join_retval.value_ptr = value_ptr;
   pthread_join_retvals[thread_to_reap] = join_retval;
-  teardownThreadStack(stack_addr, stack_size);
 
   dmtcp::ThreadInfo::destroyThread(thread_to_reap);
+
+  /* Only destroy thread stacks created by us. */
+  if (should_reap_thread(thread_to_reap)) {
+    pthread_getattr_np(thread_to_reap, &attr); // calls realloc().
+    pthread_attr_getstack(&attr, &stack_addr, &stack_size);
+    pthread_attr_destroy(&attr);
+    teardownThreadStack(stack_addr, stack_size);
+  }
 
   // Reset for next thread:
   thread_to_reap = 0;
@@ -756,7 +755,6 @@ LIB_PRIVATE void reapThisThread()
 extern "C" int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
     void *(*start_routine)(void*), void *arg)
 {
-  static bool ckptThreadBeingCreated = true;
   /* Here I've split apart WRAPPER_HEADER_RAW because we need to create the
    * reaper thread even if the current mode is SYNC_IS_NOOP. */
   void *return_addr = GET_RETURN_ADDRESS();
@@ -766,15 +764,14 @@ extern "C" int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
   }
   /* Create the reaper thread always, even if we are not in SYNC_RECORD mode
    * yet. */
-  if (ckptThreadBeingCreated) {
-    ckptThreadBeingCreated = false;
-  } else {
-    create_reaper_thread();
-  }
+  create_reaper_thread();
 
   int retval;
   if (SYNC_IS_NOOP) {
-    retval = _real_pthread_create(thread, attr, start_routine, arg);
+    struct create_arg *createArg = (struct create_arg*) JALLOC_HELPER_MALLOC(sizeof(*createArg));
+    createArg->fn = start_routine;
+    createArg->thread_arg = arg;
+    retval = _real_pthread_create(thread, attr, start_wrapper, createArg);
   } else {
     retval = internal_pthread_create(thread, attr, start_routine, arg);
   }
