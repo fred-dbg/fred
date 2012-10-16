@@ -34,6 +34,15 @@ LIB_PRIVATE __thread clone_id_t my_clone_id = -1;
 
 static volatile clone_id_t global_clone_counter = 0;
 static pthread_mutex_t cloneIdLock = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t _tblLock = PTHREAD_MUTEX_INITIALIZER;
+
+static void _lockTbl() {
+  JASSERT(_real_pthread_mutex_lock(&_tblLock) == 0);
+}
+
+static void _unlockTbl() {
+  JASSERT(_real_pthread_mutex_unlock(&_tblLock) == 0);
+}
 
 static clone_id_t get_next_clone_id()
 {
@@ -67,6 +76,8 @@ void dmtcp::ThreadInfo::init()
     pthreadIdTbl = new dmtcp::map<pthread_t, clone_id_t>;
     cloneIdTbl->clear();
     pthreadIdTbl->clear();
+    pthread_mutex_t ll = PTHREAD_MUTEX_INITIALIZER;
+    _tblLock = ll;
   }
 }
 
@@ -78,10 +89,12 @@ void dmtcp::ThreadInfo::registerThread(clone_id_t id, pthread_t pth)
     JASSERT(pth == -1);
     pth = pthread_self();
   }
+  _lockTbl();
   JASSERT(cloneIdTbl != NULL);
   ThreadLocalData *thrData = &(*cloneIdTbl)[id];
   (*pthreadIdTbl)[pth] = id;
   thrData->init(id);
+  _unlockTbl();
 }
 
 void dmtcp::ThreadInfo::initThread()
@@ -89,18 +102,25 @@ void dmtcp::ThreadInfo::initThread()
   /* Assigning my_clone_id should be the very first thing.*/
   if (my_clone_id == -1) {
     my_clone_id = get_next_clone_id();
+  } else {
+    JASSERT(my_clone_id == 1) (my_clone_id);
   }
   JTRACE ( "Thread start initialization." ) ( my_clone_id );
 
+  _lockTbl();
   JASSERT(cloneIdTbl != NULL);
   if (cloneIdTbl->find(my_clone_id) == cloneIdTbl->end()) {
     JASSERT(pthreadIdTbl->find(pthread_self()) == pthreadIdTbl->end())
-      (pthread_self()) (my_clone_id);
+      (pthread_self());
+    _unlockTbl();
     registerThread(my_clone_id);
+    _lockTbl();
   }
-  JASSERT(pthreadIdTbl->find(pthread_self()) != pthreadIdTbl->end());
+  JASSERT(pthreadIdTbl->find(pthread_self()) != pthreadIdTbl->end())
+    (pthread_self());
   ThreadLocalData *thrData = &(*cloneIdTbl)[my_clone_id];
   thrData->update(my_clone_id, pthread_self());
+  _unlockTbl();
 
   if (SYNC_IS_RECORD) {
     global_log.incrementNumberThreads();
@@ -111,6 +131,7 @@ void dmtcp::ThreadInfo::initThread()
 
 void dmtcp::ThreadInfo::destroyThread(pthread_t pth)
 {
+  _lockTbl();
   JASSERT(pthreadIdTbl != NULL);
 
   if (pthreadIdTbl->find(pth) != pthreadIdTbl->end()) {
@@ -119,11 +140,12 @@ void dmtcp::ThreadInfo::destroyThread(pthread_t pth)
     cloneIdTbl->erase(id);
     pthreadIdTbl->erase(pth);
   }
+  _unlockTbl();
 }
 
 void dmtcp::ThreadInfo::resetOnFork()
 {
-  if (cloneIdTbl == NULL) {
+  if (cloneIdTbl != NULL) {
     cloneIdTbl->clear();
     pthreadIdTbl->clear();
   }
@@ -135,22 +157,40 @@ void dmtcp::ThreadInfo::resetOnFork()
   global_clone_counter = GLOBAL_CLONE_COUNTER_INIT;
   my_clone_id = get_next_clone_id();
   initThread();
+  pthread_mutex_t ll = PTHREAD_MUTEX_INITIALIZER;
+  _tblLock = ll;
 }
 
-dmtcp::ThreadLocalData* dmtcp::ThreadInfo::getThreadLocalData(pthread_t id)
+dmtcp::ThreadLocalData* dmtcp::ThreadInfo::getThreadLocalData(pthread_t pth)
 {
-  JASSERT(pthreadIdTbl->find(id) != pthreadIdTbl->end()) (id);
-  return getThreadLocalData((*pthreadIdTbl)[id]);
+  clone_id_t id;
+  _lockTbl();
+  JASSERT(pthreadIdTbl->find(pth) != pthreadIdTbl->end()) (pth);
+  id = (*pthreadIdTbl)[pth];
+  _unlockTbl();
+  return getThreadLocalData(id);
 }
 
-dmtcp::ThreadLocalData* dmtcp::ThreadInfo::getThreadLocalData(clone_id_t id)
+dmtcp::ThreadLocalData* dmtcp::ThreadInfo::getThreadLocalData(clone_id_t id,
+                                                              bool initialize)
 {
+  if (my_clone_id == -1 && initialize) {
+    initThread();
+    id = my_clone_id;
+  }
+  ThreadLocalData *thrInfo;
+
+  _lockTbl();
   JASSERT(cloneIdTbl->find(id) != cloneIdTbl->end()) (id);
-  return &(*cloneIdTbl)[id];
+  thrInfo = &(*cloneIdTbl)[id];
+  _unlockTbl();
+  return thrInfo;
 }
 
 void dmtcp::ThreadInfo::postSuspend()
 {
+  // No need to acquire table-lock as only checkpoint-thread is executing at
+  // the moment.
   // Remove the threads which aren't alive anymore.
   PthreadIdTblIt it;
   dmtcp::vector<clone_id_t> stale_clone_ids;
@@ -173,16 +213,19 @@ void dmtcp::ThreadInfo::postSuspend()
 
 void dmtcp::ThreadInfo::postCkptResume()
 {
+  // No need to acquire table-lock as only checkpoint-thread is executing at
+  // the moment.
   CloneIdTblIt it;
   for (it = cloneIdTbl->begin(); it != cloneIdTbl->end(); it++) {
-    clone_id_t id = it->first;
-    dmtcp::ThreadLocalData *thrInfo = getThreadLocalData(id);
+    dmtcp::ThreadLocalData *thrInfo = &(*cloneIdTbl)[it->first];
     sem_init(&thrInfo->sem, 0, thrInfo->semValue);
   }
 }
 
 void dmtcp::ThreadInfo::postRestartResume()
 {
+  // No need to acquire table-lock as only checkpoint-thread is executing at
+  // the moment.
   dmtcp::ThreadLocalData *thrInfo;
   CloneIdTblIt it;
   for (it = cloneIdTbl->begin(); it != cloneIdTbl->end(); it++) {
@@ -216,7 +259,6 @@ void dmtcp::ThreadInfo::waitForTurn()
   int res;
   struct timespec ts;
   struct timespec ts_ms = {0, 1 * 1000 * 1000};
-  JASSERT(cloneIdTbl->find(my_clone_id) != cloneIdTbl->end()) (my_clone_id);
   dmtcp::ThreadLocalData *thrInfo = getThreadLocalData(my_clone_id);
   sem_t& sem = thrInfo->sem;
   do {
@@ -242,8 +284,7 @@ void dmtcp::ThreadInfo::setOptionalEvent()
   if (cloneIdTbl == NULL) {
     return;
   }
-  if (my_clone_id == -1) initThread();
-  dmtcp::ThreadLocalData *thrInfo = getThreadLocalData(my_clone_id);
+  dmtcp::ThreadLocalData *thrInfo = getThreadLocalData(my_clone_id, true);
   thrInfo->isOptionalEvent++;
 }
 void dmtcp::ThreadInfo::unsetOptionalEvent()
@@ -251,8 +292,7 @@ void dmtcp::ThreadInfo::unsetOptionalEvent()
   if (cloneIdTbl == NULL) {
     return;
   }
-  if (my_clone_id == -1) initThread();
-  dmtcp::ThreadLocalData *thrInfo = getThreadLocalData(my_clone_id);
+  dmtcp::ThreadLocalData *thrInfo = getThreadLocalData(my_clone_id, true);
   thrInfo->isOptionalEvent--;
 }
 bool dmtcp::ThreadInfo::isOptionalEvent()
@@ -260,8 +300,7 @@ bool dmtcp::ThreadInfo::isOptionalEvent()
   if (cloneIdTbl == NULL) {
     return false;
   }
-  if (my_clone_id == -1) initThread();
-  dmtcp::ThreadLocalData *thrInfo = getThreadLocalData(my_clone_id);
+  dmtcp::ThreadLocalData *thrInfo = getThreadLocalData(my_clone_id, true);
   return thrInfo->isOptionalEvent != 0;
 }
 void dmtcp::ThreadInfo::setOkToLogNextFnc()
@@ -269,8 +308,7 @@ void dmtcp::ThreadInfo::setOkToLogNextFnc()
   if (cloneIdTbl == NULL) {
     return;
   }
-  if (my_clone_id == -1) initThread();
-  dmtcp::ThreadLocalData *thrInfo = getThreadLocalData(my_clone_id);
+  dmtcp::ThreadLocalData *thrInfo = getThreadLocalData(my_clone_id, true);
   thrInfo->isOkToLogNextFnc = true;
 }
 void dmtcp::ThreadInfo::unsetOkToLogNextFnc()
@@ -278,8 +316,7 @@ void dmtcp::ThreadInfo::unsetOkToLogNextFnc()
   if (cloneIdTbl == NULL) {
     return;
   }
-  if (my_clone_id == -1) initThread();
-  dmtcp::ThreadLocalData *thrInfo = getThreadLocalData(my_clone_id);
+  dmtcp::ThreadLocalData *thrInfo = getThreadLocalData(my_clone_id, true);
   thrInfo->isOkToLogNextFnc = false;
 }
 bool dmtcp::ThreadInfo::isOkToLogNextFnc()
@@ -287,7 +324,6 @@ bool dmtcp::ThreadInfo::isOkToLogNextFnc()
   if (cloneIdTbl == NULL) {
     return false;
   }
-  if (my_clone_id == -1) initThread();
-  dmtcp::ThreadLocalData *thrInfo = getThreadLocalData(my_clone_id);
+  dmtcp::ThreadLocalData *thrInfo = getThreadLocalData(my_clone_id, true);
   return thrInfo->isOkToLogNextFnc != 0;
 }

@@ -76,7 +76,7 @@ namespace dmtcp {
     void resetOnFork();
 
     ThreadLocalData* getThreadLocalData(pthread_t pth);
-    ThreadLocalData* getThreadLocalData(clone_id_t id);
+    ThreadLocalData* getThreadLocalData(clone_id_t id, bool initialize = false);
     pthread_t cloneIdToPthreadId(clone_id_t clone_id);
 
     void postSuspend();
