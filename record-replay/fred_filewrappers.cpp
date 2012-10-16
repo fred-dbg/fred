@@ -80,6 +80,16 @@ extern "C" int fchdir(int fd)
   BASIC_SYNC_WRAPPER(int, fchdir, _real_fchdir, fd);
 }
 
+extern "C" int __open_2 (const char *path, int flags)
+{
+  BASIC_SYNC_WRAPPER(int, open, _real_open, path, flags, 0);
+}
+
+extern "C" int __open64_2 (const char *path, int flags)
+{
+  BASIC_SYNC_WRAPPER(int, open64, _real_open64, path, flags, 0);
+}
+
 extern "C" int open (const char *path, int flags, ... )
 {
   mode_t mode = 0;
