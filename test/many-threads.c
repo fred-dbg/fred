@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <pthread.h>
 
-#define NUM_THREADS 250
+#define NUM_THREADS 500
 
 void *worker(void *arg)
 {

@@ -7,7 +7,7 @@
  * times.
  */
 
-#define TOTAL_NUM_THREADS 2500
+#define TOTAL_NUM_THREADS 1000
 #define CONCURRENT_THREADS 20
 #define THREAD_LIFETIME_US 100000
 //#define PRINTING

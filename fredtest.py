@@ -251,6 +251,11 @@ def gdb_many_threads(n_count=1):
         start_session(l_cmd)
         execute_commands(["b main", "r", "fred-ckpt", "c",
                           "fred-restart", "c"])
+        end_session()
+        start_session(l_cmd)
+        execute_commands(["b main", "r", "fred-ckpt", "b pthread_create",
+                          "c 100", "d 2", "fred-ckpt", "c",
+                          "fred-restart 1", "c", "fred-restart 0", "c"])
         print GS_PASSED_STRING
         end_session()
 
