@@ -129,9 +129,6 @@ static void *start_wrapper(void *arg)
   struct create_arg *createArg = (struct create_arg *)arg;
   void *(*user_fnc) (void *) = createArg->fn;
   void *thread_arg = createArg->thread_arg;
-  _real_pthread_mutex_lock(&arguments_decode_mutex);
-  arguments_were_decoded = 1;
-  _real_pthread_mutex_unlock(&arguments_decode_mutex);
   JALLOC_HELPER_FREE(arg);
 
   retval = (*user_fnc)(thread_arg);
@@ -354,23 +351,6 @@ static int internal_pthread_cond_wait(pthread_cond_t *cond,
   return retval;
 }
 
-static inline void waitForChildThreadToInitialize()
-{
-  /* Wait for the newly created thread to decode his arguments (createArg).
-     We must ensure that's been done before we return from this
-     pthread_create wrapper and the createArg struct goes out of scope. */
-  while (1) {
-    _real_pthread_mutex_lock(&arguments_decode_mutex);
-    if (arguments_were_decoded == 1) {
-      arguments_were_decoded = 0;
-      _real_pthread_mutex_unlock(&arguments_decode_mutex);
-      break;
-    }
-    _real_pthread_mutex_unlock(&arguments_decode_mutex);
-    usleep(100);
-  }
-}
-
 /* Performs the _real version with log and replay. Does NOT check
    shouldSynchronize() and shouldn't be called directly unless you know what
    you're doing. */
@@ -406,7 +386,6 @@ static int internal_pthread_create(pthread_t *thread,
     disableDetachState(&the_attr);
     retval = _real_pthread_create(thread, &the_attr,
                                   start_wrapper, (void *)createArg);
-    waitForChildThreadToInitialize();
 
     RELEASE_THREAD_CREATE_DESTROY_LOCK();
     pthread_attr_destroy(&the_attr);
@@ -425,8 +404,6 @@ static int internal_pthread_create(pthread_t *thread,
                                   start_wrapper, (void *)createArg);
     SET_COMMON2(my_entry, retval, (void*)(unsigned long)retval);
     SET_COMMON2(my_entry, my_errno, errno);
-
-    waitForChildThreadToInitialize();
 
     RELEASE_THREAD_CREATE_DESTROY_LOCK();
     // Log whatever stack we ended up using:
