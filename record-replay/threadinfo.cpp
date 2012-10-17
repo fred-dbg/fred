@@ -29,6 +29,14 @@ using namespace dmtcp;
 dmtcp::map<clone_id_t, dmtcp::ThreadLocalData> *dmtcp::ThreadInfo::cloneIdTbl = NULL;
 dmtcp::map<pthread_t,  clone_id_t> *dmtcp::ThreadInfo::pthreadIdTbl = NULL;
 
+static __thread dmtcp::ThreadLocalData *_myThreadInfo = NULL;
+
+static dmtcp::ThreadLocalData *myThreadInfo() {
+  if (_myThreadInfo == NULL) {
+    dmtcp::ThreadInfo::initThread();
+  }
+  return _myThreadInfo;
+}
 /* Thread locals: */
 LIB_PRIVATE __thread clone_id_t my_clone_id = -1;
 
@@ -102,6 +110,7 @@ void dmtcp::ThreadInfo::initThread()
   /* Assigning my_clone_id should be the very first thing.*/
   if (my_clone_id == -1) {
     my_clone_id = get_next_clone_id();
+    JASSERT(_myThreadInfo == NULL);
   } else {
     JASSERT(my_clone_id == 1) (my_clone_id);
   }
@@ -118,8 +127,8 @@ void dmtcp::ThreadInfo::initThread()
   }
   JASSERT(pthreadIdTbl->find(pthread_self()) != pthreadIdTbl->end())
     (pthread_self());
-  ThreadLocalData *thrData = &(*cloneIdTbl)[my_clone_id];
-  thrData->update(my_clone_id, pthread_self());
+  _myThreadInfo = &(*cloneIdTbl)[my_clone_id];
+  _myThreadInfo->update(my_clone_id, pthread_self());
   _unlockTbl();
 
   if (SYNC_IS_RECORD) {
@@ -259,8 +268,8 @@ void dmtcp::ThreadInfo::waitForTurn()
   int res;
   struct timespec ts;
   struct timespec ts_ms = {0, 1 * 1000 * 1000};
-  dmtcp::ThreadLocalData *thrInfo = getThreadLocalData(my_clone_id);
-  sem_t& sem = thrInfo->sem;
+  JASSERT(myThreadInfo() != NULL);
+  sem_t& sem = myThreadInfo()->sem;
   do {
     //DMTCP_PLUGIN_DISABLE_CKPT();
     _real_clock_gettime(CLOCK_REALTIME, &ts);
@@ -284,46 +293,40 @@ void dmtcp::ThreadInfo::setOptionalEvent()
   if (cloneIdTbl == NULL) {
     return;
   }
-  dmtcp::ThreadLocalData *thrInfo = getThreadLocalData(my_clone_id, true);
-  thrInfo->isOptionalEvent++;
+  myThreadInfo()->isOptionalEvent++;
 }
 void dmtcp::ThreadInfo::unsetOptionalEvent()
 {
   if (cloneIdTbl == NULL) {
     return;
   }
-  dmtcp::ThreadLocalData *thrInfo = getThreadLocalData(my_clone_id, true);
-  thrInfo->isOptionalEvent--;
+  myThreadInfo()->isOptionalEvent--;
 }
 bool dmtcp::ThreadInfo::isOptionalEvent()
 {
   if (cloneIdTbl == NULL) {
     return false;
   }
-  dmtcp::ThreadLocalData *thrInfo = getThreadLocalData(my_clone_id, true);
-  return thrInfo->isOptionalEvent != 0;
+  return myThreadInfo()->isOptionalEvent != 0;
 }
 void dmtcp::ThreadInfo::setOkToLogNextFnc()
 {
   if (cloneIdTbl == NULL) {
     return;
   }
-  dmtcp::ThreadLocalData *thrInfo = getThreadLocalData(my_clone_id, true);
-  thrInfo->isOkToLogNextFnc = true;
+  myThreadInfo()->isOkToLogNextFnc = true;
 }
 void dmtcp::ThreadInfo::unsetOkToLogNextFnc()
 {
   if (cloneIdTbl == NULL) {
     return;
   }
-  dmtcp::ThreadLocalData *thrInfo = getThreadLocalData(my_clone_id, true);
-  thrInfo->isOkToLogNextFnc = false;
+  myThreadInfo()->isOkToLogNextFnc = false;
 }
 bool dmtcp::ThreadInfo::isOkToLogNextFnc()
 {
   if (cloneIdTbl == NULL) {
     return false;
   }
-  dmtcp::ThreadLocalData *thrInfo = getThreadLocalData(my_clone_id, true);
-  return thrInfo->isOkToLogNextFnc != 0;
+  return myThreadInfo()->isOkToLogNextFnc != 0;
 }
