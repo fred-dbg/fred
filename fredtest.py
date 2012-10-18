@@ -143,7 +143,8 @@ def gdb_record_replay(n_count=1):
 
         start_session(l_cmd)
         # Checkpoint after threads were created.
-        execute_commands(["b print_checkpoint_now", "r", "fred-ckpt", "c"])
+        execute_commands(["b print_checkpoint_now", "b print_solution",
+                          "r", "fred-ckpt", "c"])
         store_variable("solution")
         execute_commands(["fred-restart", "c"])
         if check_stored_variable("solution"):
@@ -626,7 +627,7 @@ def initialize_tests():
                  gdb_record_replay_pthread_cond,
                  "gdb-syscall-tester" : gdb_syscall_tester,
                  "gdb-many-threads" : gdb_many_threads,
-#                 "gdb-many-threads-2" : gdb_many_threads2,
+                 "gdb-many-threads-2" : gdb_many_threads2,
                  "gdb-reverse-watch" : gdb_reverse_watch,
                  "gdb-reverse-watch-n-rs" : gdb_reverse_watch_n_rs,
                  "gdb-reverse-watch-n-rn" : gdb_reverse_watch_n_rn,
