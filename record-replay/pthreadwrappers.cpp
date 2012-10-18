@@ -56,6 +56,12 @@ static pthread_cond_t  reap_cv = PTHREAD_COND_INITIALIZER;
 static pthread_mutex_t reap_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_t       thread_to_reap = 0;
 static dmtcp::vector<pthread_t> threads_with_allocated_stack;
+typedef struct {
+  int retval;
+  int my_errno;
+  void *value_ptr;
+} pthread_join_retval_t;
+static dmtcp::map<pthread_t, pthread_join_retval_t> pthread_join_retvals;
 
 //static pthread_mutex_t read_mutex = PTHREAD_MUTEX_INITIALIZER;
 static inline void memfence() {  asm volatile ("mfence" ::: "memory"); }

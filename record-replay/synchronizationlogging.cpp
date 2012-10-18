@@ -43,7 +43,6 @@
 // TODO: Do we need LIB_PRIVATE again here if we had already specified it in
 // the header file?
 /* Library private: */
-LIB_PRIVATE dmtcp::map<pthread_t, pthread_join_retval_t> pthread_join_retvals;
 LIB_PRIVATE char RECORD_LOG_PATH[RECORD_LOG_PATH_MAX];
 LIB_PRIVATE char RECORD_READ_DATA_LOG_PATH[RECORD_LOG_PATH_MAX];
 LIB_PRIVATE int             read_data_fd = -1;

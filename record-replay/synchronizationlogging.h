@@ -372,11 +372,6 @@ static inline bool isProcessGDB() {
 /* Typedefs */
 // Type for predicate to check for a turn in the log.
 typedef int (*turn_pred_t) (log_entry_t*, log_entry_t*);
-typedef struct {
-  int retval;
-  int my_errno;
-  void *value_ptr;
-} pthread_join_retval_t;
 
 /* Static constants: */
 // Clone id to indicate anyone may do this event (used for exec):
@@ -390,7 +385,6 @@ typedef struct new_sem new_sem_t;
 LIB_PRIVATE extern dmtcp::map<clone_id_t, pthread_t> *clone_id_to_tid_table;
 LIB_PRIVATE extern dmtcp::map<pthread_t, clone_id_t> *tid_to_clone_id_table;
 LIB_PRIVATE extern dmtcp::map<clone_id_t, sem_t>     *clone_id_to_sem_table;
-LIB_PRIVATE extern dmtcp::map<pthread_t, pthread_join_retval_t> pthread_join_retvals;
 LIB_PRIVATE extern char RECORD_LOG_PATH[RECORD_LOG_PATH_MAX];
 LIB_PRIVATE extern char RECORD_READ_DATA_LOG_PATH[RECORD_LOG_PATH_MAX];
 LIB_PRIVATE extern int             read_data_fd;
