@@ -208,6 +208,7 @@ miscWrappers = [
   ('int', 'pthread_mutex_trylock', [('pthread_mutex_t*', 'mutex', '__save_retval')]),
   ('int', 'pthread_mutex_unlock', [('pthread_mutex_t*', 'mutex', '__save_retval')]),
   ('int', 'rand', []),
+  ('pid_t', 'fork', []),
   ('ssize_t', 'read', [('int', 'fd'),
                        ('void*', 'buf'),
                        ('size_t', 'count')],
@@ -258,6 +259,8 @@ miscWrappers = [
                    ('extra', 'struct winsize win_val'),
                    ('extra', 'struct ifconf ifconf_val'),
                    ('extra', 'int fionread_val')),
+  ('int', 'shutdown', [('int', 'sockfd'),
+                       ('int', 'how')]),
   ('int', 'sigwait', [('const sigset_t*', 'set'),
                       ('int*', 'sig', '__save_retval')]),
   ('void', 'srand', [('unsigned int', 'seed')]),
@@ -780,7 +783,10 @@ class WrapperInfo:
             if not arg.dont_save():
                 ret += '  %s;\n' % (arg.arg_decl())
                 if arg.save_retval():
-                    ret += '  %s %s;\n' % (arg.deref_type(), 'ret_' + arg.name())
+                    if arg.deref_type() == 'struct sockaddr':
+                        ret += '  struct sockaddr_storage %s;\n' % ('ret_' + arg.name())
+                    else:
+                        ret += '  %s %s;\n' % (arg.deref_type(), 'ret_' + arg.name())
         if self.decl_data_offset:
             ret += '  off_t data_offset;\n'
         if self.decl_retval:

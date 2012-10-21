@@ -88,6 +88,7 @@ static size_t log_event_size[numTotalWrappers] = {
   sizeof(log_event_pthread_mutex_trylock_t),
   sizeof(log_event_pthread_mutex_unlock_t),
   sizeof(log_event_rand_t),
+  sizeof(log_event_fork_t),
   sizeof(log_event_read_t),
   sizeof(log_event_readv_t),
   sizeof(log_event_readlink_t),
@@ -100,6 +101,7 @@ static size_t log_event_size[numTotalWrappers] = {
   sizeof(log_event_setsockopt_t),
   sizeof(log_event_getsockopt_t),
   sizeof(log_event_ioctl_t),
+  sizeof(log_event_shutdown_t),
   sizeof(log_event_sigwait_t),
   sizeof(log_event_srand_t),
   sizeof(log_event_socket_t),
@@ -830,6 +832,13 @@ log_entry_t create_rand_entry(clone_id_t clone_id, event_code_t event)
   return e;
 }
 
+log_entry_t create_fork_entry(clone_id_t clone_id, event_code_t event)
+{
+  log_entry_t e = EMPTY_LOG_ENTRY;
+  setupCommonFields(&e, clone_id, event);
+  return e;
+}
+
 log_entry_t create_read_entry(clone_id_t clone_id, event_code_t event,
                               int fd, void* buf, size_t count)
 {
@@ -961,6 +970,16 @@ log_entry_t create_ioctl_entry(clone_id_t clone_id, event_code_t event,
   SET_FIELD(e, ioctl, d);
   SET_FIELD(e, ioctl, request);
   SET_FIELD(e, ioctl, arg);
+  return e;
+}
+
+log_entry_t create_shutdown_entry(clone_id_t clone_id, event_code_t event,
+                                  int sockfd, int how)
+{
+  log_entry_t e = EMPTY_LOG_ENTRY;
+  setupCommonFields(&e, clone_id, event);
+  SET_FIELD(e, shutdown, sockfd);
+  SET_FIELD(e, shutdown, how);
   return e;
 }
 
@@ -2338,6 +2357,11 @@ int rand_turn_check(log_entry_t *e1, log_entry_t *e2)
   return base_turn_check(e1,e2);
 }
 
+int fork_turn_check(log_entry_t *e1, log_entry_t *e2)
+{
+  return base_turn_check(e1,e2);
+}
+
 int read_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
   return base_turn_check(e1,e2)
@@ -2434,6 +2458,13 @@ int ioctl_turn_check(log_entry_t *e1, log_entry_t *e2)
     && ARE_FIELDS_EQUAL_PTR (e1, e2, ioctl, d)
     && ARE_FIELDS_EQUAL_PTR (e1, e2, ioctl, request)
     && ARE_FIELDS_EQUAL_PTR (e1, e2, ioctl, arg);
+}
+
+int shutdown_turn_check(log_entry_t *e1, log_entry_t *e2)
+{
+  return base_turn_check(e1,e2)
+    && ARE_FIELDS_EQUAL_PTR (e1, e2, shutdown, sockfd)
+    && ARE_FIELDS_EQUAL_PTR (e1, e2, shutdown, how);
 }
 
 int sigwait_turn_check(log_entry_t *e1, log_entry_t *e2)

@@ -90,6 +90,7 @@ LIB_PRIVATE void fred_get_libc_func_addr() {
   _real_func_addr[pthread_mutex_trylock_event] = _real_dlsym(RTLD_NEXT, "pthread_mutex_trylock");
   _real_func_addr[pthread_mutex_unlock_event] = _real_dlsym(RTLD_NEXT, "pthread_mutex_unlock");
   _real_func_addr[rand_event] = _real_dlsym(RTLD_NEXT, "rand");
+  _real_func_addr[fork_event] = _real_dlsym(RTLD_NEXT, "fork");
   _real_func_addr[read_event] = _real_dlsym(RTLD_NEXT, "read");
   _real_func_addr[readv_event] = _real_dlsym(RTLD_NEXT, "readv");
   _real_func_addr[readlink_event] = _real_dlsym(RTLD_NEXT, "readlink");
@@ -102,6 +103,7 @@ LIB_PRIVATE void fred_get_libc_func_addr() {
   _real_func_addr[setsockopt_event] = _real_dlsym(RTLD_NEXT, "setsockopt");
   _real_func_addr[getsockopt_event] = _real_dlsym(RTLD_NEXT, "getsockopt");
   _real_func_addr[ioctl_event] = _real_dlsym(RTLD_NEXT, "ioctl");
+  _real_func_addr[shutdown_event] = _real_dlsym(RTLD_NEXT, "shutdown");
   _real_func_addr[sigwait_event] = _real_dlsym(RTLD_NEXT, "sigwait");
   _real_func_addr[srand_event] = _real_dlsym(RTLD_NEXT, "srand");
   _real_func_addr[socket_event] = _real_dlsym(RTLD_NEXT, "socket");

@@ -39,7 +39,7 @@ typedef struct {
 typedef struct {
   int sockfd;
   struct sockaddr* addr;
-  struct sockaddr ret_addr;
+  struct sockaddr_storage ret_addr;
   socklen_t* addrlen;
   socklen_t ret_addrlen;
 } log_event_accept_t;
@@ -47,7 +47,7 @@ typedef struct {
 typedef struct {
   int sockfd;
   struct sockaddr* addr;
-  struct sockaddr ret_addr;
+  struct sockaddr_storage ret_addr;
   socklen_t* addrlen;
   socklen_t ret_addrlen;
   int flags;
@@ -136,7 +136,7 @@ typedef struct {
 typedef struct {
   int sockfd;
   struct sockaddr* addr;
-  struct sockaddr ret_addr;
+  struct sockaddr_storage ret_addr;
   socklen_t* addrlen;
   socklen_t ret_addrlen;
 } log_event_getpeername_t;
@@ -144,7 +144,7 @@ typedef struct {
 typedef struct {
   int sockfd;
   struct sockaddr* addr;
-  struct sockaddr ret_addr;
+  struct sockaddr_storage ret_addr;
   socklen_t* addrlen;
   socklen_t ret_addrlen;
 } log_event_getsockname_t;
@@ -385,6 +385,9 @@ typedef struct {
 } log_event_rand_t;
 
 typedef struct {
+} log_event_fork_t;
+
+typedef struct {
   int fd;
   void* buf;
   size_t count;
@@ -471,6 +474,11 @@ typedef struct {
   struct ifconf ifconf_val;
   int fionread_val;
 } log_event_ioctl_t;
+
+typedef struct {
+  int sockfd;
+  int how;
+} log_event_shutdown_t;
 
 typedef struct {
   const sigset_t* set;
@@ -652,7 +660,7 @@ typedef struct {
   size_t len;
   int flags;
   struct sockaddr* src_addr;
-  struct sockaddr ret_src_addr;
+  struct sockaddr_storage ret_src_addr;
   socklen_t* addrlen;
   socklen_t ret_addrlen;
   off_t data_offset;
@@ -1079,6 +1087,7 @@ union log_entry_data {
   log_event_pthread_mutex_trylock_t log_event_pthread_mutex_trylock;
   log_event_pthread_mutex_unlock_t log_event_pthread_mutex_unlock;
   log_event_rand_t log_event_rand;
+  log_event_fork_t log_event_fork;
   log_event_read_t log_event_read;
   log_event_readv_t log_event_readv;
   log_event_readlink_t log_event_readlink;
@@ -1091,6 +1100,7 @@ union log_entry_data {
   log_event_setsockopt_t log_event_setsockopt;
   log_event_getsockopt_t log_event_getsockopt;
   log_event_ioctl_t log_event_ioctl;
+  log_event_shutdown_t log_event_shutdown;
   log_event_sigwait_t log_event_sigwait;
   log_event_srand_t log_event_srand;
   log_event_socket_t log_event_socket;
@@ -1264,6 +1274,7 @@ int pthread_mutex_lock_turn_check(log_entry_t *e1, log_entry_t *e2);
 int pthread_mutex_trylock_turn_check(log_entry_t *e1, log_entry_t *e2);
 int pthread_mutex_unlock_turn_check(log_entry_t *e1, log_entry_t *e2);
 int rand_turn_check(log_entry_t *e1, log_entry_t *e2);
+int fork_turn_check(log_entry_t *e1, log_entry_t *e2);
 int read_turn_check(log_entry_t *e1, log_entry_t *e2);
 int readv_turn_check(log_entry_t *e1, log_entry_t *e2);
 int readlink_turn_check(log_entry_t *e1, log_entry_t *e2);
@@ -1276,6 +1287,7 @@ int ppoll_turn_check(log_entry_t *e1, log_entry_t *e2);
 int setsockopt_turn_check(log_entry_t *e1, log_entry_t *e2);
 int getsockopt_turn_check(log_entry_t *e1, log_entry_t *e2);
 int ioctl_turn_check(log_entry_t *e1, log_entry_t *e2);
+int shutdown_turn_check(log_entry_t *e1, log_entry_t *e2);
 int sigwait_turn_check(log_entry_t *e1, log_entry_t *e2);
 int srand_turn_check(log_entry_t *e1, log_entry_t *e2);
 int socket_turn_check(log_entry_t *e1, log_entry_t *e2);
@@ -1486,6 +1498,7 @@ log_entry_t create_pthread_mutex_trylock_entry(clone_id_t clone_id, event_code_t
 log_entry_t create_pthread_mutex_unlock_entry(clone_id_t clone_id, event_code_t event,
                                               pthread_mutex_t* mutex);
 log_entry_t create_rand_entry(clone_id_t clone_id, event_code_t event);
+log_entry_t create_fork_entry(clone_id_t clone_id, event_code_t event);
 log_entry_t create_read_entry(clone_id_t clone_id, event_code_t event,
                               int fd, void* buf, size_t count);
 log_entry_t create_readv_entry(clone_id_t clone_id, event_code_t event,
@@ -1510,6 +1523,8 @@ log_entry_t create_getsockopt_entry(clone_id_t clone_id, event_code_t event,
                                     int s, int level, int optname, void* optval, socklen_t* optlen);
 log_entry_t create_ioctl_entry(clone_id_t clone_id, event_code_t event,
                                int d, int request, void* arg);
+log_entry_t create_shutdown_entry(clone_id_t clone_id, event_code_t event,
+                                  int sockfd, int how);
 log_entry_t create_sigwait_entry(clone_id_t clone_id, event_code_t event,
                                  const sigset_t* set, int* sig);
 log_entry_t create_srand_entry(clone_id_t clone_id, event_code_t event,

@@ -89,6 +89,7 @@ static const char *log_event_str[] = {
   "pthread_mutex_trylock",
   "pthread_mutex_unlock",
   "rand",
+  "fork",
   "read",
   "readv",
   "readlink",
@@ -101,6 +102,7 @@ static const char *log_event_str[] = {
   "setsockopt",
   "getsockopt",
   "ioctl",
+  "shutdown",
   "sigwait",
   "srand",
   "socket",
@@ -576,6 +578,10 @@ void print_log_entry_rand(int idx, log_entry_t *entry)  {
   printf("\n" );
 }
 
+void print_log_entry_fork(int idx, log_entry_t *entry)  {
+  printf("\n" );
+}
+
 void print_log_entry_read(int idx, log_entry_t *entry)  {
   printf(" fd=%d buf=%p count=%zu\n" ,
          GET_FIELD_PTR(entry, read, fd),
@@ -660,6 +666,12 @@ void print_log_entry_ioctl(int idx, log_entry_t *entry)  {
          GET_FIELD_PTR(entry, ioctl, d),
          GET_FIELD_PTR(entry, ioctl, request),
          GET_FIELD_PTR(entry, ioctl, arg));
+}
+
+void print_log_entry_shutdown(int idx, log_entry_t *entry)  {
+  printf(" sockfd=%d how=%d\n" ,
+         GET_FIELD_PTR(entry, shutdown, sockfd),
+         GET_FIELD_PTR(entry, shutdown, how));
 }
 
 void print_log_entry_sigwait(int idx, log_entry_t *entry)  {
@@ -1359,6 +1371,8 @@ void printEntry(int idx, log_entry_t *entry)
 
     case rand_event: print_log_entry_rand(idx, entry); break;
 
+    case fork_event: print_log_entry_fork(idx, entry); break;
+
     case read_event: print_log_entry_read(idx, entry); break;
 
     case readv_event: print_log_entry_readv(idx, entry); break;
@@ -1382,6 +1396,8 @@ void printEntry(int idx, log_entry_t *entry)
     case getsockopt_event: print_log_entry_getsockopt(idx, entry); break;
 
     case ioctl_event: print_log_entry_ioctl(idx, entry); break;
+
+    case shutdown_event: print_log_entry_shutdown(idx, entry); break;
 
     case sigwait_event: print_log_entry_sigwait(idx, entry); break;
 

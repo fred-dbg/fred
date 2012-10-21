@@ -71,15 +71,15 @@ extern "C" int getsockname(int sockfd, struct sockaddr *addr,
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_START(getsockname);
     if (retval != -1) {
-      *addr = GET_FIELD(my_entry, getsockname, ret_addr);
       *addrlen = GET_FIELD(my_entry, getsockname, ret_addrlen);
+      memcpy(addr, &GET_FIELD(my_entry, getsockname, ret_addr), *addrlen);
     }
     WRAPPER_REPLAY_END(getsockname);
   } else if (SYNC_IS_RECORD) {
     retval = _real_getsockname(sockfd, addr, addrlen);
     if (retval != -1) {
-      SET_FIELD2(my_entry, getsockname, ret_addr, *addr);
       SET_FIELD2(my_entry, getsockname, ret_addrlen, *addrlen);
+      memcpy(&GET_FIELD(my_entry, getsockname, ret_addr), addr, *addrlen);
     }
     WRAPPER_LOG_WRITE_ENTRY(my_entry);
   }
@@ -96,15 +96,15 @@ extern "C" int getpeername(int sockfd, struct sockaddr *addr,
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_START(getpeername);
     if (retval != -1) {
-      *addr = GET_FIELD(my_entry, getpeername, ret_addr);
       *addrlen = GET_FIELD(my_entry, getpeername, ret_addrlen);
+      memcpy(addr, &GET_FIELD(my_entry, getpeername, ret_addr), *addrlen);
     }
     WRAPPER_REPLAY_END(getpeername);
   } else if (SYNC_IS_RECORD) {
     retval = _real_getpeername(sockfd, addr, addrlen);
     if (retval != -1) {
-      SET_FIELD2(my_entry, getpeername, ret_addr, *addr);
       SET_FIELD2(my_entry, getpeername, ret_addrlen, *addrlen);
+      memcpy(&GET_FIELD(my_entry, getpeername, ret_addr), addr, *addrlen);
     }
     WRAPPER_LOG_WRITE_ENTRY(my_entry);
   }

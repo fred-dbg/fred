@@ -404,9 +404,9 @@ extern "C" void *fred_mmap(void *addr, size_t length, int prot, int flags,
       flags |= MAP_ANONYMOUS;
       fd = -1;
       offset = 0;
-      size_t page_size = sysconf(_SC_PAGESIZE);
-      size_t page_mask = ~(page_size - 1);
-      length = (length + page_size - 1) & page_mask ;
+      //size_t page_size = sysconf(_SC_PAGESIZE);
+      //size_t page_mask = ~(page_size - 1);
+      //length = (length + page_size - 1) & page_mask ;
       mmap_read_from_readlog = true;
     }
     flags |= MAP_FIXED;
