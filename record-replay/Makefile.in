@@ -27,9 +27,6 @@ FREDHIJACK_OBJS = fred_signalwrappers.o fred_epollwrappers.o \
 JALIB_OBJS = $(JALIB)/jassert.o $(JALIB)/jalib.o $(JALIB)/jalloc.o \
         $(JALIB)/jfilesystem.o
 
-j%.o: ${JALIB}/j%.o
-	cp $< $@
-
 FRED_READ_LOG_OBJS = fred_read_log.o nosyscallsreal.o util.o stubs.o log.o \
 		     wrapper_util.o ${notdir ${JALIB_OBJS}}
 
@@ -57,14 +54,17 @@ fred_read_log: ${FRED_READ_LOG_OBJS}
 ${LIBNAME}.so: ${FREDHIJACK_OBJS} ${LIBFREDINTERNAL_OBJS}
 	${CXX} -shared -fPIC -o $@ $^
 
+j%.o: ${JALIB}/j%.o
+	cp $< $@
+
 %.o: autogen/%.c ${HEADERS}
 	${CC} ${CFLAGS} -I. -o $@ $<
 %.o: autogen/%.cpp ${HEADERS}
 	${CXX} ${CXXFLAGS} -I${DMTCP_SRC} -I${JALIB} -I. -o $@ $<
 
-.c.o: ${HEADERS}
+%.o: %.c ${HEADERS}
 	${CC} ${CFLAGS} -I. -o $@ $<
-.cpp.o: ${HEADERS}
+%.o: %.cpp ${HEADERS}
 	${CXX} ${CXXFLAGS} -I${DMTCP_SRC} -I${JALIB} -I. -o $@ $<
 
 check:
