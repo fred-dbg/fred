@@ -325,17 +325,14 @@ typedef struct {
 
 typedef struct {
   pthread_rwlock_t* rwlock;
-  pthread_rwlock_t ret_rwlock;
 } log_event_pthread_rwlock_unlock_t;
 
 typedef struct {
   pthread_rwlock_t* rwlock;
-  pthread_rwlock_t ret_rwlock;
 } log_event_pthread_rwlock_rdlock_t;
 
 typedef struct {
   pthread_rwlock_t* rwlock;
-  pthread_rwlock_t ret_rwlock;
 } log_event_pthread_rwlock_wrlock_t;
 
 typedef struct {
@@ -368,17 +365,14 @@ typedef struct {
 
 typedef struct {
   pthread_mutex_t* mutex;
-  pthread_mutex_t ret_mutex;
 } log_event_pthread_mutex_lock_t;
 
 typedef struct {
   pthread_mutex_t* mutex;
-  pthread_mutex_t ret_mutex;
 } log_event_pthread_mutex_trylock_t;
 
 typedef struct {
   pthread_mutex_t* mutex;
-  pthread_mutex_t ret_mutex;
 } log_event_pthread_mutex_unlock_t;
 
 typedef struct {
@@ -914,32 +908,25 @@ typedef struct {
 
 typedef struct {
   pthread_cond_t* cond;
-  pthread_cond_t ret_cond;
 } log_event_pthread_cond_broadcast_t;
 
 typedef struct {
   pthread_cond_t* cond;
-  pthread_cond_t ret_cond;
 } log_event_pthread_cond_signal_t;
 
 typedef struct {
   pthread_cond_t* cond;
-  pthread_cond_t ret_cond;
   pthread_mutex_t* mutex;
-  pthread_mutex_t ret_mutex;
 } log_event_pthread_cond_wait_t;
 
 typedef struct {
   pthread_cond_t* cond;
-  pthread_cond_t ret_cond;
   pthread_mutex_t* mutex;
-  pthread_mutex_t ret_mutex;
   const struct timespec* abstime;
 } log_event_pthread_cond_timedwait_t;
 
 typedef struct {
   pthread_cond_t* cond;
-  pthread_cond_t ret_cond;
 } log_event_pthread_cond_destroy_t;
 
 typedef struct {

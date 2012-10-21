@@ -277,16 +277,9 @@ static int internal_pthread_mutex_lock(pthread_mutex_t *mutex)
                                                          pthread_mutex_lock_event,
                                                          mutex);
   if (SYNC_IS_REPLAY) {
-    WRAPPER_REPLAY_START(pthread_mutex_lock);
-    if (retval == 0) {
-      *mutex = GET_FIELD(my_entry, pthread_mutex_lock, ret_mutex);
-    }
-    WRAPPER_REPLAY_END(pthread_mutex_lock);
+    WRAPPER_REPLAY(pthread_mutex_lock);
   } else if (SYNC_IS_RECORD) {
     retval = _real_pthread_mutex_lock(mutex);
-    if (retval == 0) {
-      SET_FIELD2(my_entry, pthread_mutex_lock, ret_mutex, *mutex);
-    }
     WRAPPER_LOG_WRITE_ENTRY(my_entry);
   }
   return retval;
@@ -303,17 +296,10 @@ static int internal_pthread_mutex_unlock(pthread_mutex_t *mutex)
                                                            mutex);
 
   if (SYNC_IS_REPLAY) {
-    WRAPPER_REPLAY_START(pthread_mutex_unlock);
-    if (retval == 0) {
-      *mutex = GET_FIELD(my_entry, pthread_mutex_unlock, ret_mutex);
-    }
-    WRAPPER_REPLAY_END(pthread_mutex_unlock);
+    WRAPPER_REPLAY(pthread_mutex_unlock);
   } else if (SYNC_IS_RECORD) {
     WRAPPER_LOG_WRITE_ENTRY(my_entry);
     retval = _real_pthread_mutex_unlock(mutex);
-    if (retval == 0) {
-      SET_FIELD2(my_entry, pthread_mutex_unlock, ret_mutex, *mutex);
-    }
     WRAPPER_LOG_UPDATE_ENTRY(my_entry);
   }
   return retval;
@@ -329,18 +315,11 @@ static int internal_pthread_cond_signal(pthread_cond_t *cond)
                                                           pthread_cond_signal_event,
                                                           cond);
   if (SYNC_IS_REPLAY) {
-    WRAPPER_REPLAY_START(pthread_cond_signal);
-    if (retval == 0) {
-      *cond = GET_FIELD(my_entry, pthread_cond_signal, ret_cond);
-    }
-    WRAPPER_REPLAY_END(pthread_cond_signal);
+    WRAPPER_REPLAY(pthread_cond_signal);
   } else  if (SYNC_IS_RECORD) {
     dmtcp::ThreadInfo::setOptionalEvent();
     retval = _real_pthread_cond_signal(cond);
     dmtcp::ThreadInfo::unsetOptionalEvent();
-    if (retval == 0) {
-      SET_FIELD2(my_entry, pthread_cond_signal, ret_cond, *cond);
-    }
     WRAPPER_LOG_WRITE_ENTRY(my_entry);
   }
   return retval;
@@ -384,20 +363,11 @@ static int internal_pthread_cond_wait(pthread_cond_t *cond,
                                                         pthread_cond_wait_event,
                                                         cond, mutex);
   if (SYNC_IS_REPLAY) {
-    WRAPPER_REPLAY_START(pthread_cond_wait);
-    if (retval == 0) {
-      *cond = GET_FIELD(my_entry, pthread_cond_wait, ret_cond);
-      *mutex = GET_FIELD(my_entry, pthread_cond_wait, ret_mutex);
-    }
-    WRAPPER_REPLAY_END(pthread_cond_wait);
+    WRAPPER_REPLAY(pthread_cond_wait);
   } else if (SYNC_IS_RECORD) {
     dmtcp::ThreadInfo::setOptionalEvent();
     retval = _real_pthread_cond_wait(cond, mutex);
     dmtcp::ThreadInfo::unsetOptionalEvent();
-    if (retval == 0) {
-      SET_FIELD2(my_entry, pthread_cond_wait, ret_cond, *cond);
-      SET_FIELD2(my_entry, pthread_cond_wait, ret_mutex, *mutex);
-    }
     WRAPPER_LOG_WRITE_ENTRY(my_entry);
   }
   return retval;
@@ -496,16 +466,9 @@ extern "C" int pthread_mutex_trylock(pthread_mutex_t *mutex)
   /* NOTE: Don't call JTRACE (or anything that calls JTRACE) before
     this point. */
   if (SYNC_IS_REPLAY) {
-    WRAPPER_REPLAY_START(pthread_mutex_trylock);
-    if (retval == 0) {
-      *mutex = GET_FIELD(my_entry, pthread_mutex_trylock, ret_mutex);
-    }
-    WRAPPER_REPLAY_END(pthread_mutex_trylock);
+    WRAPPER_REPLAY(pthread_mutex_trylock);
   } else if (SYNC_IS_RECORD) {
     retval = _real_pthread_mutex_trylock(mutex);
-    if (retval == 0) {
-      SET_FIELD2(my_entry, pthread_mutex_trylock, ret_mutex, *mutex);
-    }
     WRAPPER_LOG_WRITE_ENTRY(my_entry);
   }
   return retval;
@@ -534,18 +497,11 @@ extern "C" int pthread_cond_broadcast(pthread_cond_t *cond)
   WRAPPER_HEADER(int, pthread_cond_broadcast, _real_pthread_cond_broadcast,
                  cond);
   if (SYNC_IS_REPLAY) {
-    WRAPPER_REPLAY_START(pthread_cond_broadcast);
-    if (retval == 0) {
-      *cond = GET_FIELD(my_entry, pthread_cond_broadcast, ret_cond);
-    }
-    WRAPPER_REPLAY_END(pthread_cond_broadcast);
+    WRAPPER_REPLAY(pthread_cond_broadcast);
   } else if (SYNC_IS_RECORD) {
     dmtcp::ThreadInfo::setOptionalEvent();
     retval = _real_pthread_cond_broadcast(cond);
     dmtcp::ThreadInfo::unsetOptionalEvent();
-    if (retval == 0) {
-      SET_FIELD2(my_entry, pthread_cond_broadcast, ret_cond, *cond);
-    }
     WRAPPER_LOG_WRITE_ENTRY(my_entry);
   }
   return retval;
@@ -571,20 +527,11 @@ extern "C" int pthread_cond_timedwait(pthread_cond_t *cond,
                  cond, mutex, abstime);
 
   if (SYNC_IS_REPLAY) {
-    WRAPPER_REPLAY_START(pthread_cond_timedwait);
-    if (retval == 0) {
-      *cond = GET_FIELD(my_entry, pthread_cond_timedwait, ret_cond);
-      *mutex = GET_FIELD(my_entry, pthread_cond_timedwait, ret_mutex);
-    }
-    WRAPPER_REPLAY_END(pthread_cond_timedwait);
+    WRAPPER_REPLAY(pthread_cond_timedwait);
   } else if (SYNC_IS_RECORD) {
     dmtcp::ThreadInfo::setOptionalEvent();
     retval = _real_pthread_cond_timedwait(cond, mutex, abstime);
     dmtcp::ThreadInfo::unsetOptionalEvent();
-    if (retval == 0) {
-      SET_FIELD2(my_entry, pthread_cond_timedwait, ret_cond, *cond);
-      SET_FIELD2(my_entry, pthread_cond_timedwait, ret_mutex, *mutex);
-    }
     WRAPPER_LOG_WRITE_ENTRY(my_entry);
   }
   return retval;
@@ -595,16 +542,9 @@ extern "C" int pthread_cond_destroy(pthread_cond_t *cond)
   WRAPPER_HEADER(int, pthread_cond_destroy, _real_pthread_cond_destroy, cond);
 
   if (SYNC_IS_REPLAY) {
-    WRAPPER_REPLAY_START(pthread_cond_destroy);
-    if (retval == 0) {
-      *cond = GET_FIELD(my_entry, pthread_cond_destroy, ret_cond);
-    }
-    WRAPPER_REPLAY_END(pthread_cond_destroy);
+    WRAPPER_REPLAY(pthread_cond_destroy);
   } else if (SYNC_IS_RECORD) {
     retval = _real_pthread_cond_destroy(cond);
-    if (retval == 0) {
-      SET_FIELD2(my_entry, pthread_cond_destroy, ret_cond, *cond);
-    }
     WRAPPER_LOG_WRITE_ENTRY(my_entry);
   }
   return retval;
@@ -615,17 +555,10 @@ extern "C" int pthread_rwlock_unlock(pthread_rwlock_t *rwlock)
   WRAPPER_HEADER(int, pthread_rwlock_unlock, _real_pthread_rwlock_unlock,
                  rwlock);
   if (SYNC_IS_REPLAY) {
-    WRAPPER_REPLAY_START(pthread_rwlock_unlock);
-    if (retval == 0) {
-      *rwlock = GET_FIELD(my_entry, pthread_rwlock_unlock, ret_rwlock);
-    }
-    WRAPPER_REPLAY_END(pthread_rwlock_unlock);
+    WRAPPER_REPLAY(pthread_rwlock_unlock);
   } else if (SYNC_IS_RECORD) {
     WRAPPER_LOG_WRITE_ENTRY(my_entry);
     retval = _real_pthread_rwlock_unlock(rwlock);
-    if (retval == 0) {
-      SET_FIELD2(my_entry, pthread_rwlock_unlock, ret_rwlock, *rwlock);
-    }
     WRAPPER_LOG_UPDATE_ENTRY(my_entry);
   }
   return retval;
@@ -636,16 +569,9 @@ extern "C" int pthread_rwlock_rdlock(pthread_rwlock_t *rwlock)
   WRAPPER_HEADER(int, pthread_rwlock_rdlock, _real_pthread_rwlock_rdlock,
                  rwlock);
   if (SYNC_IS_REPLAY) {
-    WRAPPER_REPLAY_START(pthread_rwlock_rdlock);
-    if (retval == 0) {
-      *rwlock = GET_FIELD(my_entry, pthread_rwlock_rdlock, ret_rwlock);
-    }
-    WRAPPER_REPLAY_END(pthread_rwlock_rdlock);
+    WRAPPER_REPLAY(pthread_rwlock_rdlock);
   } else if (SYNC_IS_RECORD) {
     retval = _real_pthread_rwlock_rdlock(rwlock);
-    if (retval == 0) {
-      SET_FIELD2(my_entry, pthread_rwlock_rdlock, ret_rwlock, *rwlock);
-    }
     WRAPPER_LOG_WRITE_ENTRY(my_entry);
   }
   return retval;
@@ -656,16 +582,9 @@ extern "C" int pthread_rwlock_wrlock(pthread_rwlock_t *rwlock)
   WRAPPER_HEADER(int, pthread_rwlock_wrlock, _real_pthread_rwlock_wrlock,
                  rwlock);
   if (SYNC_IS_REPLAY) {
-    WRAPPER_REPLAY_START(pthread_rwlock_wrlock);
-    if (retval == 0) {
-      *rwlock = GET_FIELD(my_entry, pthread_rwlock_wrlock, ret_rwlock);
-    }
-    WRAPPER_REPLAY_END(pthread_rwlock_wrlock);
+    WRAPPER_REPLAY(pthread_rwlock_wrlock);
   } else if (SYNC_IS_RECORD) {
     retval = _real_pthread_rwlock_wrlock(rwlock);
-    if (retval == 0) {
-      SET_FIELD2(my_entry, pthread_rwlock_wrlock, ret_rwlock, *rwlock);
-    }
     WRAPPER_LOG_WRITE_ENTRY(my_entry);
   }
   return retval;
