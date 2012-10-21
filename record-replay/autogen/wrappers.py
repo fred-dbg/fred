@@ -853,7 +853,7 @@ def gen_wrapper_util_cpp(allWrappers):
         };
 
         size_t getLogEventSize(const log_entry_t *entry) {
-          return log_event_size[entry->header.event];
+          return log_event_size[entry->eventId()];
         }
         """)
 
@@ -863,16 +863,16 @@ def gen_wrapper_util_cpp(allWrappers):
         {
           // Zero out all fields:
           memset(&(e->header), 0, sizeof(e->header));
-          SET_COMMON_PTR(e, clone_id);
-          SET_COMMON_PTR(e, event);
+          e->setCloneId(clone_id);
+          e->setEventId(event);
         }
         """)
 
     base_turn_check = textwrap.dedent("""\
         static int base_turn_check(log_entry_t *e1, log_entry_t *e2) {
           // Predicate function for a basic check -- event # and clone id.
-          return GET_COMMON_PTR(e1,clone_id) == GET_COMMON_PTR(e2,clone_id) &&
-                 GET_COMMON_PTR(e1,event) == GET_COMMON_PTR(e2,event);
+          return e1->cloneId() == e2->cloneId() &&
+                 e1->eventId() == e2->eventId();
         }
         """)
 
@@ -914,7 +914,7 @@ def gen_fred_read_log_h(allWrappers):
         void printEntry(int idx, log_entry_t *entry)
         {
           print_log_entry_common(idx, entry);
-          switch (entry->header.event) {
+          switch (entry->eventId()) {
           """)
 
     print_entry_end = '  }\n}\n'
@@ -1030,16 +1030,34 @@ def gen_wrapper_util_h(allWrappers):
 
         """)
 
+    if len(allWrappers) > 255:
+        print "Total number of events exceeded 255, "\
+              "update log entry header accordingly"
+        exit
+
     log_entry_decl = textwrap.dedent("""\
         typedef struct {
-          event_code_t event;
-          unsigned char isOptional;
-          clone_id_t clone_id;
-          int my_errno;
+          struct {
+            unsigned      event       :8;
+            unsigned      isOptional  :1;
+            unsigned      clone_id    :20;
+            int           savedErrno  :32;
+          } h;
           void* retval;
         } log_entry_header_t;
 
         typedef struct {
+          event_code_t eventId() const { return (event_code_t) header.h.event; }
+          void         setEventId(event_code_t e) { header.h.event = e; }
+          clone_id_t cloneId() const { return header.h.clone_id; }
+          void       setCloneId(clone_id_t c) { header.h.clone_id = c; }
+          bool       isOptional() const { return header.h.isOptional; }
+          void       setIsOptional(bool i) { header.h.isOptional = i; }
+          int        savedErrno() const { return header.h.savedErrno; }
+          void       setSavedErrno(int e) { header.h.savedErrno = e; }
+          void      *retval() const { return header.retval; }
+          void       setRetval(void *r) { header.retval = r; }
+
           // Shared among all events ("common area"):
           /* IMPORTANT: Adding new fields to the common area requires that you also
            * update the log_event_common_size definition. */

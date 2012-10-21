@@ -117,18 +117,6 @@ static inline bool isProcessGDB() {
 #define SET_FIELD_FROM(entry, event, field, source) \
   GET_FIELD(entry, event, field) = GET_FIELD(source, event, field)
 
-#define GET_COMMON(entry, field) (entry.header.field)
-#define GET_COMMON_PTR(entry, field) (entry->header.field)
-
-#define SET_COMMON_PTR(entry, field) GET_COMMON_PTR(entry, field) = field
-#define SET_COMMON_PTR2(entry, field, field2) \
-  GET_COMMON_PTR(entry, field) = field2
-
-#define SET_COMMON2(entry, field, field2) GET_COMMON(entry, field) = field2
-#define SET_COMMON(entry, field) SET_COMMON2(entry, field, field)
-
-#define IS_EQUAL_COMMON(e1, e2, field) \
-  (GET_COMMON(e1, field) == GET_COMMON(e2, field))
 #define IS_EQUAL_FIELD(e1, e2, event, field) \
   (GET_FIELD(e1, event, field) == GET_FIELD(e2, event, field))
 #define IS_EQUAL_FIELD_PTR(e1, e2, event, field) \
@@ -180,19 +168,18 @@ static inline bool isProcessGDB() {
   log_entry_t my_entry = create_##name##_entry(my_clone_id,           \
       name##_event, __VA_ARGS__);
 
-#define WRAPPER_REPLAY_START_TYPED(ret_type, name)                                    \
+#define WRAPPER_REPLAY_START_TYPED(ret_type, name)                    \
   do {                                                                \
-    waitForTurn(&my_entry, &name##_turn_check);                        \
-    retval = (ret_type) (unsigned long) GET_COMMON(my_entry,          \
-                                                   retval);           \
+    waitForTurn(&my_entry, &name##_turn_check);                       \
+    retval = (ret_type) (unsigned long) my_entry.retval();            \
   } while (0)
 
-#define WRAPPER_REPLAY_START(name)                                    \
+#define WRAPPER_REPLAY_START(name)                                  \
   WRAPPER_REPLAY_START_TYPED(int, name)
 
-#define WRAPPER_REPLAY_END(name)                                      \
-  do {                                                                \
-    int saved_errno = GET_COMMON(my_entry, my_errno);                 \
+#define WRAPPER_REPLAY_END(name)                                    \
+  do {                                                              \
+    int saved_errno = my_entry.savedErrno();                        \
     getNextLogEntry();                                              \
     if (saved_errno != 0) {                                         \
       errno = saved_errno;                                          \
@@ -211,7 +198,7 @@ static inline bool isProcessGDB() {
 #define WRAPPER_REPLAY_VOID(name)                                   \
   do {                                                              \
     waitForTurn(&my_entry, &name##_turn_check);                     \
-    int saved_errno = GET_COMMON(my_entry, my_errno);               \
+    int saved_errno = my_entry.savedErrno();                        \
     getNextLogEntry();                                              \
     if (saved_errno != 0) {                                         \
       errno = saved_errno;                                          \
@@ -240,7 +227,7 @@ static inline bool isProcessGDB() {
     errno = saved_errno;                                            \
   } while (0)
 
-#define WRAPPER_REPLAY_READ_VECTOR_FROM_READ_LOG(name, iov, iovcnt)           \
+#define WRAPPER_REPLAY_READ_VECTOR_FROM_READ_LOG(name, iov, iovcnt) \
   do {                                                              \
     JASSERT ( read_data_fd != -1 );                                 \
     lseek(read_data_fd,                                             \
@@ -269,32 +256,29 @@ static inline bool isProcessGDB() {
 #define WRAPPER_LOG_WRITE_ENTRY_VOID(my_entry)                      \
   size_t log_offset;                                                \
   do {                                                              \
-    SET_COMMON2(my_entry, my_errno, errno);                         \
-    SET_COMMON2(my_entry, isOptional,                               \
-                dmtcp::ThreadInfo::isOptionalEvent());              \
+    my_entry.setSavedErrno(errno);                                  \
+    my_entry.setIsOptional(dmtcp::ThreadInfo::isOptionalEvent());   \
     log_offset = addNextLogEntry(my_entry);                         \
-    errno = GET_COMMON(my_entry, my_errno);                         \
+    errno = my_entry.savedErrno();                                  \
   } while (0)
 
 #define WRAPPER_LOG_WRITE_ENTRY(my_entry)                           \
   size_t log_offset;                                                \
   do {                                                              \
-    SET_COMMON2(my_entry, retval, (void*)(unsigned long)retval);    \
-    SET_COMMON2(my_entry, my_errno, errno);                         \
-    SET_COMMON2(my_entry, isOptional,                               \
-                dmtcp::ThreadInfo::isOptionalEvent());              \
+    my_entry.setRetval((void*) (unsigned long) retval);             \
+    my_entry.setSavedErrno(errno);                                  \
+    my_entry.setIsOptional(dmtcp::ThreadInfo::isOptionalEvent());   \
     log_offset = addNextLogEntry(my_entry);                         \
-    errno = GET_COMMON(my_entry, my_errno);                         \
+    errno = my_entry.savedErrno();                                  \
   } while (0)
 
 #define WRAPPER_LOG_UPDATE_ENTRY(my_entry)                          \
   do {                                                              \
-    SET_COMMON2(my_entry, retval, (void*)(unsigned long)retval);    \
-    SET_COMMON2(my_entry, my_errno, errno);                         \
-    SET_COMMON2(my_entry, isOptional,                               \
-                dmtcp::ThreadInfo::isOptionalEvent());              \
+    my_entry.setRetval((void*) (unsigned long) retval);             \
+    my_entry.setSavedErrno(errno);                                  \
+    my_entry.setIsOptional(dmtcp::ThreadInfo::isOptionalEvent());   \
     updateLogEntry(my_entry, log_offset);                           \
-    errno = GET_COMMON(my_entry, my_errno);                         \
+    errno = my_entry.savedErrno();                                  \
   } while (0)
 
 #define WRAPPER_LOG(real_func, ...)                                 \
@@ -306,9 +290,9 @@ static inline bool isProcessGDB() {
 #define WRAPPER_LOG_VOID(real_func, ...)                            \
   do {                                                              \
     real_func(__VA_ARGS__);                                         \
-    SET_COMMON2(my_entry, my_errno, errno);                         \
+    my_entry.setSavedErrno(errno);                                  \
     addNextLogEntry(my_entry);                                      \
-    errno = GET_COMMON(my_entry, my_errno);                         \
+    errno = my_entry.savedErrno();                                  \
   } while (0)
 
 
@@ -323,7 +307,7 @@ static inline bool isProcessGDB() {
                                __VA_ARGS__);                        \
   if (SYNC_IS_REPLAY) {                                             \
     WRAPPER_REPLAY_TYPED(ret_type, name);                           \
-  } else if (SYNC_IS_RECORD) {                                         \
+  } else if (SYNC_IS_RECORD) {                                      \
     WRAPPER_LOG(real_func, __VA_ARGS__);                            \
   }                                                                 \
   WRAPPER_EXECUTION_ENABLE_CKPT();                                  \
@@ -333,16 +317,16 @@ static inline bool isProcessGDB() {
   WRAPPER_HEADER(ret_type, name, real_func, __VA_ARGS__);           \
   if (SYNC_IS_REPLAY) {                                             \
     WRAPPER_REPLAY_TYPED(ret_type, name);                           \
-  } else if (SYNC_IS_RECORD) {                                         \
+  } else if (SYNC_IS_RECORD) {                                      \
     WRAPPER_LOG(real_func, __VA_ARGS__);                            \
   }                                                                 \
   return retval;
 
-#define BASIC_SYNC_WRAPPER_NO_RETURN(ret_type, name, real_func, ...)          \
+#define BASIC_SYNC_WRAPPER_NO_RETURN(ret_type, name, real_func, ...) \
   WRAPPER_HEADER(ret_type, name, real_func, __VA_ARGS__);           \
   if (SYNC_IS_REPLAY) {                                             \
     WRAPPER_REPLAY_TYPED(ret_type, name);                           \
-  } else if (SYNC_IS_RECORD) {                                         \
+  } else if (SYNC_IS_RECORD) {                                      \
     WRAPPER_LOG(real_func, __VA_ARGS__);                            \
   }                                                                 \
 
@@ -350,7 +334,7 @@ static inline bool isProcessGDB() {
   WRAPPER_HEADER_VOID(name, real_func, __VA_ARGS__);                \
   if (SYNC_IS_REPLAY) {                                             \
     WRAPPER_REPLAY_VOID(name);                                      \
-  } else if (SYNC_IS_RECORD) {                                         \
+  } else if (SYNC_IS_RECORD) {                                      \
     WRAPPER_LOG_VOID(real_func, __VA_ARGS__);                       \
   }
 

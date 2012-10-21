@@ -244,10 +244,10 @@ void dmtcp::ThreadInfo::postRestartResume()
   }
 
   log_entry_t temp_entry = global_log.getCurrentEntry();
-  thrInfo = getThreadLocalData(GET_COMMON(temp_entry, clone_id));
+  thrInfo = getThreadLocalData(temp_entry.cloneId());
   if (thrInfo->semValue == 0) {
     //JASSERT (global_log.currentEntryIndex() == 0);
-    dmtcp::ThreadInfo::wakeUpThread(GET_COMMON(temp_entry, clone_id));
+    dmtcp::ThreadInfo::wakeUpThread(temp_entry.cloneId());
   }
 }
 

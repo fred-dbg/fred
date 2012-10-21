@@ -529,8 +529,7 @@ extern "C" int __fprintf_chk (FILE *stream, int flag, const char *format, ...)
     /*if (stream == stdout || stream == stderr) {
       retval = _fprintf(stream, format, arg);
       }*/
-    retval = (int)(unsigned long)GET_COMMON(my_entry,
-                                            retval);
+    retval = (int)(unsigned long) my_entry.retval();
   } else if (SYNC_IS_RECORD) {
     dmtcp::ThreadInfo::setOptionalEvent();
     retval = _fprintf(stream, format, arg);
@@ -556,7 +555,7 @@ extern "C" int fprintf (FILE *stream, const char *format, ...)
     /*if (stream == stdout || stream == stderr) {
       retval = _fprintf(stream, format, arg);
       }*/
-    retval = (int)(unsigned long)GET_COMMON(my_entry, retval);
+    retval = (int)(unsigned long) my_entry.retval();
     WRAPPER_REPLAY_END(vfprintf);
   } else if (SYNC_IS_RECORD) {
     dmtcp::ThreadInfo::setOptionalEvent();
@@ -584,7 +583,7 @@ extern "C" int printf (const char *format, ...)
     /*if (stream == stdout || stream == stderr) {
       retval = _fprintf(stream, format, arg);
       }*/
-    retval = (int)(unsigned long)GET_COMMON(my_entry, retval);
+    retval = (int)(unsigned long) my_entry.retval();
     WRAPPER_REPLAY_END(vfprintf);
   } else if (SYNC_IS_RECORD) {
     dmtcp::ThreadInfo::setOptionalEvent();
@@ -962,14 +961,10 @@ extern "C" int chown(const char *path, uid_t owner, gid_t group)
   do {                                                                      \
     if (SYNC_IS_REPLAY) {                                                   \
       WRAPPER_REPLAY_START(name);                                           \
-      int saved_errno = GET_COMMON(my_entry, my_errno);                     \
       if (retval == 0 && buf != NULL) {                                     \
         *buf = GET_FIELD(my_entry, name, ret_buf);                          \
       }                                                                     \
       WRAPPER_REPLAY_END(name);                                             \
-      if (saved_errno != 0) {                                               \
-        errno = saved_errno;                                                \
-      }                                                                     \
     } else if (SYNC_IS_RECORD) {                                            \
       retval = _real_ ## name(__VA_ARGS__);                                 \
       if (retval != -1 && buf != NULL) {                                    \

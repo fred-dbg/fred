@@ -327,7 +327,7 @@ void getNextLogEntry()
   } else {
     memfence();
     const log_entry_t& temp_entry = global_log.getCurrentEntry();
-    clone_id_t clone_id = GET_COMMON(temp_entry, clone_id);
+    clone_id_t clone_id = temp_entry.cloneId();
     dmtcp::ThreadInfo::wakeUpThread(clone_id);
   }
 }
@@ -483,23 +483,22 @@ void waitForTurn(log_entry_t *my_entry, turn_pred_t pred)
     dmtcp::ThreadInfo::waitForTurn();
     memfence();
     log_entry_t& temp_entry = global_log.getCurrentEntry();
-    JASSERT(GET_COMMON(temp_entry, clone_id) == my_clone_id)
-      (GET_COMMON(temp_entry, clone_id)) (my_clone_id);
+    JASSERT(temp_entry.cloneId() == my_clone_id)
+      (temp_entry.cloneId()) (my_clone_id);
     if ((*pred)(&temp_entry, my_entry))
       break;
     /* Also check for an optional event for this clone_id. */
-    if (GET_COMMON(temp_entry, clone_id) == my_clone_id &&
-        GET_COMMON(temp_entry, isOptional) == 1) {
+    if (temp_entry.cloneId() == my_clone_id &&
+        temp_entry.isOptional()) {
 #if DEBUG
-      if (!is_optional_event_for((event_code_t)GET_COMMON_PTR(my_entry, event),
-                                 (event_code_t)GET_COMMON(temp_entry, event),
+      if (!is_optional_event_for(my_entry->eventId(), temp_entry.eventId(),
                                  false)) {
         JASSERT(false);
       }
 #endif
       memfence();
       dmtcp::ThreadInfo::wakeUpThread(my_clone_id);
-      execute_optional_event(GET_COMMON(temp_entry, event));
+      execute_optional_event(temp_entry.eventId());
     }
   }
 
@@ -510,7 +509,7 @@ void waitForExecBarrier()
 {
   while (1) {
     const log_entry_t& temp_entry = global_log.getCurrentEntry();
-    if (GET_COMMON(temp_entry, event) == exec_barrier_event) {
+    if (temp_entry.eventId() == exec_barrier_event) {
       // We don't check clone ids because anyone can do an exec.
       break;
     }

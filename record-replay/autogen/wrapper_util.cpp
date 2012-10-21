@@ -194,15 +194,15 @@ static size_t log_event_size[numTotalWrappers] = {
 };
 
 size_t getLogEventSize(const log_entry_t *entry) {
-  return log_event_size[entry->header.event];
+  return log_event_size[entry->eventId()];
 }
 static void setupCommonFields(log_entry_t *e, clone_id_t clone_id,
                               event_code_t event)
 {
   // Zero out all fields:
   memset(&(e->header), 0, sizeof(e->header));
-  SET_COMMON_PTR(e, clone_id);
-  SET_COMMON_PTR(e, event);
+  e->setCloneId(clone_id);
+  e->setEventId(event);
 }
 
 log_entry_t create_empty_entry(clone_id_t clone_id, event_code_t event)
@@ -1907,8 +1907,8 @@ log_entry_t create_syscall_entry(clone_id_t clone_id, event_code_t event,
 }
 static int base_turn_check(log_entry_t *e1, log_entry_t *e2) {
   // Predicate function for a basic check -- event # and clone id.
-  return GET_COMMON_PTR(e1,clone_id) == GET_COMMON_PTR(e2,clone_id) &&
-         GET_COMMON_PTR(e1,event) == GET_COMMON_PTR(e2,event);
+  return e1->cloneId() == e2->cloneId() &&
+         e1->eventId() == e2->eventId();
 }
 
 int empty_turn_check(log_entry_t *e1, log_entry_t *e2)

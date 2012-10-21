@@ -1248,7 +1248,7 @@ void print_log_entry_syscall(int idx, log_entry_t *entry)  {
 void printEntry(int idx, log_entry_t *entry)
 {
   print_log_entry_common(idx, entry);
-  switch (entry->header.event) {
+  switch (entry->eventId()) {
     case empty_event: print_log_entry_empty(idx, entry); break;
 
     case accept_event: print_log_entry_accept(idx, entry); break;

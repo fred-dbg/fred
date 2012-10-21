@@ -456,8 +456,8 @@ static int internal_pthread_create(pthread_t *thread,
 
     retval = _real_pthread_create(thread, &the_attr,
                                   start_wrapper, (void *)createArg);
-    SET_COMMON2(my_entry, retval, (void*)(unsigned long)retval);
-    SET_COMMON2(my_entry, my_errno, errno);
+    my_entry.setRetval((void*)(unsigned long)retval);
+    my_entry.setSavedErrno(errno);
     if (retval == 0 && was_detached) {
       record_detached_thread(*thread);
     }
@@ -861,11 +861,11 @@ static void *signal_thread(void *arg)
   while (1) {
     // Lock this so it doesn't change from underneath:
     temp_entry = global_log.getCurrentEntry();
-    if (__builtin_expect(GET_COMMON(temp_entry,event) == signal_handler_event, 0)) {
+    if (__builtin_expect(temp_entry.eventId() == signal_handler_event, 0)) {
       if (signal_sent_on != global_log.currentEntryIndex()) {
         // Only send one signal per sig_handler entry.
         signal_sent_on = global_log.currentEntryIndex();
-        clone_id_t clone_id = GET_COMMON(temp_entry, clone_id);
+        clone_id_t clone_id = temp_entry.cloneId();
         _real_pthread_kill(dmtcp::ThreadInfo::cloneIdToPthreadId(clone_id),
                            GET_FIELD(temp_entry, signal_handler, sig));
       }

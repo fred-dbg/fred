@@ -1194,14 +1194,27 @@ union log_entry_data {
 
 
 typedef struct {
-  event_code_t event;
-  unsigned char isOptional;
-  clone_id_t clone_id;
-  int my_errno;
+  struct {
+    unsigned      event       :8;
+    unsigned      isOptional  :1;
+    unsigned      clone_id    :20;
+    int           savedErrno  :32;
+  } h;
   void* retval;
 } log_entry_header_t;
 
 typedef struct {
+  event_code_t eventId() const { return (event_code_t) header.h.event; }
+  void         setEventId(event_code_t e) { header.h.event = e; }
+  clone_id_t cloneId() const { return header.h.clone_id; }
+  void       setCloneId(clone_id_t c) { header.h.clone_id = c; }
+  bool       isOptional() const { return header.h.isOptional; }
+  void       setIsOptional(bool i) { header.h.isOptional = i; }
+  int        savedErrno() const { return header.h.savedErrno; }
+  void       setSavedErrno(int e) { header.h.savedErrno = e; }
+  void      *retval() const { return header.retval; }
+  void       setRetval(void *r) { header.retval = r; }
+
   // Shared among all events ("common area"):
   /* IMPORTANT: Adding new fields to the common area requires that you also
    * update the log_event_common_size definition. */

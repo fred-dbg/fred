@@ -82,7 +82,7 @@ void dmtcp::SynchronizationLog::initialize(const char *path, size_t size)
 
     _index = _entryOffsetMarker;
     _entryIndex = _entryIndexMarker;
-    _sharedInterfaceInfo->current_clone_id = GET_COMMON(temp_entry, clone_id);
+    _sharedInterfaceInfo->current_clone_id = temp_entry.cloneId();
     _sharedInterfaceInfo->current_log_entry_index = _entryIndex;
 
     JTRACE ("Restored log to index and offset from intermediate checkpoint.")
@@ -311,7 +311,7 @@ int dmtcp::SynchronizationLog::advanceToNextEntry()
   getEntryAtOffset(_currentEntry, getIndex());
 
   /* Keep interface info up to date. */
-  _sharedInterfaceInfo->current_clone_id = GET_COMMON(_currentEntry, clone_id);
+  _sharedInterfaceInfo->current_clone_id = _currentEntry.cloneId();
   _sharedInterfaceInfo->current_log_entry_index = _entryIndex;
 
   return 1;
@@ -346,7 +346,7 @@ int dmtcp::SynchronizationLog::getEntryAtOffset(log_entry_t& entry, size_t index
     return 0;
   }
 
-  JASSERT(GET_COMMON(entry, event) > 0);
+  JASSERT(entry.eventId() > 0);
   size_t event_size = getLogEventSize(&entry);
 
   if (index + log_event_common_size + event_size > currentDataSize) {
@@ -380,13 +380,13 @@ void dmtcp::SynchronizationLog::updateEntry(const log_entry_t& entry,
   JASSERT(offset <= *_dataSize);
 
   // only allow it for pthread_create and malloc calls
-  JASSERT(GET_COMMON(entry, event) == pthread_create_event ||
-	  GET_COMMON(entry, event) == pthread_rwlock_unlock_event ||
-	  GET_COMMON(entry, event) == pthread_mutex_unlock_event ||
-	  GET_COMMON(entry, event) == malloc_event ||
-	  GET_COMMON(entry, event) == libc_memalign_event ||
-	  GET_COMMON(entry, event) == calloc_event ||
-	  GET_COMMON(entry, event) == realloc_event);
+  JASSERT(entry.eventId() == pthread_create_event ||
+	  entry.eventId() == pthread_rwlock_unlock_event ||
+	  entry.eventId() == pthread_mutex_unlock_event ||
+	  entry.eventId() == malloc_event ||
+	  entry.eventId() == libc_memalign_event ||
+	  entry.eventId() == calloc_event ||
+	  entry.eventId() == realloc_event);
 
 #ifdef DEBUG
   log_entry_t old_entry = EMPTY_LOG_ENTRY;
@@ -394,15 +394,15 @@ void dmtcp::SynchronizationLog::updateEntry(const log_entry_t& entry,
 
   // Only allow replacing events of the same type. Allowing it for differing
   // types (which means differing sizes) would take more work.
-  JASSERT(GET_COMMON(entry, event) == GET_COMMON(old_entry, event));
+  JASSERT(entry.eventId() == old_entry.eventId());
 
-  if (GET_COMMON(entry, event) == pthread_create_event) {
+  if (entry.eventId() == pthread_create_event) {
     JASSERT(IS_EQUAL_FIELD(entry, old_entry, pthread_create, thread) &&
 	    IS_EQUAL_FIELD(entry, old_entry, pthread_create, thread) &&
 	    IS_EQUAL_FIELD(entry, old_entry, pthread_create, start_routine) &&
 	    IS_EQUAL_FIELD(entry, old_entry, pthread_create, attr) &&
 	    IS_EQUAL_FIELD(entry, old_entry, pthread_create, arg));
-  } else if (GET_COMMON(entry, event) == malloc_event) {
+  } else if (entry.eventId() == malloc_event) {
     JASSERT(IS_EQUAL_FIELD(entry, old_entry, malloc, size));
   }
 #endif
@@ -450,22 +450,16 @@ size_t dmtcp::SynchronizationLog::getEntryHeaderAtOffset(log_entry_t& entry,
 #else
   char* buffer = &_log[index];
 
-  memcpy(&GET_COMMON(entry, event), buffer, sizeof(GET_COMMON(entry, event)));
-  buffer += sizeof(GET_COMMON(entry, event));
-  memcpy(&GET_COMMON(entry, isOptional), buffer, sizeof(GET_COMMON(entry, isOptional)));
-  buffer += sizeof(GET_COMMON(entry, isOptional));
-  memcpy(&GET_COMMON(entry, clone_id), buffer, sizeof(GET_COMMON(entry, clone_id)));
-  buffer += sizeof(GET_COMMON(entry, clone_id));
-  memcpy(&GET_COMMON(entry, my_errno), buffer, sizeof(GET_COMMON(entry, my_errno)));
-  buffer += sizeof(GET_COMMON(entry, my_errno));
-  memcpy(&GET_COMMON(entry, retval), buffer, sizeof(GET_COMMON(entry, retval)));
-  buffer += sizeof(GET_COMMON(entry, retval));
+  memcpy(&entry.header.h, buffer, sizeof(entry.header.h));
+  buffer += sizeof(entry.header.h);
+  memcpy(&entry.header.retval, buffer, sizeof(entry.header.retval));
+  buffer += sizeof(entry.header.retval);
 
   JASSERT((buffer - &_log[index]) == log_event_common_size)
     (index) (log_event_common_size) (buffer);
 #endif
 
-  if (GET_COMMON(entry, clone_id) == 0) {
+  if (entry.cloneId() == 0) {
     return 0;
   }
   return log_event_common_size;
@@ -475,23 +469,17 @@ void dmtcp::SynchronizationLog::writeEntryHeaderAtOffset(const log_entry_t& entr
                                                         size_t index)
 {
 
-  JASSERT(GET_COMMON(entry, clone_id) > 0);
+  JASSERT(entry.cloneId() > 0);
 
 #ifdef NO_LOG_ENTRY_TO_BUFFER
   memcpy(&_log[index], &entry.header, log_event_common_size);
 #else
   char* buffer = &_log[index];
 
-  memcpy(buffer, &GET_COMMON(entry, event), sizeof(GET_COMMON(entry, event)));
-  buffer += sizeof(GET_COMMON(entry, event));
-  memcpy(buffer, &GET_COMMON(entry, isOptional), sizeof(GET_COMMON(entry, isOptional)));
-  buffer += sizeof(GET_COMMON(entry, isOptional));
-  memcpy(buffer, &GET_COMMON(entry, clone_id), sizeof(GET_COMMON(entry, clone_id)));
-  buffer += sizeof(GET_COMMON(entry, clone_id));
-  memcpy(buffer, &GET_COMMON(entry, my_errno), sizeof(GET_COMMON(entry, my_errno)));
-  buffer += sizeof(GET_COMMON(entry, my_errno));
-  memcpy(buffer, &GET_COMMON(entry, retval), sizeof(GET_COMMON(entry, retval)));
-  buffer += sizeof(GET_COMMON(entry, retval));
+  memcpy(buffer, &entry.header.h, sizeof(entry.header.h));
+  buffer += sizeof(entry.header.h);
+  memcpy(buffer, &entry.header.retval, sizeof(entry.header.retval));
+  buffer += sizeof(entry.header.retval);
 
   JASSERT((buffer - &_log[index]) == log_event_common_size)
     (index) (log_event_common_size) (buffer);

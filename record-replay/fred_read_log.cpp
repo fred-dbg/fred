@@ -45,18 +45,18 @@
 
 void print_log_entry_common(int idx, log_entry_t *entry) {
   printf("%2d: clone_id=%ld, [%-20.20s]: ",
-         idx, GET_COMMON_PTR(entry, clone_id), log_event_str[entry->header.event]);
+         idx, entry->cloneId(), log_event_str[entry->eventId()]);
 
-  switch ((long) (unsigned long) GET_COMMON_PTR(entry, retval)) {
+  switch ((long) (unsigned long) entry->retval()) {
     case 0:
       printf("ret=  0      , "); break;
     case -1:
       printf("ret= -1      , "); break;
     default:
-      printf("ret=%p, ", GET_COMMON_PTR(entry, retval)); break;
+      printf("ret=%p, ", entry->retval()); break;
   }
   printf("errno=%d, isOpt=%d",
-         GET_COMMON_PTR(entry, my_errno), GET_COMMON_PTR(entry, isOptional));
+         entry->savedErrno(), entry->isOptional());
 }
 
 void rewriteLog(char *log_path)
