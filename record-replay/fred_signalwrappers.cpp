@@ -65,9 +65,11 @@ if (!shouldSynchronize(return_addr)) {
                                                      sig, NULL, NULL);
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY(signal_handler);
-    (*user_sig_handlers[sig]) (sig);
+    int s = GET_FIELD(my_entry, signal_handler, savedSig);
+    (*user_sig_handlers[s]) (s);
   } else if (SYNC_IS_RECORD) {
     (*user_sig_handlers[sig]) (sig);
+    SET_FIELD2(my_entry, signal_handler, savedSig, sig);
     WRAPPER_LOG_WRITE_ENTRY(my_entry);
   }
 }

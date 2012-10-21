@@ -34,7 +34,7 @@ import textwrap
 # wrapper-tuple := ('<type>', '<name>', <argument-list> [, <opt-wrapper-info>]*)
 # argument-list := <list of argument-tuples>
 # argument-tuple := ('<type>', '<name>' [,<argument-flag>]*)
-# argument-flag := '__save_retval' | '__no_save'
+# argument-flag := '__save_retval' | '__no_save' | '_save'
 # opt-wrapper-info := ('opt', <optional-flags>) | ('extra', <extra-fields-for-struct>)
 # optional-flags := 'decl_data_offset' | 'decl_retval'
 # extra-fields-for-struct := '<type> <name>'
@@ -42,6 +42,7 @@ import textwrap
 # Meaning of flags:
 #  '__save_retval' : decl a ret_XXX field which saves the return value of this arg
 #  '__no_save' : do not include this arg in log entry struct
+#  '_save' : include this arg in log entry struct even if debugMode is disabled
 #  'decl_data_offset' : add a 'off_t data_offset' field to the log entry struct
 #  'decl_retval' : add a '<ret-type> <name__retval' field to the log entry struct
 
@@ -61,8 +62,8 @@ miscWrappers = [
   ('int', 'bind', [('int', 'sockfd'),
                    ('const struct sockaddr*', 'my_addr'),
                    ('socklen_t', 'addrlen')]),
-  ('void*', 'calloc', [('size_t', 'nmemb'),
-                       ('size_t', 'size')]),
+  ('void*', 'calloc', [('size_t', 'nmemb', '__save'),
+                       ('size_t', 'size', '__save')]),
   ('int', 'chmod', [('const char*', 'path'),
                     ('mode_t', 'mode')]),
   ('int', 'chown', [('const char*', 'path'),
@@ -130,30 +131,30 @@ miscWrappers = [
   ('loff_t', 'llseek', [('int', 'fd'),
                         ('loff_t', 'offset'),
                         ('int', 'whence')]),
-  ('void*', 'malloc', [('size_t', 'size')]),
+  ('void*', 'malloc', [('size_t', 'size', '__save')]),
 
-  ('void', 'free', [('void*', 'ptr')]),
+  ('void', 'free', [('void*', 'ptr', '__save')]),
 
   ('int', 'mkdir', [('const char*', 'pathname'),
                     ('mode_t', 'mode')]),
   ('int', 'mkstemp', [('char*', 'temp')]),
-  ('void*', 'mmap', [('void*', 'addr'),
-                     ('size_t', 'length'),
-                     ('int', 'prot'),
-                     ('int', 'flags'),
-                     ('int', 'fd'),
-                     ('off_t', 'offset')],
+  ('void*', 'mmap', [('void*', 'addr', '__save'),
+                     ('size_t', 'length', '__save'),
+                     ('int', 'prot', '__save'),
+                     ('int', 'flags', '__save'),
+                     ('int', 'fd', '__save'),
+                     ('off_t', 'offset', '__save')],
                     ('opt', 'decl_data_offset'),
                     ('opt', 'decl_fred_xxx_fn')),
-  ('void*', 'mmap64', [('void*', 'addr'),
-                       ('size_t', 'length'),
-                       ('int', 'prot'),
-                       ('int', 'flags'),
-                       ('int', 'fd'),
-                       ('off64_t', 'offset')],
+  ('void*', 'mmap64', [('void*', 'addr', '__save'),
+                       ('size_t', 'length', '__save'),
+                       ('int', 'prot', '__save'),
+                       ('int', 'flags', '__save'),
+                       ('int', 'fd', '__save'),
+                       ('off64_t', 'offset', '__save')],
                       ('opt', 'decl_data_offset')),
-  ('int', 'munmap', [('void*', 'addr'),
-                     ('size_t', 'length')],
+  ('int', 'munmap', [('void*', 'addr', '__save'),
+                     ('size_t', 'length', '__save')],
                      ('opt', 'decl_fred_xxx_fn')),
   ('void*', 'mremap', [('void*', 'old_address'),
                        ('size_t', 'old_size'),
@@ -562,7 +563,8 @@ nonSyscallWrappers = [
   ('void', 'exec_barrier', []),
   ('void', 'signal_handler', [('int', 'sig'),
                               ('siginfo_t*', 'info'),
-                              ('void*', 'data')]),
+                              ('void*', 'data')],
+                              ('extra', 'int savedSig')),
   ('void', 'user', []),
 ]
 
@@ -662,6 +664,7 @@ class ArgInfo:
         self._ret_type = RetType(atuple[0])
         self._name = atuple[1]
         self._save_retval = '__save_retval' in atuple[2:]
+        self._save = '__save' in atuple[2:]
         self._dont_save = '__no_save' in atuple[2:]
 
     def __str__(self):
@@ -676,6 +679,9 @@ class ArgInfo:
     def save_retval(self):
         return self._save_retval
 
+    def save(self):
+        return self._save
+
     def dont_save(self):
         return self._dont_save
 
@@ -689,7 +695,7 @@ class ArgInfo:
 class WrapperInfo:
     """Complete information about a wrapper function"""
 
-    def __init__(self, wtuple, groupName):
+    def __init__(self, wtuple, groupName, debugMode):
         if len(wtuple) < 3:
             print "Error: Invalid format"
             print wtuple
@@ -701,6 +707,7 @@ class WrapperInfo:
         self.decl_retval = False
         self.extra_fields_for_log_entry_struct = []
         self.groupName = groupName
+        self.debugMode = debugMode;
 
         for arg in wtuple[2]:
             self.args += [ArgInfo(arg)]
@@ -761,8 +768,9 @@ class WrapperInfo:
         body += '  setupCommonFields(&e, clone_id, event);\n'
 
         for arg in self.args:
-            if not arg.dont_save():
-                body += '  SET_FIELD(e, %s, %s);\n' % (self._name, arg.name())
+            if self.debugMode or arg.save():
+                if not arg.dont_save():
+                    body += '  SET_FIELD(e, %s, %s);\n' % (self._name, arg.name())
 
         body += '  return e;\n}\n'
         return (sign, body)
@@ -771,9 +779,11 @@ class WrapperInfo:
         sign = 'int %s_turn_check(log_entry_t *e1, log_entry_t *e2)' % (self._name)
         body = '\n{\n  return base_turn_check(e1,e2)'
         for arg in self.args:
-            if not arg.dont_save():
-                body += '\n    && '
-                body += 'ARE_FIELDS_EQUAL_PTR (e1, e2, %s, %s)'  % (self._name, arg.name())
+            if self.debugMode or arg.save():
+                if not arg.dont_save():
+                    body += '\n    && '
+                    body += 'ARE_FIELDS_EQUAL_PTR (e1, e2, %s, %s)'  % \
+                            (self._name, arg.name())
         body += ';\n}\n'
         return (sign, body)
 
@@ -781,7 +791,8 @@ class WrapperInfo:
         ret = 'typedef struct {\n'
         for arg in self.args:
             if not arg.dont_save():
-                ret += '  %s;\n' % (arg.arg_decl())
+                if self.debugMode or arg.save():
+                    ret += '  %s;\n' % (arg.arg_decl())
                 if arg.save_retval():
                     if arg.deref_type() == 'struct sockaddr':
                         ret += '  struct sockaddr_storage %s;\n' % ('ret_' + arg.name())
@@ -805,7 +816,7 @@ class WrapperInfo:
         fmt_str = ''
         arg_list = ''
         for arg in self.args:
-            if arg.dont_save() == False:
+            if arg.dont_save() == False and (self.debugMode or arg.save()):
                 fmt_str += ' %s=%s' % (arg.name(), arg.ret_type().format_str())
                 arg_list += ',\n         GET_FIELD_PTR(entry, %s, %s)' \
                          % (self._name, arg.name())
@@ -1118,7 +1129,6 @@ def gen_wrapper_util_h(allWrappers):
     fd.write(string.join(create_entry, '\n'))
     fd.write('\n')
 
-
     fd.write(footer)
     fd.close()
 
@@ -1126,9 +1136,10 @@ def gen_wrapper_util_h(allWrappers):
 def main():
     """Start hook"""
     allWrappers = []
+    debugMode = False
     for (wrapperGroup, groupName) in wrapperGroups:
         for wrapper in wrapperGroup:
-            allWrappers += [WrapperInfo(wrapper, groupName)]
+            allWrappers += [WrapperInfo(wrapper, groupName, debugMode)]
     gen_fred_read_log_h(allWrappers)
     gen_wrapper_util_cpp(allWrappers)
     gen_fred_wrappers_raw_h(allWrappers)

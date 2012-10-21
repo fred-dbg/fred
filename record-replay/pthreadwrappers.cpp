@@ -786,7 +786,7 @@ static void *signal_thread(void *arg)
         signal_sent_on = global_log.currentEntryIndex();
         clone_id_t clone_id = temp_entry.cloneId();
         _real_pthread_kill(dmtcp::ThreadInfo::cloneIdToPthreadId(clone_id),
-                           GET_FIELD(temp_entry, signal_handler, sig));
+                           GET_FIELD(temp_entry, signal_handler, savedSig));
       }
     }
     usleep(20);

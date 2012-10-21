@@ -217,9 +217,6 @@ log_entry_t create_accept_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, accept, sockfd);
-  SET_FIELD(e, accept, addr);
-  SET_FIELD(e, accept, addrlen);
   return e;
 }
 
@@ -228,10 +225,6 @@ log_entry_t create_accept4_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, accept4, sockfd);
-  SET_FIELD(e, accept4, addr);
-  SET_FIELD(e, accept4, addrlen);
-  SET_FIELD(e, accept4, flags);
   return e;
 }
 
@@ -240,8 +233,6 @@ log_entry_t create_access_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, access, pathname);
-  SET_FIELD(e, access, mode);
   return e;
 }
 
@@ -250,9 +241,6 @@ log_entry_t create_bind_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, bind, sockfd);
-  SET_FIELD(e, bind, my_addr);
-  SET_FIELD(e, bind, addrlen);
   return e;
 }
 
@@ -271,8 +259,6 @@ log_entry_t create_chmod_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, chmod, path);
-  SET_FIELD(e, chmod, mode);
   return e;
 }
 
@@ -281,9 +267,6 @@ log_entry_t create_chown_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, chown, path);
-  SET_FIELD(e, chown, owner);
-  SET_FIELD(e, chown, group);
   return e;
 }
 
@@ -292,7 +275,6 @@ log_entry_t create_close_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, close, fd);
   return e;
 }
 
@@ -301,9 +283,6 @@ log_entry_t create_connect_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, connect, sockfd);
-  SET_FIELD(e, connect, serv_addr);
-  SET_FIELD(e, connect, addrlen);
   return e;
 }
 
@@ -312,7 +291,6 @@ log_entry_t create_dup_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, dup, oldfd);
   return e;
 }
 
@@ -321,8 +299,6 @@ log_entry_t create_dup2_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, dup2, oldfd);
-  SET_FIELD(e, dup2, newfd);
   return e;
 }
 
@@ -331,9 +307,6 @@ log_entry_t create_dup3_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, dup3, oldfd);
-  SET_FIELD(e, dup3, newfd);
-  SET_FIELD(e, dup3, flags);
   return e;
 }
 
@@ -342,9 +315,6 @@ log_entry_t create_fcntl_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, fcntl, fd);
-  SET_FIELD(e, fcntl, cmd);
-  SET_FIELD(e, fcntl, arg);
   return e;
 }
 
@@ -353,7 +323,6 @@ log_entry_t create_fchdir_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, fchdir, fd);
   return e;
 }
 
@@ -362,7 +331,6 @@ log_entry_t create_fdatasync_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, fdatasync, fd);
   return e;
 }
 
@@ -371,8 +339,6 @@ log_entry_t create_getcwd_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, getcwd, buf);
-  SET_FIELD(e, getcwd, size);
   return e;
 }
 
@@ -381,8 +347,6 @@ log_entry_t create_gettimeofday_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, gettimeofday, tv);
-  SET_FIELD(e, gettimeofday, tz);
   return e;
 }
 
@@ -391,9 +355,6 @@ log_entry_t create_getpeername_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, getpeername, sockfd);
-  SET_FIELD(e, getpeername, addr);
-  SET_FIELD(e, getpeername, addrlen);
   return e;
 }
 
@@ -402,9 +363,6 @@ log_entry_t create_getsockname_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, getsockname, sockfd);
-  SET_FIELD(e, getsockname, addr);
-  SET_FIELD(e, getsockname, addrlen);
   return e;
 }
 
@@ -413,8 +371,6 @@ log_entry_t create_link_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, link, oldpath);
-  SET_FIELD(e, link, newpath);
   return e;
 }
 
@@ -423,8 +379,6 @@ log_entry_t create_symlink_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, symlink, oldpath);
-  SET_FIELD(e, symlink, newpath);
   return e;
 }
 
@@ -433,8 +387,6 @@ log_entry_t create_listen_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, listen, sockfd);
-  SET_FIELD(e, listen, backlog);
   return e;
 }
 
@@ -443,8 +395,6 @@ log_entry_t create_localtime_r_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, localtime_r, timep);
-  SET_FIELD(e, localtime_r, result);
   return e;
 }
 
@@ -453,8 +403,6 @@ log_entry_t create_utime_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, utime, filename);
-  SET_FIELD(e, utime, times);
   return e;
 }
 
@@ -463,8 +411,6 @@ log_entry_t create_utimes_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, utimes, filename);
-  SET_FIELD(e, utimes, times);
   return e;
 }
 
@@ -473,8 +419,6 @@ log_entry_t create_lutimes_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, lutimes, filename);
-  SET_FIELD(e, lutimes, tv);
   return e;
 }
 
@@ -483,8 +427,6 @@ log_entry_t create_futimes_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, futimes, fd);
-  SET_FIELD(e, futimes, tv);
   return e;
 }
 
@@ -493,8 +435,6 @@ log_entry_t create_clock_getres_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, clock_getres, clk_id);
-  SET_FIELD(e, clock_getres, res);
   return e;
 }
 
@@ -503,8 +443,6 @@ log_entry_t create_clock_gettime_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, clock_gettime, clk_id);
-  SET_FIELD(e, clock_gettime, tp);
   return e;
 }
 
@@ -513,8 +451,6 @@ log_entry_t create_clock_settime_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, clock_settime, clk_id);
-  SET_FIELD(e, clock_settime, tp);
   return e;
 }
 
@@ -523,9 +459,6 @@ log_entry_t create_lseek_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, lseek, fd);
-  SET_FIELD(e, lseek, offset);
-  SET_FIELD(e, lseek, whence);
   return e;
 }
 
@@ -534,9 +467,6 @@ log_entry_t create_lseek64_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, lseek64, fd);
-  SET_FIELD(e, lseek64, offset);
-  SET_FIELD(e, lseek64, whence);
   return e;
 }
 
@@ -545,9 +475,6 @@ log_entry_t create_llseek_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, llseek, fd);
-  SET_FIELD(e, llseek, offset);
-  SET_FIELD(e, llseek, whence);
   return e;
 }
 
@@ -574,8 +501,6 @@ log_entry_t create_mkdir_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, mkdir, pathname);
-  SET_FIELD(e, mkdir, mode);
   return e;
 }
 
@@ -584,7 +509,6 @@ log_entry_t create_mkstemp_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, mkstemp, temp);
   return e;
 }
 
@@ -631,11 +555,6 @@ log_entry_t create_mremap_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, mremap, old_address);
-  SET_FIELD(e, mremap, old_size);
-  SET_FIELD(e, mremap, new_size);
-  SET_FIELD(e, mremap, flags);
-  SET_FIELD(e, mremap, new_address);
   return e;
 }
 
@@ -644,9 +563,6 @@ log_entry_t create_open_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, open, pathname);
-  SET_FIELD(e, open, flags);
-  SET_FIELD(e, open, mode);
   return e;
 }
 
@@ -655,9 +571,6 @@ log_entry_t create_open64_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, open64, pathname);
-  SET_FIELD(e, open64, flags);
-  SET_FIELD(e, open64, mode);
   return e;
 }
 
@@ -666,9 +579,6 @@ log_entry_t create_openat_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, openat, dirfd);
-  SET_FIELD(e, openat, pathname);
-  SET_FIELD(e, openat, flags);
   return e;
 }
 
@@ -677,10 +587,6 @@ log_entry_t create_pread_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, pread, fd);
-  SET_FIELD(e, pread, buf);
-  SET_FIELD(e, pread, count);
-  SET_FIELD(e, pread, offset);
   return e;
 }
 
@@ -689,10 +595,6 @@ log_entry_t create_preadv_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, preadv, fd);
-  SET_FIELD(e, preadv, iov);
-  SET_FIELD(e, preadv, iovcnt);
-  SET_FIELD(e, preadv, offset);
   return e;
 }
 
@@ -701,10 +603,6 @@ log_entry_t create_pwrite_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, pwrite, fd);
-  SET_FIELD(e, pwrite, buf);
-  SET_FIELD(e, pwrite, count);
-  SET_FIELD(e, pwrite, offset);
   return e;
 }
 
@@ -713,10 +611,6 @@ log_entry_t create_pwritev_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, pwritev, fd);
-  SET_FIELD(e, pwritev, iov);
-  SET_FIELD(e, pwritev, iovcnt);
-  SET_FIELD(e, pwritev, offset);
   return e;
 }
 
@@ -725,7 +619,6 @@ log_entry_t create_pthread_rwlock_unlock_entry(clone_id_t clone_id, event_code_t
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, pthread_rwlock_unlock, rwlock);
   return e;
 }
 
@@ -734,7 +627,6 @@ log_entry_t create_pthread_rwlock_rdlock_entry(clone_id_t clone_id, event_code_t
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, pthread_rwlock_rdlock, rwlock);
   return e;
 }
 
@@ -743,7 +635,6 @@ log_entry_t create_pthread_rwlock_wrlock_entry(clone_id_t clone_id, event_code_t
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, pthread_rwlock_wrlock, rwlock);
   return e;
 }
 
@@ -752,10 +643,6 @@ log_entry_t create_pthread_create_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, pthread_create, thread);
-  SET_FIELD(e, pthread_create, attr);
-  SET_FIELD(e, pthread_create, start_routine);
-  SET_FIELD(e, pthread_create, arg);
   return e;
 }
 
@@ -764,7 +651,6 @@ log_entry_t create_pthread_detach_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, pthread_detach, thread);
   return e;
 }
 
@@ -773,7 +659,6 @@ log_entry_t create_pthread_exit_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, pthread_exit, value_ptr);
   return e;
 }
 
@@ -782,8 +667,6 @@ log_entry_t create_pthread_join_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, pthread_join, thread);
-  SET_FIELD(e, pthread_join, value_ptr);
   return e;
 }
 
@@ -792,8 +675,6 @@ log_entry_t create_pthread_kill_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, pthread_kill, thread);
-  SET_FIELD(e, pthread_kill, sig);
   return e;
 }
 
@@ -802,7 +683,6 @@ log_entry_t create_pthread_mutex_lock_entry(clone_id_t clone_id, event_code_t ev
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, pthread_mutex_lock, mutex);
   return e;
 }
 
@@ -811,7 +691,6 @@ log_entry_t create_pthread_mutex_trylock_entry(clone_id_t clone_id, event_code_t
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, pthread_mutex_trylock, mutex);
   return e;
 }
 
@@ -820,7 +699,6 @@ log_entry_t create_pthread_mutex_unlock_entry(clone_id_t clone_id, event_code_t 
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, pthread_mutex_unlock, mutex);
   return e;
 }
 
@@ -843,9 +721,6 @@ log_entry_t create_read_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, read, fd);
-  SET_FIELD(e, read, buf);
-  SET_FIELD(e, read, count);
   return e;
 }
 
@@ -854,9 +729,6 @@ log_entry_t create_readv_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, readv, fd);
-  SET_FIELD(e, readv, iov);
-  SET_FIELD(e, readv, iovcnt);
   return e;
 }
 
@@ -865,9 +737,6 @@ log_entry_t create_readlink_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, readlink, path);
-  SET_FIELD(e, readlink, buf);
-  SET_FIELD(e, readlink, bufsiz);
   return e;
 }
 
@@ -876,8 +745,6 @@ log_entry_t create_realpath_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, realpath, path);
-  SET_FIELD(e, realpath, resolved_path);
   return e;
 }
 
@@ -886,8 +753,6 @@ log_entry_t create_realloc_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, realloc, ptr);
-  SET_FIELD(e, realloc, size);
   return e;
 }
 
@@ -896,8 +761,6 @@ log_entry_t create_rename_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, rename, oldpath);
-  SET_FIELD(e, rename, newpath);
   return e;
 }
 
@@ -906,7 +769,6 @@ log_entry_t create_rmdir_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, rmdir, pathname);
   return e;
 }
 
@@ -915,11 +777,6 @@ log_entry_t create_select_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, select, nfds);
-  SET_FIELD(e, select, readfds);
-  SET_FIELD(e, select, writefds);
-  SET_FIELD(e, select, exceptfds);
-  SET_FIELD(e, select, timeout);
   return e;
 }
 
@@ -928,10 +785,6 @@ log_entry_t create_ppoll_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, ppoll, fds);
-  SET_FIELD(e, ppoll, nfds);
-  SET_FIELD(e, ppoll, timeout_ts);
-  SET_FIELD(e, ppoll, sigmask);
   return e;
 }
 
@@ -940,11 +793,6 @@ log_entry_t create_setsockopt_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, setsockopt, s);
-  SET_FIELD(e, setsockopt, level);
-  SET_FIELD(e, setsockopt, optname);
-  SET_FIELD(e, setsockopt, optval);
-  SET_FIELD(e, setsockopt, optlen);
   return e;
 }
 
@@ -953,11 +801,6 @@ log_entry_t create_getsockopt_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, getsockopt, s);
-  SET_FIELD(e, getsockopt, level);
-  SET_FIELD(e, getsockopt, optname);
-  SET_FIELD(e, getsockopt, optval);
-  SET_FIELD(e, getsockopt, optlen);
   return e;
 }
 
@@ -966,9 +809,6 @@ log_entry_t create_ioctl_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, ioctl, d);
-  SET_FIELD(e, ioctl, request);
-  SET_FIELD(e, ioctl, arg);
   return e;
 }
 
@@ -977,8 +817,6 @@ log_entry_t create_shutdown_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, shutdown, sockfd);
-  SET_FIELD(e, shutdown, how);
   return e;
 }
 
@@ -987,8 +825,6 @@ log_entry_t create_sigwait_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, sigwait, set);
-  SET_FIELD(e, sigwait, sig);
   return e;
 }
 
@@ -997,7 +833,6 @@ log_entry_t create_srand_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, srand, seed);
   return e;
 }
 
@@ -1006,9 +841,6 @@ log_entry_t create_socket_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, socket, domain);
-  SET_FIELD(e, socket, type);
-  SET_FIELD(e, socket, protocol);
   return e;
 }
 
@@ -1017,10 +849,6 @@ log_entry_t create_socketpair_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, socketpair, d);
-  SET_FIELD(e, socketpair, type);
-  SET_FIELD(e, socketpair, protocol);
-  SET_FIELD(e, socketpair, sv);
   return e;
 }
 
@@ -1029,7 +857,6 @@ log_entry_t create_time_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, time, tloc);
   return e;
 }
 
@@ -1038,8 +865,6 @@ log_entry_t create_truncate_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, truncate, path);
-  SET_FIELD(e, truncate, length);
   return e;
 }
 
@@ -1048,8 +873,6 @@ log_entry_t create_ftruncate_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, ftruncate, fd);
-  SET_FIELD(e, ftruncate, length);
   return e;
 }
 
@@ -1058,8 +881,6 @@ log_entry_t create_truncate64_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, truncate64, path);
-  SET_FIELD(e, truncate64, length);
   return e;
 }
 
@@ -1068,8 +889,6 @@ log_entry_t create_ftruncate64_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, ftruncate64, fd);
-  SET_FIELD(e, ftruncate64, length);
   return e;
 }
 
@@ -1078,7 +897,6 @@ log_entry_t create_unlink_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, unlink, pathname);
   return e;
 }
 
@@ -1087,9 +905,6 @@ log_entry_t create_write_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, write, fd);
-  SET_FIELD(e, write, buf);
-  SET_FIELD(e, write, count);
   return e;
 }
 
@@ -1098,9 +913,6 @@ log_entry_t create_writev_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, writev, fd);
-  SET_FIELD(e, writev, iov);
-  SET_FIELD(e, writev, iovcnt);
   return e;
 }
 
@@ -1109,7 +921,6 @@ log_entry_t create_epoll_create_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, epoll_create, size);
   return e;
 }
 
@@ -1118,7 +929,6 @@ log_entry_t create_epoll_create1_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, epoll_create1, flags);
   return e;
 }
 
@@ -1127,10 +937,6 @@ log_entry_t create_epoll_ctl_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, epoll_ctl, epfd);
-  SET_FIELD(e, epoll_ctl, op);
-  SET_FIELD(e, epoll_ctl, fd);
-  SET_FIELD(e, epoll_ctl, ep);
   return e;
 }
 
@@ -1139,10 +945,6 @@ log_entry_t create_epoll_wait_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, epoll_wait, epfd);
-  SET_FIELD(e, epoll_wait, events);
-  SET_FIELD(e, epoll_wait, maxevents);
-  SET_FIELD(e, epoll_wait, timeout);
   return e;
 }
 
@@ -1151,11 +953,6 @@ log_entry_t create_getpwnam_r_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, getpwnam_r, name);
-  SET_FIELD(e, getpwnam_r, pwd);
-  SET_FIELD(e, getpwnam_r, buf);
-  SET_FIELD(e, getpwnam_r, buflen);
-  SET_FIELD(e, getpwnam_r, result);
   return e;
 }
 
@@ -1164,11 +961,6 @@ log_entry_t create_getpwuid_r_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, getpwuid_r, uid);
-  SET_FIELD(e, getpwuid_r, pwd);
-  SET_FIELD(e, getpwuid_r, buf);
-  SET_FIELD(e, getpwuid_r, buflen);
-  SET_FIELD(e, getpwuid_r, result);
   return e;
 }
 
@@ -1177,11 +969,6 @@ log_entry_t create_getgrnam_r_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, getgrnam_r, name);
-  SET_FIELD(e, getgrnam_r, grp);
-  SET_FIELD(e, getgrnam_r, buf);
-  SET_FIELD(e, getgrnam_r, buflen);
-  SET_FIELD(e, getgrnam_r, result);
   return e;
 }
 
@@ -1190,11 +977,6 @@ log_entry_t create_getgrgid_r_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, getgrgid_r, gid);
-  SET_FIELD(e, getgrgid_r, grp);
-  SET_FIELD(e, getgrgid_r, buf);
-  SET_FIELD(e, getgrgid_r, buflen);
-  SET_FIELD(e, getgrgid_r, result);
   return e;
 }
 
@@ -1203,10 +985,6 @@ log_entry_t create_getaddrinfo_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, getaddrinfo, node);
-  SET_FIELD(e, getaddrinfo, service);
-  SET_FIELD(e, getaddrinfo, hints);
-  SET_FIELD(e, getaddrinfo, res);
   return e;
 }
 
@@ -1215,7 +993,6 @@ log_entry_t create_freeaddrinfo_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, freeaddrinfo, res);
   return e;
 }
 
@@ -1224,13 +1001,6 @@ log_entry_t create_getnameinfo_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, getnameinfo, sa);
-  SET_FIELD(e, getnameinfo, salen);
-  SET_FIELD(e, getnameinfo, host);
-  SET_FIELD(e, getnameinfo, hostlen);
-  SET_FIELD(e, getnameinfo, serv);
-  SET_FIELD(e, getnameinfo, servlen);
-  SET_FIELD(e, getnameinfo, flags);
   return e;
 }
 
@@ -1239,12 +1009,6 @@ log_entry_t create_sendto_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, sendto, sockfd);
-  SET_FIELD(e, sendto, buf);
-  SET_FIELD(e, sendto, len);
-  SET_FIELD(e, sendto, flags);
-  SET_FIELD(e, sendto, dest_addr);
-  SET_FIELD(e, sendto, addrlen);
   return e;
 }
 
@@ -1253,9 +1017,6 @@ log_entry_t create_sendmsg_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, sendmsg, sockfd);
-  SET_FIELD(e, sendmsg, msg);
-  SET_FIELD(e, sendmsg, flags);
   return e;
 }
 
@@ -1264,12 +1025,6 @@ log_entry_t create_recvfrom_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, recvfrom, sockfd);
-  SET_FIELD(e, recvfrom, buf);
-  SET_FIELD(e, recvfrom, len);
-  SET_FIELD(e, recvfrom, flags);
-  SET_FIELD(e, recvfrom, src_addr);
-  SET_FIELD(e, recvfrom, addrlen);
   return e;
 }
 
@@ -1278,9 +1033,6 @@ log_entry_t create_recvmsg_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, recvmsg, sockfd);
-  SET_FIELD(e, recvmsg, msg);
-  SET_FIELD(e, recvmsg, flags);
   return e;
 }
 
@@ -1289,10 +1041,6 @@ log_entry_t create_waitid_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, waitid, idtype);
-  SET_FIELD(e, waitid, id);
-  SET_FIELD(e, waitid, infop);
-  SET_FIELD(e, waitid, options);
   return e;
 }
 
@@ -1301,10 +1049,6 @@ log_entry_t create_wait4_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, wait4, pid);
-  SET_FIELD(e, wait4, status);
-  SET_FIELD(e, wait4, options);
-  SET_FIELD(e, wait4, rusage);
   return e;
 }
 
@@ -1313,9 +1057,6 @@ log_entry_t create_sigaction_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, sigaction, signum);
-  SET_FIELD(e, sigaction, act);
-  SET_FIELD(e, sigaction, oldact);
   return e;
 }
 
@@ -1324,8 +1065,6 @@ log_entry_t create_signal_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, signal, signum);
-  SET_FIELD(e, signal, handler);
   return e;
 }
 
@@ -1334,8 +1073,6 @@ log_entry_t create_sigset_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, sigset, sig);
-  SET_FIELD(e, sigset, disp);
   return e;
 }
 
@@ -1344,8 +1081,6 @@ log_entry_t create_fopen_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, fopen, path);
-  SET_FIELD(e, fopen, mode);
   return e;
 }
 
@@ -1354,8 +1089,6 @@ log_entry_t create_fopen64_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, fopen64, path);
-  SET_FIELD(e, fopen64, mode);
   return e;
 }
 
@@ -1364,9 +1097,6 @@ log_entry_t create_freopen_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, freopen, path);
-  SET_FIELD(e, freopen, mode);
-  SET_FIELD(e, freopen, stream);
   return e;
 }
 
@@ -1375,7 +1105,6 @@ log_entry_t create_fclose_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, fclose, fp);
   return e;
 }
 
@@ -1384,8 +1113,6 @@ log_entry_t create_fdopen_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, fdopen, fd);
-  SET_FIELD(e, fdopen, mode);
   return e;
 }
 
@@ -1394,9 +1121,6 @@ log_entry_t create_fgets_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, fgets, s);
-  SET_FIELD(e, fgets, size);
-  SET_FIELD(e, fgets, stream);
   return e;
 }
 
@@ -1405,7 +1129,6 @@ log_entry_t create_ferror_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, ferror, stream);
   return e;
 }
 
@@ -1414,7 +1137,6 @@ log_entry_t create_feof_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, feof, stream);
   return e;
 }
 
@@ -1423,7 +1145,6 @@ log_entry_t create_fileno_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, fileno, stream);
   return e;
 }
 
@@ -1432,7 +1153,6 @@ log_entry_t create_fflush_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, fflush, stream);
   return e;
 }
 
@@ -1441,10 +1161,6 @@ log_entry_t create_setvbuf_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, setvbuf, stream);
-  SET_FIELD(e, setvbuf, buf);
-  SET_FIELD(e, setvbuf, mode);
-  SET_FIELD(e, setvbuf, size);
   return e;
 }
 
@@ -1453,9 +1169,6 @@ log_entry_t create_fseek_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, fseek, stream);
-  SET_FIELD(e, fseek, offset);
-  SET_FIELD(e, fseek, whence);
   return e;
 }
 
@@ -1464,8 +1177,6 @@ log_entry_t create_fputs_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, fputs, s);
-  SET_FIELD(e, fputs, stream);
   return e;
 }
 
@@ -1474,7 +1185,6 @@ log_entry_t create_puts_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, puts, s);
   return e;
 }
 
@@ -1483,8 +1193,6 @@ log_entry_t create_fputc_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, fputc, c);
-  SET_FIELD(e, fputc, stream);
   return e;
 }
 
@@ -1493,7 +1201,6 @@ log_entry_t create_fsync_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, fsync, fd);
   return e;
 }
 
@@ -1502,7 +1209,6 @@ log_entry_t create_ftell_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, ftell, stream);
   return e;
 }
 
@@ -1511,8 +1217,6 @@ log_entry_t create_fgetpos_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, fgetpos, stream);
-  SET_FIELD(e, fgetpos, pos);
   return e;
 }
 
@@ -1521,8 +1225,6 @@ log_entry_t create_fgetpos64_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, fgetpos64, stream);
-  SET_FIELD(e, fgetpos64, pos);
   return e;
 }
 
@@ -1531,8 +1233,6 @@ log_entry_t create_fsetpos_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, fsetpos, stream);
-  SET_FIELD(e, fsetpos, pos);
   return e;
 }
 
@@ -1541,8 +1241,6 @@ log_entry_t create_fsetpos64_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, fsetpos64, stream);
-  SET_FIELD(e, fsetpos64, pos);
   return e;
 }
 
@@ -1551,10 +1249,6 @@ log_entry_t create_fwrite_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, fwrite, ptr);
-  SET_FIELD(e, fwrite, size);
-  SET_FIELD(e, fwrite, nmemb);
-  SET_FIELD(e, fwrite, stream);
   return e;
 }
 
@@ -1563,10 +1257,6 @@ log_entry_t create_fread_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, fread, ptr);
-  SET_FIELD(e, fread, size);
-  SET_FIELD(e, fread, nmemb);
-  SET_FIELD(e, fread, stream);
   return e;
 }
 
@@ -1575,7 +1265,6 @@ log_entry_t create_getc_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, getc, stream);
   return e;
 }
 
@@ -1584,7 +1273,6 @@ log_entry_t create_fgetc_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, fgetc, stream);
   return e;
 }
 
@@ -1593,8 +1281,6 @@ log_entry_t create_ungetc_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, ungetc, c);
-  SET_FIELD(e, ungetc, stream);
   return e;
 }
 
@@ -1603,9 +1289,6 @@ log_entry_t create_getline_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, getline, lineptr);
-  SET_FIELD(e, getline, n);
-  SET_FIELD(e, getline, stream);
   return e;
 }
 
@@ -1614,10 +1297,6 @@ log_entry_t create_getdelim_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, getdelim, lineptr);
-  SET_FIELD(e, getdelim, n);
-  SET_FIELD(e, getdelim, delim);
-  SET_FIELD(e, getdelim, stream);
   return e;
 }
 
@@ -1626,8 +1305,6 @@ log_entry_t create_putc_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, putc, c);
-  SET_FIELD(e, putc, stream);
   return e;
 }
 
@@ -1636,7 +1313,6 @@ log_entry_t create_rewind_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, rewind, stream);
   return e;
 }
 
@@ -1652,7 +1328,6 @@ log_entry_t create_flockfile_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, flockfile, filehandle);
   return e;
 }
 
@@ -1661,7 +1336,6 @@ log_entry_t create_ftrylockfile_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, ftrylockfile, filehandle);
   return e;
 }
 
@@ -1670,7 +1344,6 @@ log_entry_t create_funlockfile_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, funlockfile, filehandle);
   return e;
 }
 
@@ -1679,7 +1352,6 @@ log_entry_t create_closedir_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, closedir, dirp);
   return e;
 }
 
@@ -1688,7 +1360,6 @@ log_entry_t create_opendir_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, opendir, name);
   return e;
 }
 
@@ -1697,7 +1368,6 @@ log_entry_t create_fdopendir_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, fdopendir, fd);
   return e;
 }
 
@@ -1706,7 +1376,6 @@ log_entry_t create_readdir_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, readdir, dirp);
   return e;
 }
 
@@ -1715,9 +1384,6 @@ log_entry_t create_readdir_r_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, readdir_r, dirp);
-  SET_FIELD(e, readdir_r, entry);
-  SET_FIELD(e, readdir_r, result);
   return e;
 }
 
@@ -1726,7 +1392,6 @@ log_entry_t create_pthread_cond_broadcast_entry(clone_id_t clone_id, event_code_
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, pthread_cond_broadcast, cond);
   return e;
 }
 
@@ -1735,7 +1400,6 @@ log_entry_t create_pthread_cond_signal_entry(clone_id_t clone_id, event_code_t e
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, pthread_cond_signal, cond);
   return e;
 }
 
@@ -1744,8 +1408,6 @@ log_entry_t create_pthread_cond_wait_entry(clone_id_t clone_id, event_code_t eve
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, pthread_cond_wait, cond);
-  SET_FIELD(e, pthread_cond_wait, mutex);
   return e;
 }
 
@@ -1754,9 +1416,6 @@ log_entry_t create_pthread_cond_timedwait_entry(clone_id_t clone_id, event_code_
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, pthread_cond_timedwait, cond);
-  SET_FIELD(e, pthread_cond_timedwait, mutex);
-  SET_FIELD(e, pthread_cond_timedwait, abstime);
   return e;
 }
 
@@ -1765,7 +1424,6 @@ log_entry_t create_pthread_cond_destroy_entry(clone_id_t clone_id, event_code_t 
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, pthread_cond_destroy, cond);
   return e;
 }
 
@@ -1774,9 +1432,6 @@ log_entry_t create_fxstat_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, fxstat, vers);
-  SET_FIELD(e, fxstat, fd);
-  SET_FIELD(e, fxstat, buf);
   return e;
 }
 
@@ -1785,9 +1440,6 @@ log_entry_t create_fxstat64_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, fxstat64, vers);
-  SET_FIELD(e, fxstat64, fd);
-  SET_FIELD(e, fxstat64, buf);
   return e;
 }
 
@@ -1796,9 +1448,6 @@ log_entry_t create_lxstat_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, lxstat, vers);
-  SET_FIELD(e, lxstat, path);
-  SET_FIELD(e, lxstat, buf);
   return e;
 }
 
@@ -1807,9 +1456,6 @@ log_entry_t create_lxstat64_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, lxstat64, vers);
-  SET_FIELD(e, lxstat64, path);
-  SET_FIELD(e, lxstat64, buf);
   return e;
 }
 
@@ -1818,9 +1464,6 @@ log_entry_t create_xstat_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, xstat, vers);
-  SET_FIELD(e, xstat, path);
-  SET_FIELD(e, xstat, buf);
   return e;
 }
 
@@ -1829,9 +1472,6 @@ log_entry_t create_xstat64_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, xstat64, vers);
-  SET_FIELD(e, xstat64, path);
-  SET_FIELD(e, xstat64, buf);
   return e;
 }
 
@@ -1840,8 +1480,6 @@ log_entry_t create_libc_memalign_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, libc_memalign, boundary);
-  SET_FIELD(e, libc_memalign, size);
   return e;
 }
 
@@ -1850,8 +1488,6 @@ log_entry_t create_vfprintf_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, vfprintf, stream);
-  SET_FIELD(e, vfprintf, format);
   return e;
 }
 
@@ -1860,8 +1496,6 @@ log_entry_t create_vfscanf_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, vfscanf, stream);
-  SET_FIELD(e, vfscanf, format);
   return e;
 }
 
@@ -1877,9 +1511,6 @@ log_entry_t create_signal_handler_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, signal_handler, sig);
-  SET_FIELD(e, signal_handler, info);
-  SET_FIELD(e, signal_handler, data);
   return e;
 }
 
@@ -1895,14 +1526,6 @@ log_entry_t create_syscall_entry(clone_id_t clone_id, event_code_t event,
 {
   log_entry_t e = EMPTY_LOG_ENTRY;
   setupCommonFields(&e, clone_id, event);
-  SET_FIELD(e, syscall, num);
-  SET_FIELD(e, syscall, a1);
-  SET_FIELD(e, syscall, a2);
-  SET_FIELD(e, syscall, a3);
-  SET_FIELD(e, syscall, a4);
-  SET_FIELD(e, syscall, a5);
-  SET_FIELD(e, syscall, a6);
-  SET_FIELD(e, syscall, a7);
   return e;
 }
 static int base_turn_check(log_entry_t *e1, log_entry_t *e2) {
@@ -1918,34 +1541,22 @@ int empty_turn_check(log_entry_t *e1, log_entry_t *e2)
 
 int accept_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, accept, sockfd)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, accept, addr)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, accept, addrlen);
+  return base_turn_check(e1,e2);
 }
 
 int accept4_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, accept4, sockfd)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, accept4, addr)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, accept4, addrlen)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, accept4, flags);
+  return base_turn_check(e1,e2);
 }
 
 int access_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, access, pathname)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, access, mode);
+  return base_turn_check(e1,e2);
 }
 
 int bind_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, bind, sockfd)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, bind, my_addr)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, bind, addrlen);
+  return base_turn_check(e1,e2);
 }
 
 int calloc_turn_check(log_entry_t *e1, log_entry_t *e2)
@@ -1957,203 +1568,142 @@ int calloc_turn_check(log_entry_t *e1, log_entry_t *e2)
 
 int chmod_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, chmod, path)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, chmod, mode);
+  return base_turn_check(e1,e2);
 }
 
 int chown_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, chown, path)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, chown, owner)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, chown, group);
+  return base_turn_check(e1,e2);
 }
 
 int close_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, close, fd);
+  return base_turn_check(e1,e2);
 }
 
 int connect_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, connect, sockfd)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, connect, serv_addr)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, connect, addrlen);
+  return base_turn_check(e1,e2);
 }
 
 int dup_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, dup, oldfd);
+  return base_turn_check(e1,e2);
 }
 
 int dup2_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, dup2, oldfd)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, dup2, newfd);
+  return base_turn_check(e1,e2);
 }
 
 int dup3_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, dup3, oldfd)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, dup3, newfd)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, dup3, flags);
+  return base_turn_check(e1,e2);
 }
 
 int fcntl_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, fcntl, fd)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, fcntl, cmd)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, fcntl, arg);
+  return base_turn_check(e1,e2);
 }
 
 int fchdir_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, fchdir, fd);
+  return base_turn_check(e1,e2);
 }
 
 int fdatasync_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, fdatasync, fd);
+  return base_turn_check(e1,e2);
 }
 
 int getcwd_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, getcwd, buf)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, getcwd, size);
+  return base_turn_check(e1,e2);
 }
 
 int gettimeofday_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, gettimeofday, tv)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, gettimeofday, tz);
+  return base_turn_check(e1,e2);
 }
 
 int getpeername_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, getpeername, sockfd)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, getpeername, addr)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, getpeername, addrlen);
+  return base_turn_check(e1,e2);
 }
 
 int getsockname_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, getsockname, sockfd)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, getsockname, addr)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, getsockname, addrlen);
+  return base_turn_check(e1,e2);
 }
 
 int link_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, link, oldpath)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, link, newpath);
+  return base_turn_check(e1,e2);
 }
 
 int symlink_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, symlink, oldpath)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, symlink, newpath);
+  return base_turn_check(e1,e2);
 }
 
 int listen_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, listen, sockfd)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, listen, backlog);
+  return base_turn_check(e1,e2);
 }
 
 int localtime_r_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, localtime_r, timep)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, localtime_r, result);
+  return base_turn_check(e1,e2);
 }
 
 int utime_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, utime, filename)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, utime, times);
+  return base_turn_check(e1,e2);
 }
 
 int utimes_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, utimes, filename)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, utimes, times);
+  return base_turn_check(e1,e2);
 }
 
 int lutimes_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, lutimes, filename)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, lutimes, tv);
+  return base_turn_check(e1,e2);
 }
 
 int futimes_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, futimes, fd)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, futimes, tv);
+  return base_turn_check(e1,e2);
 }
 
 int clock_getres_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, clock_getres, clk_id)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, clock_getres, res);
+  return base_turn_check(e1,e2);
 }
 
 int clock_gettime_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, clock_gettime, clk_id)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, clock_gettime, tp);
+  return base_turn_check(e1,e2);
 }
 
 int clock_settime_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, clock_settime, clk_id)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, clock_settime, tp);
+  return base_turn_check(e1,e2);
 }
 
 int lseek_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, lseek, fd)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, lseek, offset)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, lseek, whence);
+  return base_turn_check(e1,e2);
 }
 
 int lseek64_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, lseek64, fd)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, lseek64, offset)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, lseek64, whence);
+  return base_turn_check(e1,e2);
 }
 
 int llseek_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, llseek, fd)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, llseek, offset)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, llseek, whence);
+  return base_turn_check(e1,e2);
 }
 
 int malloc_turn_check(log_entry_t *e1, log_entry_t *e2)
@@ -2170,15 +1720,12 @@ int free_turn_check(log_entry_t *e1, log_entry_t *e2)
 
 int mkdir_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, mkdir, pathname)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, mkdir, mode);
+  return base_turn_check(e1,e2);
 }
 
 int mkstemp_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, mkstemp, temp);
+  return base_turn_check(e1,e2);
 }
 
 int mmap_turn_check(log_entry_t *e1, log_entry_t *e2)
@@ -2212,143 +1759,97 @@ int munmap_turn_check(log_entry_t *e1, log_entry_t *e2)
 
 int mremap_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, mremap, old_address)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, mremap, old_size)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, mremap, new_size)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, mremap, flags)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, mremap, new_address);
+  return base_turn_check(e1,e2);
 }
 
 int open_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, open, pathname)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, open, flags)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, open, mode);
+  return base_turn_check(e1,e2);
 }
 
 int open64_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, open64, pathname)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, open64, flags)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, open64, mode);
+  return base_turn_check(e1,e2);
 }
 
 int openat_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, openat, dirfd)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, openat, pathname)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, openat, flags);
+  return base_turn_check(e1,e2);
 }
 
 int pread_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, pread, fd)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, pread, buf)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, pread, count)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, pread, offset);
+  return base_turn_check(e1,e2);
 }
 
 int preadv_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, preadv, fd)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, preadv, iov)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, preadv, iovcnt)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, preadv, offset);
+  return base_turn_check(e1,e2);
 }
 
 int pwrite_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, pwrite, fd)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, pwrite, buf)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, pwrite, count)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, pwrite, offset);
+  return base_turn_check(e1,e2);
 }
 
 int pwritev_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, pwritev, fd)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, pwritev, iov)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, pwritev, iovcnt)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, pwritev, offset);
+  return base_turn_check(e1,e2);
 }
 
 int pthread_rwlock_unlock_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, pthread_rwlock_unlock, rwlock);
+  return base_turn_check(e1,e2);
 }
 
 int pthread_rwlock_rdlock_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, pthread_rwlock_rdlock, rwlock);
+  return base_turn_check(e1,e2);
 }
 
 int pthread_rwlock_wrlock_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, pthread_rwlock_wrlock, rwlock);
+  return base_turn_check(e1,e2);
 }
 
 int pthread_create_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, pthread_create, thread)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, pthread_create, attr)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, pthread_create, start_routine)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, pthread_create, arg);
+  return base_turn_check(e1,e2);
 }
 
 int pthread_detach_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, pthread_detach, thread);
+  return base_turn_check(e1,e2);
 }
 
 int pthread_exit_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, pthread_exit, value_ptr);
+  return base_turn_check(e1,e2);
 }
 
 int pthread_join_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, pthread_join, thread)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, pthread_join, value_ptr);
+  return base_turn_check(e1,e2);
 }
 
 int pthread_kill_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, pthread_kill, thread)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, pthread_kill, sig);
+  return base_turn_check(e1,e2);
 }
 
 int pthread_mutex_lock_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, pthread_mutex_lock, mutex);
+  return base_turn_check(e1,e2);
 }
 
 int pthread_mutex_trylock_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, pthread_mutex_trylock, mutex);
+  return base_turn_check(e1,e2);
 }
 
 int pthread_mutex_unlock_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, pthread_mutex_unlock, mutex);
+  return base_turn_check(e1,e2);
 }
 
 int rand_turn_check(log_entry_t *e1, log_entry_t *e2)
@@ -2363,579 +1864,377 @@ int fork_turn_check(log_entry_t *e1, log_entry_t *e2)
 
 int read_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, read, fd)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, read, buf)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, read, count);
+  return base_turn_check(e1,e2);
 }
 
 int readv_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, readv, fd)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, readv, iov)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, readv, iovcnt);
+  return base_turn_check(e1,e2);
 }
 
 int readlink_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, readlink, path)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, readlink, buf)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, readlink, bufsiz);
+  return base_turn_check(e1,e2);
 }
 
 int realpath_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, realpath, path)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, realpath, resolved_path);
+  return base_turn_check(e1,e2);
 }
 
 int realloc_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, realloc, ptr)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, realloc, size);
+  return base_turn_check(e1,e2);
 }
 
 int rename_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, rename, oldpath)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, rename, newpath);
+  return base_turn_check(e1,e2);
 }
 
 int rmdir_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, rmdir, pathname);
+  return base_turn_check(e1,e2);
 }
 
 int select_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, select, nfds)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, select, readfds)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, select, writefds)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, select, exceptfds)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, select, timeout);
+  return base_turn_check(e1,e2);
 }
 
 int ppoll_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, ppoll, fds)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, ppoll, nfds)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, ppoll, timeout_ts)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, ppoll, sigmask);
+  return base_turn_check(e1,e2);
 }
 
 int setsockopt_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, setsockopt, s)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, setsockopt, level)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, setsockopt, optname)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, setsockopt, optval)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, setsockopt, optlen);
+  return base_turn_check(e1,e2);
 }
 
 int getsockopt_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, getsockopt, s)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, getsockopt, level)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, getsockopt, optname)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, getsockopt, optval)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, getsockopt, optlen);
+  return base_turn_check(e1,e2);
 }
 
 int ioctl_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, ioctl, d)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, ioctl, request)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, ioctl, arg);
+  return base_turn_check(e1,e2);
 }
 
 int shutdown_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, shutdown, sockfd)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, shutdown, how);
+  return base_turn_check(e1,e2);
 }
 
 int sigwait_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, sigwait, set)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, sigwait, sig);
+  return base_turn_check(e1,e2);
 }
 
 int srand_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, srand, seed);
+  return base_turn_check(e1,e2);
 }
 
 int socket_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, socket, domain)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, socket, type)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, socket, protocol);
+  return base_turn_check(e1,e2);
 }
 
 int socketpair_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, socketpair, d)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, socketpair, type)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, socketpair, protocol)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, socketpair, sv);
+  return base_turn_check(e1,e2);
 }
 
 int time_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, time, tloc);
+  return base_turn_check(e1,e2);
 }
 
 int truncate_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, truncate, path)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, truncate, length);
+  return base_turn_check(e1,e2);
 }
 
 int ftruncate_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, ftruncate, fd)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, ftruncate, length);
+  return base_turn_check(e1,e2);
 }
 
 int truncate64_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, truncate64, path)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, truncate64, length);
+  return base_turn_check(e1,e2);
 }
 
 int ftruncate64_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, ftruncate64, fd)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, ftruncate64, length);
+  return base_turn_check(e1,e2);
 }
 
 int unlink_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, unlink, pathname);
+  return base_turn_check(e1,e2);
 }
 
 int write_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, write, fd)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, write, buf)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, write, count);
+  return base_turn_check(e1,e2);
 }
 
 int writev_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, writev, fd)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, writev, iov)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, writev, iovcnt);
+  return base_turn_check(e1,e2);
 }
 
 int epoll_create_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, epoll_create, size);
+  return base_turn_check(e1,e2);
 }
 
 int epoll_create1_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, epoll_create1, flags);
+  return base_turn_check(e1,e2);
 }
 
 int epoll_ctl_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, epoll_ctl, epfd)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, epoll_ctl, op)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, epoll_ctl, fd)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, epoll_ctl, ep);
+  return base_turn_check(e1,e2);
 }
 
 int epoll_wait_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, epoll_wait, epfd)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, epoll_wait, events)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, epoll_wait, maxevents)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, epoll_wait, timeout);
+  return base_turn_check(e1,e2);
 }
 
 int getpwnam_r_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, getpwnam_r, name)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, getpwnam_r, pwd)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, getpwnam_r, buf)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, getpwnam_r, buflen)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, getpwnam_r, result);
+  return base_turn_check(e1,e2);
 }
 
 int getpwuid_r_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, getpwuid_r, uid)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, getpwuid_r, pwd)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, getpwuid_r, buf)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, getpwuid_r, buflen)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, getpwuid_r, result);
+  return base_turn_check(e1,e2);
 }
 
 int getgrnam_r_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, getgrnam_r, name)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, getgrnam_r, grp)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, getgrnam_r, buf)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, getgrnam_r, buflen)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, getgrnam_r, result);
+  return base_turn_check(e1,e2);
 }
 
 int getgrgid_r_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, getgrgid_r, gid)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, getgrgid_r, grp)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, getgrgid_r, buf)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, getgrgid_r, buflen)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, getgrgid_r, result);
+  return base_turn_check(e1,e2);
 }
 
 int getaddrinfo_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, getaddrinfo, node)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, getaddrinfo, service)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, getaddrinfo, hints)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, getaddrinfo, res);
+  return base_turn_check(e1,e2);
 }
 
 int freeaddrinfo_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, freeaddrinfo, res);
+  return base_turn_check(e1,e2);
 }
 
 int getnameinfo_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, getnameinfo, sa)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, getnameinfo, salen)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, getnameinfo, host)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, getnameinfo, hostlen)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, getnameinfo, serv)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, getnameinfo, servlen)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, getnameinfo, flags);
+  return base_turn_check(e1,e2);
 }
 
 int sendto_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, sendto, sockfd)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, sendto, buf)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, sendto, len)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, sendto, flags)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, sendto, dest_addr)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, sendto, addrlen);
+  return base_turn_check(e1,e2);
 }
 
 int sendmsg_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, sendmsg, sockfd)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, sendmsg, msg)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, sendmsg, flags);
+  return base_turn_check(e1,e2);
 }
 
 int recvfrom_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, recvfrom, sockfd)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, recvfrom, buf)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, recvfrom, len)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, recvfrom, flags)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, recvfrom, src_addr)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, recvfrom, addrlen);
+  return base_turn_check(e1,e2);
 }
 
 int recvmsg_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, recvmsg, sockfd)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, recvmsg, msg)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, recvmsg, flags);
+  return base_turn_check(e1,e2);
 }
 
 int waitid_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, waitid, idtype)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, waitid, id)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, waitid, infop)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, waitid, options);
+  return base_turn_check(e1,e2);
 }
 
 int wait4_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, wait4, pid)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, wait4, status)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, wait4, options)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, wait4, rusage);
+  return base_turn_check(e1,e2);
 }
 
 int sigaction_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, sigaction, signum)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, sigaction, act)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, sigaction, oldact);
+  return base_turn_check(e1,e2);
 }
 
 int signal_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, signal, signum)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, signal, handler);
+  return base_turn_check(e1,e2);
 }
 
 int sigset_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, sigset, sig)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, sigset, disp);
+  return base_turn_check(e1,e2);
 }
 
 int fopen_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, fopen, path)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, fopen, mode);
+  return base_turn_check(e1,e2);
 }
 
 int fopen64_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, fopen64, path)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, fopen64, mode);
+  return base_turn_check(e1,e2);
 }
 
 int freopen_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, freopen, path)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, freopen, mode)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, freopen, stream);
+  return base_turn_check(e1,e2);
 }
 
 int fclose_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, fclose, fp);
+  return base_turn_check(e1,e2);
 }
 
 int fdopen_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, fdopen, fd)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, fdopen, mode);
+  return base_turn_check(e1,e2);
 }
 
 int fgets_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, fgets, s)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, fgets, size)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, fgets, stream);
+  return base_turn_check(e1,e2);
 }
 
 int ferror_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, ferror, stream);
+  return base_turn_check(e1,e2);
 }
 
 int feof_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, feof, stream);
+  return base_turn_check(e1,e2);
 }
 
 int fileno_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, fileno, stream);
+  return base_turn_check(e1,e2);
 }
 
 int fflush_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, fflush, stream);
+  return base_turn_check(e1,e2);
 }
 
 int setvbuf_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, setvbuf, stream)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, setvbuf, buf)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, setvbuf, mode)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, setvbuf, size);
+  return base_turn_check(e1,e2);
 }
 
 int fseek_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, fseek, stream)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, fseek, offset)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, fseek, whence);
+  return base_turn_check(e1,e2);
 }
 
 int fputs_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, fputs, s)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, fputs, stream);
+  return base_turn_check(e1,e2);
 }
 
 int puts_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, puts, s);
+  return base_turn_check(e1,e2);
 }
 
 int fputc_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, fputc, c)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, fputc, stream);
+  return base_turn_check(e1,e2);
 }
 
 int fsync_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, fsync, fd);
+  return base_turn_check(e1,e2);
 }
 
 int ftell_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, ftell, stream);
+  return base_turn_check(e1,e2);
 }
 
 int fgetpos_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, fgetpos, stream)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, fgetpos, pos);
+  return base_turn_check(e1,e2);
 }
 
 int fgetpos64_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, fgetpos64, stream)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, fgetpos64, pos);
+  return base_turn_check(e1,e2);
 }
 
 int fsetpos_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, fsetpos, stream)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, fsetpos, pos);
+  return base_turn_check(e1,e2);
 }
 
 int fsetpos64_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, fsetpos64, stream)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, fsetpos64, pos);
+  return base_turn_check(e1,e2);
 }
 
 int fwrite_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, fwrite, ptr)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, fwrite, size)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, fwrite, nmemb)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, fwrite, stream);
+  return base_turn_check(e1,e2);
 }
 
 int fread_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, fread, ptr)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, fread, size)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, fread, nmemb)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, fread, stream);
+  return base_turn_check(e1,e2);
 }
 
 int getc_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, getc, stream);
+  return base_turn_check(e1,e2);
 }
 
 int fgetc_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, fgetc, stream);
+  return base_turn_check(e1,e2);
 }
 
 int ungetc_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, ungetc, c)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, ungetc, stream);
+  return base_turn_check(e1,e2);
 }
 
 int getline_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, getline, lineptr)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, getline, n)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, getline, stream);
+  return base_turn_check(e1,e2);
 }
 
 int getdelim_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, getdelim, lineptr)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, getdelim, n)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, getdelim, delim)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, getdelim, stream);
+  return base_turn_check(e1,e2);
 }
 
 int putc_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, putc, c)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, putc, stream);
+  return base_turn_check(e1,e2);
 }
 
 int rewind_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, rewind, stream);
+  return base_turn_check(e1,e2);
 }
 
 int tmpfile_turn_check(log_entry_t *e1, log_entry_t *e2)
@@ -2945,154 +2244,112 @@ int tmpfile_turn_check(log_entry_t *e1, log_entry_t *e2)
 
 int flockfile_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, flockfile, filehandle);
+  return base_turn_check(e1,e2);
 }
 
 int ftrylockfile_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, ftrylockfile, filehandle);
+  return base_turn_check(e1,e2);
 }
 
 int funlockfile_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, funlockfile, filehandle);
+  return base_turn_check(e1,e2);
 }
 
 int closedir_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, closedir, dirp);
+  return base_turn_check(e1,e2);
 }
 
 int opendir_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, opendir, name);
+  return base_turn_check(e1,e2);
 }
 
 int fdopendir_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, fdopendir, fd);
+  return base_turn_check(e1,e2);
 }
 
 int readdir_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, readdir, dirp);
+  return base_turn_check(e1,e2);
 }
 
 int readdir_r_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, readdir_r, dirp)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, readdir_r, entry)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, readdir_r, result);
+  return base_turn_check(e1,e2);
 }
 
 int pthread_cond_broadcast_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, pthread_cond_broadcast, cond);
+  return base_turn_check(e1,e2);
 }
 
 int pthread_cond_signal_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, pthread_cond_signal, cond);
+  return base_turn_check(e1,e2);
 }
 
 int pthread_cond_wait_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, pthread_cond_wait, cond)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, pthread_cond_wait, mutex);
+  return base_turn_check(e1,e2);
 }
 
 int pthread_cond_timedwait_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, pthread_cond_timedwait, cond)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, pthread_cond_timedwait, mutex)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, pthread_cond_timedwait, abstime);
+  return base_turn_check(e1,e2);
 }
 
 int pthread_cond_destroy_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, pthread_cond_destroy, cond);
+  return base_turn_check(e1,e2);
 }
 
 int fxstat_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, fxstat, vers)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, fxstat, fd)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, fxstat, buf);
+  return base_turn_check(e1,e2);
 }
 
 int fxstat64_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, fxstat64, vers)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, fxstat64, fd)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, fxstat64, buf);
+  return base_turn_check(e1,e2);
 }
 
 int lxstat_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, lxstat, vers)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, lxstat, path)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, lxstat, buf);
+  return base_turn_check(e1,e2);
 }
 
 int lxstat64_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, lxstat64, vers)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, lxstat64, path)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, lxstat64, buf);
+  return base_turn_check(e1,e2);
 }
 
 int xstat_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, xstat, vers)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, xstat, path)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, xstat, buf);
+  return base_turn_check(e1,e2);
 }
 
 int xstat64_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, xstat64, vers)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, xstat64, path)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, xstat64, buf);
+  return base_turn_check(e1,e2);
 }
 
 int libc_memalign_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, libc_memalign, boundary)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, libc_memalign, size);
+  return base_turn_check(e1,e2);
 }
 
 int vfprintf_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, vfprintf, stream)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, vfprintf, format);
+  return base_turn_check(e1,e2);
 }
 
 int vfscanf_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, vfscanf, stream)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, vfscanf, format);
+  return base_turn_check(e1,e2);
 }
 
 int exec_barrier_turn_check(log_entry_t *e1, log_entry_t *e2)
@@ -3102,10 +2359,7 @@ int exec_barrier_turn_check(log_entry_t *e1, log_entry_t *e2)
 
 int signal_handler_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, signal_handler, sig)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, signal_handler, info)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, signal_handler, data);
+  return base_turn_check(e1,e2);
 }
 
 int user_turn_check(log_entry_t *e1, log_entry_t *e2)
@@ -3115,13 +2369,5 @@ int user_turn_check(log_entry_t *e1, log_entry_t *e2)
 
 int syscall_turn_check(log_entry_t *e1, log_entry_t *e2)
 {
-  return base_turn_check(e1,e2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, syscall, num)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, syscall, a1)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, syscall, a2)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, syscall, a3)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, syscall, a4)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, syscall, a5)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, syscall, a6)
-    && ARE_FIELDS_EQUAL_PTR (e1, e2, syscall, a7);
+  return base_turn_check(e1,e2);
 }

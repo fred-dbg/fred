@@ -364,7 +364,7 @@ size_t dmtcp::SynchronizationLog::appendEntry(log_entry_t& entry)
   log_off_t offset;
 
   eventSize = getLogEventSize(&entry);
-  JASSERT( eventSize > 0 );
+  JASSERT( eventSize >= 0 );
   eventSize += log_event_common_size;
   offset = atomicIncrementOffset(eventSize);
   __sync_fetch_and_add(_numEntries, 1);

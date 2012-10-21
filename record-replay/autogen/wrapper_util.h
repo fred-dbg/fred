@@ -37,31 +37,19 @@ typedef struct {
 } log_event_empty_t;
 
 typedef struct {
-  int sockfd;
-  struct sockaddr* addr;
   struct sockaddr_storage ret_addr;
-  socklen_t* addrlen;
   socklen_t ret_addrlen;
 } log_event_accept_t;
 
 typedef struct {
-  int sockfd;
-  struct sockaddr* addr;
   struct sockaddr_storage ret_addr;
-  socklen_t* addrlen;
   socklen_t ret_addrlen;
-  int flags;
 } log_event_accept4_t;
 
 typedef struct {
-  const char* pathname;
-  int mode;
 } log_event_access_t;
 
 typedef struct {
-  int sockfd;
-  const struct sockaddr* my_addr;
-  socklen_t addrlen;
 } log_event_bind_t;
 
 typedef struct {
@@ -70,159 +58,98 @@ typedef struct {
 } log_event_calloc_t;
 
 typedef struct {
-  const char* path;
-  mode_t mode;
 } log_event_chmod_t;
 
 typedef struct {
-  const char* path;
-  uid_t owner;
-  gid_t group;
 } log_event_chown_t;
 
 typedef struct {
-  int fd;
 } log_event_close_t;
 
 typedef struct {
-  int sockfd;
-  const struct sockaddr* serv_addr;
-  socklen_t addrlen;
 } log_event_connect_t;
 
 typedef struct {
-  int oldfd;
 } log_event_dup_t;
 
 typedef struct {
-  int oldfd;
-  int newfd;
 } log_event_dup2_t;
 
 typedef struct {
-  int oldfd;
-  int newfd;
-  int flags;
 } log_event_dup3_t;
 
 typedef struct {
-  int fd;
-  int cmd;
-  void* arg;
   struct flock ret_flock;
 } log_event_fcntl_t;
 
 typedef struct {
-  int fd;
 } log_event_fchdir_t;
 
 typedef struct {
-  int fd;
 } log_event_fdatasync_t;
 
 typedef struct {
-  char* buf;
-  size_t size;
   off_t data_offset;
 } log_event_getcwd_t;
 
 typedef struct {
-  struct timeval* tv;
   struct timeval ret_tv;
-  struct timezone* tz;
   struct timezone ret_tz;
 } log_event_gettimeofday_t;
 
 typedef struct {
-  int sockfd;
-  struct sockaddr* addr;
   struct sockaddr_storage ret_addr;
-  socklen_t* addrlen;
   socklen_t ret_addrlen;
 } log_event_getpeername_t;
 
 typedef struct {
-  int sockfd;
-  struct sockaddr* addr;
   struct sockaddr_storage ret_addr;
-  socklen_t* addrlen;
   socklen_t ret_addrlen;
 } log_event_getsockname_t;
 
 typedef struct {
-  const char* oldpath;
-  const char* newpath;
 } log_event_link_t;
 
 typedef struct {
-  const char* oldpath;
-  const char* newpath;
 } log_event_symlink_t;
 
 typedef struct {
-  int sockfd;
-  int backlog;
 } log_event_listen_t;
 
 typedef struct {
-  const time_t* timep;
-  struct tm* result;
   struct tm ret_result;
 } log_event_localtime_r_t;
 
 typedef struct {
-  const char* filename;
-  const struct utimbuf* times;
 } log_event_utime_t;
 
 typedef struct {
-  const char* filename;
-  const struct timeval* times;
 } log_event_utimes_t;
 
 typedef struct {
-  const char* filename;
-  const struct timeval* tv;
 } log_event_lutimes_t;
 
 typedef struct {
-  int fd;
-  const struct timeval* tv;
 } log_event_futimes_t;
 
 typedef struct {
-  clockid_t clk_id;
-  struct timespec* res;
   struct timespec ret_res;
 } log_event_clock_getres_t;
 
 typedef struct {
-  clockid_t clk_id;
-  struct timespec* tp;
   struct timespec ret_tp;
 } log_event_clock_gettime_t;
 
 typedef struct {
-  clockid_t clk_id;
-  const struct timespec* tp;
 } log_event_clock_settime_t;
 
 typedef struct {
-  int fd;
-  off_t offset;
-  int whence;
 } log_event_lseek_t;
 
 typedef struct {
-  int fd;
-  off64_t offset;
-  int whence;
 } log_event_lseek64_t;
 
 typedef struct {
-  int fd;
-  loff_t offset;
-  int whence;
 } log_event_llseek_t;
 
 typedef struct {
@@ -234,12 +161,9 @@ typedef struct {
 } log_event_free_t;
 
 typedef struct {
-  const char* pathname;
-  mode_t mode;
 } log_event_mkdir_t;
 
 typedef struct {
-  char* temp;
 } log_event_mkstemp_t;
 
 typedef struct {
@@ -268,111 +192,65 @@ typedef struct {
 } log_event_munmap_t;
 
 typedef struct {
-  void* old_address;
-  size_t old_size;
-  size_t new_size;
-  int flags;
-  void* new_address;
 } log_event_mremap_t;
 
 typedef struct {
-  const char* pathname;
-  int flags;
-  mode_t mode;
 } log_event_open_t;
 
 typedef struct {
-  const char* pathname;
-  int flags;
-  mode_t mode;
 } log_event_open64_t;
 
 typedef struct {
-  int dirfd;
-  const char* pathname;
-  int flags;
 } log_event_openat_t;
 
 typedef struct {
-  int fd;
-  void* buf;
-  size_t count;
-  off_t offset;
   off_t data_offset;
 } log_event_pread_t;
 
 typedef struct {
-  int fd;
-  const struct iovec* iov;
-  int iovcnt;
-  off_t offset;
   off_t data_offset;
 } log_event_preadv_t;
 
 typedef struct {
-  int fd;
-  const void* buf;
-  size_t count;
-  off_t offset;
 } log_event_pwrite_t;
 
 typedef struct {
-  int fd;
-  const struct iovec* iov;
-  int iovcnt;
-  off_t offset;
 } log_event_pwritev_t;
 
 typedef struct {
-  pthread_rwlock_t* rwlock;
 } log_event_pthread_rwlock_unlock_t;
 
 typedef struct {
-  pthread_rwlock_t* rwlock;
 } log_event_pthread_rwlock_rdlock_t;
 
 typedef struct {
-  pthread_rwlock_t* rwlock;
 } log_event_pthread_rwlock_wrlock_t;
 
 typedef struct {
-  pthread_t* thread;
   pthread_t ret_thread;
-  const pthread_attr_t* attr;
-  pthread_start_routine_t start_routine;
-  void* arg;
   void *stack_addr;
   size_t stack_size;
 } log_event_pthread_create_t;
 
 typedef struct {
-  pthread_t thread;
 } log_event_pthread_detach_t;
 
 typedef struct {
-  void* value_ptr;
 } log_event_pthread_exit_t;
 
 typedef struct {
-  pthread_t thread;
-  void** value_ptr;
 } log_event_pthread_join_t;
 
 typedef struct {
-  pthread_t thread;
-  int sig;
 } log_event_pthread_kill_t;
 
 typedef struct {
-  pthread_mutex_t* mutex;
 } log_event_pthread_mutex_lock_t;
 
 typedef struct {
-  pthread_mutex_t* mutex;
 } log_event_pthread_mutex_trylock_t;
 
 typedef struct {
-  pthread_mutex_t* mutex;
 } log_event_pthread_mutex_unlock_t;
 
 typedef struct {
@@ -382,87 +260,49 @@ typedef struct {
 } log_event_fork_t;
 
 typedef struct {
-  int fd;
-  void* buf;
-  size_t count;
   off_t data_offset;
 } log_event_read_t;
 
 typedef struct {
-  int fd;
-  const struct iovec* iov;
-  int iovcnt;
   off_t data_offset;
 } log_event_readv_t;
 
 typedef struct {
-  const char* path;
-  char* buf;
-  size_t bufsiz;
   off_t data_offset;
 } log_event_readlink_t;
 
 typedef struct {
-  const char* path;
-  char* resolved_path;
   off_t data_offset;
   size_t len;
 } log_event_realpath_t;
 
 typedef struct {
-  void* ptr;
-  size_t size;
 } log_event_realloc_t;
 
 typedef struct {
-  const char* oldpath;
-  const char* newpath;
 } log_event_rename_t;
 
 typedef struct {
-  const char* pathname;
 } log_event_rmdir_t;
 
 typedef struct {
-  int nfds;
-  fd_set* readfds;
   fd_set ret_readfds;
-  fd_set* writefds;
   fd_set ret_writefds;
-  fd_set* exceptfds;
-  struct timeval* timeout;
 } log_event_select_t;
 
 typedef struct {
-  struct pollfd* fds;
-  nfds_t nfds;
-  const struct timespec* timeout_ts;
-  const sigset_t* sigmask;
   off_t data_offset;
 } log_event_ppoll_t;
 
 typedef struct {
-  int s;
-  int level;
-  int optname;
-  const void* optval;
-  socklen_t optlen;
 } log_event_setsockopt_t;
 
 typedef struct {
-  int s;
-  int level;
-  int optname;
-  void* optval;
-  socklen_t* optlen;
   socklen_t ret_optlen;
   off_t data_offset;
 } log_event_getsockopt_t;
 
 typedef struct {
-  int d;
-  int request;
-  void* arg;
   off_t data_offset;
   struct winsize win_val;
   struct ifconf ifconf_val;
@@ -470,399 +310,235 @@ typedef struct {
 } log_event_ioctl_t;
 
 typedef struct {
-  int sockfd;
-  int how;
 } log_event_shutdown_t;
 
 typedef struct {
-  const sigset_t* set;
-  int* sig;
   int ret_sig;
 } log_event_sigwait_t;
 
 typedef struct {
-  unsigned int seed;
 } log_event_srand_t;
 
 typedef struct {
-  int domain;
-  int type;
-  int protocol;
 } log_event_socket_t;
 
 typedef struct {
-  int d;
-  int type;
-  int protocol;
-  int* sv;
   int ret_sv[2];
 } log_event_socketpair_t;
 
 typedef struct {
-  time_t* tloc;
   time_t ret_tloc;
 } log_event_time_t;
 
 typedef struct {
-  const char* path;
-  off_t length;
 } log_event_truncate_t;
 
 typedef struct {
-  int fd;
-  off_t length;
 } log_event_ftruncate_t;
 
 typedef struct {
-  const char* path;
-  off64_t length;
 } log_event_truncate64_t;
 
 typedef struct {
-  int fd;
-  off64_t length;
 } log_event_ftruncate64_t;
 
 typedef struct {
-  const char* pathname;
 } log_event_unlink_t;
 
 typedef struct {
-  int fd;
-  const void* buf;
-  size_t count;
 } log_event_write_t;
 
 typedef struct {
-  int fd;
-  const struct iovec* iov;
-  int iovcnt;
 } log_event_writev_t;
 
 typedef struct {
-  int size;
 } log_event_epoll_create_t;
 
 typedef struct {
-  int flags;
 } log_event_epoll_create1_t;
 
 typedef struct {
-  int epfd;
-  int op;
-  int fd;
-  struct epoll_event* ep;
 } log_event_epoll_ctl_t;
 
 typedef struct {
-  int epfd;
-  struct epoll_event* events;
-  int maxevents;
-  int timeout;
   off_t data_offset;
 } log_event_epoll_wait_t;
 
 typedef struct {
-  const char* name;
-  struct passwd* pwd;
   struct passwd ret_pwd;
-  char* buf;
-  size_t buflen;
-  struct passwd** result;
   struct passwd* ret_result;
   off_t data_offset;
 } log_event_getpwnam_r_t;
 
 typedef struct {
-  uid_t uid;
-  struct passwd* pwd;
   struct passwd ret_pwd;
-  char* buf;
-  size_t buflen;
-  struct passwd** result;
   struct passwd* ret_result;
   off_t data_offset;
 } log_event_getpwuid_r_t;
 
 typedef struct {
-  const char* name;
-  struct group* grp;
   struct group ret_grp;
-  char* buf;
-  size_t buflen;
-  struct group** result;
   struct group* ret_result;
   off_t data_offset;
 } log_event_getgrnam_r_t;
 
 typedef struct {
-  gid_t gid;
-  struct group* grp;
   struct group ret_grp;
-  char* buf;
-  size_t buflen;
-  struct group** result;
   struct group* ret_result;
   off_t data_offset;
 } log_event_getgrgid_r_t;
 
 typedef struct {
-  const char* node;
-  const char* service;
-  const struct addrinfo* hints;
-  struct addrinfo** res;
   struct addrinfo* ret_res;
   off_t data_offset;
   int num_results;
 } log_event_getaddrinfo_t;
 
 typedef struct {
-  struct addrinfo* res;
 } log_event_freeaddrinfo_t;
 
 typedef struct {
-  const struct sockaddr* sa;
-  socklen_t salen;
-  char* host;
-  size_t hostlen;
-  char* serv;
-  size_t servlen;
-  int flags;
   off_t data_offset;
   char ret_host[NI_MAXHOST];
   char ret_serv[NI_MAXSERV];
 } log_event_getnameinfo_t;
 
 typedef struct {
-  int sockfd;
-  const void* buf;
-  size_t len;
-  int flags;
-  const struct sockaddr* dest_addr;
-  socklen_t addrlen;
 } log_event_sendto_t;
 
 typedef struct {
-  int sockfd;
-  const struct msghdr* msg;
-  int flags;
 } log_event_sendmsg_t;
 
 typedef struct {
-  int sockfd;
-  void* buf;
-  size_t len;
-  int flags;
-  struct sockaddr* src_addr;
   struct sockaddr_storage ret_src_addr;
-  socklen_t* addrlen;
   socklen_t ret_addrlen;
   off_t data_offset;
 } log_event_recvfrom_t;
 
 typedef struct {
-  int sockfd;
-  struct msghdr* msg;
   struct msghdr ret_msg;
-  int flags;
   off_t data_offset;
   off_t control_buf_offset;
 } log_event_recvmsg_t;
 
 typedef struct {
-  idtype_t idtype;
-  id_t id;
-  siginfo_t* infop;
   siginfo_t ret_infop;
-  int options;
 } log_event_waitid_t;
 
 typedef struct {
-  pid_t pid;
-  __WAIT_STATUS status;
   void* ret_status;
-  int options;
-  struct rusage* rusage;
   struct rusage ret_rusage;
 } log_event_wait4_t;
 
 typedef struct {
-  int signum;
-  const struct sigaction* act;
-  struct sigaction* oldact;
 } log_event_sigaction_t;
 
 typedef struct {
-  int signum;
-  sighandler_t handler;
 } log_event_signal_t;
 
 typedef struct {
-  int sig;
-  sighandler_t disp;
 } log_event_sigset_t;
 
 typedef struct {
-  const char* path;
-  const char* mode;
   FILE fopen_retval;
 } log_event_fopen_t;
 
 typedef struct {
-  const char* path;
-  const char* mode;
   FILE fopen64_retval;
 } log_event_fopen64_t;
 
 typedef struct {
-  const char* path;
-  const char* mode;
-  FILE* stream;
   FILE freopen_retval;
 } log_event_freopen_t;
 
 typedef struct {
-  FILE* fp;
 } log_event_fclose_t;
 
 typedef struct {
-  int fd;
-  const char* mode;
   FILE fdopen_retval;
 } log_event_fdopen_t;
 
 typedef struct {
-  char* s;
-  int size;
-  FILE* stream;
   off_t data_offset;
 } log_event_fgets_t;
 
 typedef struct {
-  FILE* stream;
 } log_event_ferror_t;
 
 typedef struct {
-  FILE* stream;
 } log_event_feof_t;
 
 typedef struct {
-  FILE* stream;
 } log_event_fileno_t;
 
 typedef struct {
-  FILE* stream;
 } log_event_fflush_t;
 
 typedef struct {
-  FILE* stream;
-  char* buf;
-  int mode;
-  size_t size;
 } log_event_setvbuf_t;
 
 typedef struct {
-  FILE* stream;
-  long offset;
-  int whence;
 } log_event_fseek_t;
 
 typedef struct {
-  const char* s;
-  FILE* stream;
 } log_event_fputs_t;
 
 typedef struct {
-  const char* s;
 } log_event_puts_t;
 
 typedef struct {
-  int c;
-  FILE* stream;
 } log_event_fputc_t;
 
 typedef struct {
-  int fd;
 } log_event_fsync_t;
 
 typedef struct {
-  FILE* stream;
 } log_event_ftell_t;
 
 typedef struct {
-  FILE* stream;
-  fpos_t* pos;
 } log_event_fgetpos_t;
 
 typedef struct {
-  FILE* stream;
-  fpos64_t* pos;
 } log_event_fgetpos64_t;
 
 typedef struct {
-  FILE* stream;
-  const fpos_t* pos;
 } log_event_fsetpos_t;
 
 typedef struct {
-  FILE* stream;
-  const fpos64_t* pos;
 } log_event_fsetpos64_t;
 
 typedef struct {
-  const void* ptr;
-  size_t size;
-  size_t nmemb;
-  FILE* stream;
 } log_event_fwrite_t;
 
 typedef struct {
-  void* ptr;
-  size_t size;
-  size_t nmemb;
-  FILE* stream;
   off_t data_offset;
 } log_event_fread_t;
 
 typedef struct {
-  FILE* stream;
 } log_event_getc_t;
 
 typedef struct {
-  FILE* stream;
 } log_event_fgetc_t;
 
 typedef struct {
-  int c;
-  FILE* stream;
 } log_event_ungetc_t;
 
 typedef struct {
-  char** lineptr;
   char* ret_lineptr;
-  size_t* n;
   size_t ret_n;
-  FILE* stream;
   off_t data_offset;
 } log_event_getline_t;
 
 typedef struct {
-  char** lineptr;
   char* ret_lineptr;
-  size_t* n;
   size_t ret_n;
-  int delim;
-  FILE* stream;
   off_t data_offset;
 } log_event_getdelim_t;
 
 typedef struct {
-  int c;
-  FILE* stream;
 } log_event_putc_t;
 
 typedef struct {
-  FILE* stream;
 } log_event_rewind_t;
 
 typedef struct {
@@ -870,120 +546,78 @@ typedef struct {
 } log_event_tmpfile_t;
 
 typedef struct {
-  FILE* filehandle;
 } log_event_flockfile_t;
 
 typedef struct {
-  FILE* filehandle;
 } log_event_ftrylockfile_t;
 
 typedef struct {
-  FILE* filehandle;
 } log_event_funlockfile_t;
 
 typedef struct {
-  DIR* dirp;
 } log_event_closedir_t;
 
 typedef struct {
-  const char* name;
 } log_event_opendir_t;
 
 typedef struct {
-  int fd;
 } log_event_fdopendir_t;
 
 typedef struct {
-  DIR* dirp;
   struct dirent readdir_retval;
 } log_event_readdir_t;
 
 typedef struct {
-  DIR* dirp;
-  struct dirent* entry;
   struct dirent ret_entry;
-  struct dirent** result;
   struct dirent* ret_result;
 } log_event_readdir_r_t;
 
 typedef struct {
-  pthread_cond_t* cond;
 } log_event_pthread_cond_broadcast_t;
 
 typedef struct {
-  pthread_cond_t* cond;
 } log_event_pthread_cond_signal_t;
 
 typedef struct {
-  pthread_cond_t* cond;
-  pthread_mutex_t* mutex;
 } log_event_pthread_cond_wait_t;
 
 typedef struct {
-  pthread_cond_t* cond;
-  pthread_mutex_t* mutex;
-  const struct timespec* abstime;
 } log_event_pthread_cond_timedwait_t;
 
 typedef struct {
-  pthread_cond_t* cond;
 } log_event_pthread_cond_destroy_t;
 
 typedef struct {
-  int vers;
-  int fd;
-  struct stat* buf;
   struct stat ret_buf;
 } log_event_fxstat_t;
 
 typedef struct {
-  int vers;
-  int fd;
-  struct stat64* buf;
   struct stat64 ret_buf;
 } log_event_fxstat64_t;
 
 typedef struct {
-  int vers;
-  const char* path;
-  struct stat* buf;
   struct stat ret_buf;
 } log_event_lxstat_t;
 
 typedef struct {
-  int vers;
-  const char* path;
-  struct stat64* buf;
   struct stat64 ret_buf;
 } log_event_lxstat64_t;
 
 typedef struct {
-  int vers;
-  const char* path;
-  struct stat* buf;
   struct stat ret_buf;
 } log_event_xstat_t;
 
 typedef struct {
-  int vers;
-  const char* path;
-  struct stat64* buf;
   struct stat64 ret_buf;
 } log_event_xstat64_t;
 
 typedef struct {
-  size_t boundary;
-  size_t size;
 } log_event_libc_memalign_t;
 
 typedef struct {
-  FILE* stream;
-  const char* format;
 } log_event_vfprintf_t;
 
 typedef struct {
-  FILE* stream;
-  const char* format;
   off_t data_offset;
   int bytes;
 } log_event_vfscanf_t;
@@ -992,23 +626,13 @@ typedef struct {
 } log_event_exec_barrier_t;
 
 typedef struct {
-  int sig;
-  siginfo_t* info;
-  void* data;
+  int savedSig;
 } log_event_signal_handler_t;
 
 typedef struct {
 } log_event_user_t;
 
 typedef struct {
-  int num;
-  void* a1;
-  void* a2;
-  void* a3;
-  void* a4;
-  void* a5;
-  void* a6;
-  void* a7;
 } log_event_syscall_t;
 
 

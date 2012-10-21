@@ -445,25 +445,25 @@ static void execute_optional_event(int opt_event_num)
     size_t nmemb = GET_FIELD(temp_entry, calloc, nmemb);
     JASSERT(calloc(nmemb, size) != NULL);
   } else if (opt_event_num == fopen_event) {
-    const char *path = GET_FIELD(temp_entry, fopen, path);
-    const char *mode = GET_FIELD(temp_entry, fopen, mode);
+    const char *path = "dummy";//GET_FIELD(temp_entry, fopen, path);
+    const char *mode = "dummy";//GET_FIELD(temp_entry, fopen, mode);
     dmtcp::ThreadInfo::setOkToLogNextFnc();
     FILE *fp = fopen(path, mode);
   } else if (opt_event_num == fclose_event) {
-    FILE *fp = GET_FIELD(temp_entry, fclose, fp);
+    FILE *fp = NULL;//GET_FIELD(temp_entry, fclose, fp);
     dmtcp::ThreadInfo::setOkToLogNextFnc();
     fclose(fp);
   } else if (opt_event_num == ftell_event) {
-    FILE *fp = GET_FIELD(temp_entry, ftell, stream);
+    FILE *fp = NULL;//GET_FIELD(temp_entry, ftell, stream);
     dmtcp::ThreadInfo::setOkToLogNextFnc();
     // No need to execute ftell().  It has no side effects.
     long int offset = ftell(fp);
   } else if (opt_event_num == pthread_mutex_lock_event) {
-    pthread_mutex_t *mutex = GET_FIELD(temp_entry, pthread_mutex_lock, mutex);
+    pthread_mutex_t *mutex = NULL;//GET_FIELD(temp_entry, pthread_mutex_lock, mutex);
     dmtcp::ThreadInfo::setOkToLogNextFnc();
     pthread_mutex_lock(mutex);
   } else if (opt_event_num == pthread_mutex_unlock_event) {
-    pthread_mutex_t *mutex = GET_FIELD(temp_entry, pthread_mutex_lock, mutex);
+    pthread_mutex_t *mutex = NULL;//GET_FIELD(temp_entry, pthread_mutex_lock, mutex);
     dmtcp::ThreadInfo::setOkToLogNextFnc();
     pthread_mutex_unlock(mutex);
   } else {

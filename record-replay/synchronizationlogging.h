@@ -357,11 +357,8 @@ static inline bool isProcessGDB() {
 # define log_event_common_size (sizeof(log_entry_header_t))
 #else
 # define log_event_common_size                                         \
-  (sizeof(event_code_t)  +  /* event */                                \
-   sizeof(unsigned char) +  /* isOptional */                           \
-   sizeof(clone_id_t)    +  /* clone_id */                             \
-   sizeof(int)           +  /* my_errno */                             \
-   sizeof(void *))          /* retval */
+  (sizeof(EMPTY_LOG_ENTRY.headher.h)  +    /* event */                 \
+   sizeof(EMPTY_LOG_ENTRY.headher.retval)) /* isOptional */
 #endif
 
 
@@ -373,7 +370,7 @@ typedef int (*turn_pred_t) (log_entry_t*, log_entry_t*);
 /* Static constants: */
 // Clone id to indicate anyone may do this event (used for exec):
 static const int         CLONE_ID_ANYONE = -2;
-static const log_entry_t EMPTY_LOG_ENTRY = {{empty_event, 0, 0, 0, 0}};
+static const log_entry_t EMPTY_LOG_ENTRY = {{{empty_event, 0 , 0, 0}, 0}};
 // Number to start clone_ids at:
 static const int         RECORD_LOG_PATH_MAX = 256;
 
