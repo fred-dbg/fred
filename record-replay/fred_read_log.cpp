@@ -55,9 +55,8 @@ void print_log_entry_common(int idx, log_entry_t *entry) {
     default:
       printf("ret=%p, ", GET_COMMON_PTR(entry, retval)); break;
   }
-  printf("offset=%2ld, errno=%d, isOpt=%d",
-         GET_COMMON_PTR(entry, log_offset), GET_COMMON_PTR(entry, my_errno),
-         GET_COMMON_PTR(entry, isOptional));
+  printf("errno=%d, isOpt=%d",
+         GET_COMMON_PTR(entry, my_errno), GET_COMMON_PTR(entry, isOptional));
 }
 
 void rewriteLog(char *log_path)

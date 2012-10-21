@@ -267,21 +267,35 @@ static inline bool isProcessGDB() {
 
 
 #define WRAPPER_LOG_WRITE_ENTRY_VOID(my_entry)                      \
+  size_t log_offset;                                                \
   do {                                                              \
     SET_COMMON2(my_entry, my_errno, errno);                         \
     SET_COMMON2(my_entry, isOptional,                               \
                 dmtcp::ThreadInfo::isOptionalEvent());              \
-    addNextLogEntry(my_entry);                                      \
+    log_offset = addNextLogEntry(my_entry);                         \
     errno = GET_COMMON(my_entry, my_errno);                         \
   } while (0)
 
 #define WRAPPER_LOG_WRITE_ENTRY(my_entry)                           \
+  size_t log_offset;                                                \
   do {                                                              \
     SET_COMMON2(my_entry, retval, (void*)(unsigned long)retval);    \
-    WRAPPER_LOG_WRITE_ENTRY_VOID(my_entry);                         \
+    SET_COMMON2(my_entry, my_errno, errno);                         \
+    SET_COMMON2(my_entry, isOptional,                               \
+                dmtcp::ThreadInfo::isOptionalEvent());              \
+    log_offset = addNextLogEntry(my_entry);                         \
+    errno = GET_COMMON(my_entry, my_errno);                         \
   } while (0)
 
-#define WRAPPER_LOG_UPDATE_ENTRY WRAPPER_LOG_WRITE_ENTRY
+#define WRAPPER_LOG_UPDATE_ENTRY(my_entry)                          \
+  do {                                                              \
+    SET_COMMON2(my_entry, retval, (void*)(unsigned long)retval);    \
+    SET_COMMON2(my_entry, my_errno, errno);                         \
+    SET_COMMON2(my_entry, isOptional,                               \
+                dmtcp::ThreadInfo::isOptionalEvent());              \
+    updateLogEntry(my_entry, log_offset);                           \
+    errno = GET_COMMON(my_entry, my_errno);                         \
+  } while (0)
 
 #define WRAPPER_LOG(real_func, ...)                                 \
   do {                                                              \
@@ -361,7 +375,6 @@ static inline bool isProcessGDB() {
 # define log_event_common_size                                         \
   (sizeof(event_code_t)  +  /* event */                                \
    sizeof(unsigned char) +  /* isOptional */                           \
-   sizeof(log_off_t)     +  /* log_offset */                           \
    sizeof(clone_id_t)    +  /* clone_id */                             \
    sizeof(int)           +  /* my_errno */                             \
    sizeof(void *))          /* retval */
@@ -376,7 +389,7 @@ typedef int (*turn_pred_t) (log_entry_t*, log_entry_t*);
 /* Static constants: */
 // Clone id to indicate anyone may do this event (used for exec):
 static const int         CLONE_ID_ANYONE = -2;
-static const log_entry_t EMPTY_LOG_ENTRY = {{empty_event, 0, 0, 0, 0, 0}};
+static const log_entry_t EMPTY_LOG_ENTRY = {{empty_event, 0, 0, 0, 0}};
 // Number to start clone_ids at:
 static const int         RECORD_LOG_PATH_MAX = 256;
 
@@ -401,7 +414,8 @@ LIB_PRIVATE extern __thread clone_id_t my_clone_id;
 LIB_PRIVATE extern volatile off_t         read_log_pos;
 
 /* Functions */
-LIB_PRIVATE void   addNextLogEntry(log_entry_t&);
+LIB_PRIVATE size_t addNextLogEntry(log_entry_t&);
+LIB_PRIVATE void   updateLogEntry(log_entry_t&, size_t offset = INVALID_LOG_OFFSET);
 LIB_PRIVATE void   set_sync_mode(int mode);
 LIB_PRIVATE int    get_sync_mode();
 LIB_PRIVATE void   copyFdSet(fd_set *src, fd_set *dest);

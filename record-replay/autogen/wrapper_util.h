@@ -1196,7 +1196,6 @@ union log_entry_data {
 typedef struct {
   event_code_t event;
   unsigned char isOptional;
-  log_off_t log_offset;
   clone_id_t clone_id;
   int my_errno;
   void* retval;

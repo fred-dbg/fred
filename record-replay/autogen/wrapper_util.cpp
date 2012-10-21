@@ -203,7 +203,6 @@ static void setupCommonFields(log_entry_t *e, clone_id_t clone_id,
   memset(&(e->header), 0, sizeof(e->header));
   SET_COMMON_PTR(e, clone_id);
   SET_COMMON_PTR(e, event);
-  SET_COMMON_PTR2(e, log_offset, INVALID_LOG_OFFSET);
 }
 
 log_entry_t create_empty_entry(clone_id_t clone_id, event_code_t event)

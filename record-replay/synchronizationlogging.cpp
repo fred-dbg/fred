@@ -301,14 +301,17 @@ void close_read_log()
   read_data_fd = -1;
 }
 
-void addNextLogEntry(log_entry_t& e)
+size_t addNextLogEntry(log_entry_t& e)
 {
   JASSERT(my_clone_id != -1);
-  if (GET_COMMON(e, log_offset) == INVALID_LOG_OFFSET) {
-    global_log.appendEntry(e);
-  } else {
-    global_log.updateEntry(e);
-  }
+  return global_log.appendEntry(e);
+}
+
+void updateLogEntry(log_entry_t& e, size_t offset)
+{
+  JASSERT(my_clone_id != -1);
+  JASSERT(offset != INVALID_LOG_OFFSET);
+  global_log.updateEntry(e, offset);
 }
 
 void getNextLogEntry()

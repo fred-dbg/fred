@@ -865,7 +865,6 @@ def gen_wrapper_util_cpp(allWrappers):
           memset(&(e->header), 0, sizeof(e->header));
           SET_COMMON_PTR(e, clone_id);
           SET_COMMON_PTR(e, event);
-          SET_COMMON_PTR2(e, log_offset, INVALID_LOG_OFFSET);
         }
         """)
 
@@ -1035,7 +1034,6 @@ def gen_wrapper_util_h(allWrappers):
         typedef struct {
           event_code_t event;
           unsigned char isOptional;
-          log_off_t log_offset;
           clone_id_t clone_id;
           int my_errno;
           void* retval;

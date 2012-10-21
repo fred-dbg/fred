@@ -109,8 +109,8 @@ namespace dmtcp
       int    advanceToNextEntry();
       void   checkForBreakpoint();
       log_entry_t& getCurrentEntry();
-      void   appendEntry(log_entry_t& entry);
-      void   updateEntry(const log_entry_t& entry);
+      size_t appendEntry(log_entry_t& entry);
+      void   updateEntry(const log_entry_t& entry, size_t offset);
       void   moveMarkersToEnd();
 
     private:

@@ -358,7 +358,7 @@ int dmtcp::SynchronizationLog::getEntryAtOffset(log_entry_t& entry, size_t index
   return log_event_common_size + event_size;
 }
 
-void dmtcp::SynchronizationLog::appendEntry(log_entry_t& entry)
+size_t dmtcp::SynchronizationLog::appendEntry(log_entry_t& entry)
 {
   int eventSize = -1;
   log_off_t offset;
@@ -368,13 +368,17 @@ void dmtcp::SynchronizationLog::appendEntry(log_entry_t& entry)
   eventSize += log_event_common_size;
   offset = atomicIncrementOffset(eventSize);
   __sync_fetch_and_add(_numEntries, 1);
-  SET_COMMON2(entry, log_offset, offset);
 
   JASSERT(eventSize == writeEntryAtOffset(entry, offset));
+  return offset;
 }
 
-void dmtcp::SynchronizationLog::updateEntry(const log_entry_t& entry)
+void dmtcp::SynchronizationLog::updateEntry(const log_entry_t& entry,
+                                            size_t offset)
 {
+  JASSERT(offset != INVALID_LOG_OFFSET);
+  JASSERT(offset <= *_dataSize);
+
   // only allow it for pthread_create and malloc calls
   JASSERT(GET_COMMON(entry, event) == pthread_create_event ||
 	  GET_COMMON(entry, event) == pthread_rwlock_unlock_event ||
@@ -386,26 +390,24 @@ void dmtcp::SynchronizationLog::updateEntry(const log_entry_t& entry)
 
 #ifdef DEBUG
   log_entry_t old_entry = EMPTY_LOG_ENTRY;
-  JASSERT(getEntryAtOffset(old_entry, GET_COMMON(entry, log_offset)) != 0);
+  JASSERT(getEntryAtOffset(old_entry, offset) != 0);
 
   // Only allow replacing events of the same type. Allowing it for differing
   // types (which means differing sizes) would take more work.
   JASSERT(GET_COMMON(entry, event) == GET_COMMON(old_entry, event));
 
   if (GET_COMMON(entry, event) == pthread_create_event) {
-    JASSERT(GET_COMMON(entry, log_offset) == GET_COMMON(old_entry, log_offset) &&
-	    IS_EQUAL_FIELD(entry, old_entry, pthread_create, thread) &&
+    JASSERT(IS_EQUAL_FIELD(entry, old_entry, pthread_create, thread) &&
 	    IS_EQUAL_FIELD(entry, old_entry, pthread_create, thread) &&
 	    IS_EQUAL_FIELD(entry, old_entry, pthread_create, start_routine) &&
 	    IS_EQUAL_FIELD(entry, old_entry, pthread_create, attr) &&
 	    IS_EQUAL_FIELD(entry, old_entry, pthread_create, arg));
   } else if (GET_COMMON(entry, event) == malloc_event) {
-    JASSERT(GET_COMMON(entry, log_offset) == GET_COMMON(old_entry, log_offset) &&
-	    IS_EQUAL_FIELD(entry, old_entry, malloc, size));
+    JASSERT(IS_EQUAL_FIELD(entry, old_entry, malloc, size));
   }
 #endif
 
-  writeEntryAtOffset(entry, GET_COMMON(entry, log_offset));
+  writeEntryAtOffset(entry, offset);
 }
 
 /* Move appropriate markers to the end, so that we enter "append" mode. */
@@ -452,8 +454,6 @@ size_t dmtcp::SynchronizationLog::getEntryHeaderAtOffset(log_entry_t& entry,
   buffer += sizeof(GET_COMMON(entry, event));
   memcpy(&GET_COMMON(entry, isOptional), buffer, sizeof(GET_COMMON(entry, isOptional)));
   buffer += sizeof(GET_COMMON(entry, isOptional));
-  memcpy(&GET_COMMON(entry, log_offset), buffer, sizeof(GET_COMMON(entry, log_offset)));
-  buffer += sizeof(GET_COMMON(entry, log_offset));
   memcpy(&GET_COMMON(entry, clone_id), buffer, sizeof(GET_COMMON(entry, clone_id)));
   buffer += sizeof(GET_COMMON(entry, clone_id));
   memcpy(&GET_COMMON(entry, my_errno), buffer, sizeof(GET_COMMON(entry, my_errno)));
@@ -486,8 +486,6 @@ void dmtcp::SynchronizationLog::writeEntryHeaderAtOffset(const log_entry_t& entr
   buffer += sizeof(GET_COMMON(entry, event));
   memcpy(buffer, &GET_COMMON(entry, isOptional), sizeof(GET_COMMON(entry, isOptional)));
   buffer += sizeof(GET_COMMON(entry, isOptional));
-  memcpy(buffer, &GET_COMMON(entry, log_offset), sizeof(GET_COMMON(entry, log_offset)));
-  buffer += sizeof(GET_COMMON(entry, log_offset));
   memcpy(buffer, &GET_COMMON(entry, clone_id), sizeof(GET_COMMON(entry, clone_id)));
   buffer += sizeof(GET_COMMON(entry, clone_id));
   memcpy(buffer, &GET_COMMON(entry, my_errno), sizeof(GET_COMMON(entry, my_errno)));
