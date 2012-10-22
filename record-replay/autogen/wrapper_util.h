@@ -809,7 +809,7 @@ union log_entry_data {
 typedef struct {
   struct {
     unsigned      event       :8;
-    unsigned      isOptional  :1;
+    unsigned      isOptional  :3;
     unsigned      clone_id    :20;
     int           savedErrno  :32;
   } h;
