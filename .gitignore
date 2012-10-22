@@ -31,5 +31,7 @@ pthread-test-thread-private
 test-list-no-malloc
 test/malloc-to-mmap
 test/reader
+test/many-threads
+test/many-threads2
 record-replay/aclocal.m4
 record-replay/config.h

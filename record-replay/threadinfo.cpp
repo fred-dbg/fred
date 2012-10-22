@@ -61,6 +61,11 @@ static clone_id_t get_next_clone_id()
 {
   clone_id_t id;
   _real_pthread_mutex_lock(&cloneIdLock);
+  if (__builtin_expect(global_clone_counter >= MAX_CLONE_IDS, 0)) {
+    // Temp fix. Later, we should start replacing cloneIds with
+    // (gettid() - getpid()) value.
+    JASSERT(false) .Text("Reached Maximum allowed clone-ids.");
+  }
   id = global_clone_counter;
   global_clone_counter++;
   _real_pthread_mutex_unlock(&cloneIdLock);
@@ -331,6 +336,7 @@ void dmtcp::ThreadInfo::setOptionalEvent()
   if (cloneIdTbl == NULL) {
     return;
   }
+  JASSERT(myThreadInfo()->isOptionalEvent < MAX_OPTIONAL_LEVEL);
   myThreadInfo()->isOptionalEvent++;
 }
 void dmtcp::ThreadInfo::unsetOptionalEvent()

@@ -758,14 +758,14 @@ class WrapperInfo:
     def get_create_entry_fn(self):
         sign = 'log_entry_t create_%s_entry(' % (self._name)
         slen = len(sign)
-        sign += 'clone_id_t clone_id, event_code_t event'
+        sign += 'clone_id_t cloneId, event_code_t event'
         if len(self.args) > 0:
             sign += ',\n%s%s' % (' ' * slen, self.get_arg_signature())
         sign += ')'
 
         body =  '\n{\n'
         body += '  log_entry_t e = EMPTY_LOG_ENTRY;\n'
-        body += '  setupCommonFields(&e, clone_id, event);\n'
+        body += '  setupCommonFields(&e, cloneId, event);\n'
 
         for arg in self.args:
             if self.debugMode or arg.save():
@@ -869,12 +869,12 @@ def gen_wrapper_util_cpp(allWrappers):
         """)
 
     setup_common_fields = textwrap.dedent("""\
-        static void setupCommonFields(log_entry_t *e, clone_id_t clone_id,
+        static void setupCommonFields(log_entry_t *e, clone_id_t cloneId,
                                       event_code_t event)
         {
           // Zero out all fields:
           memset(&(e->header), 0, sizeof(e->header));
-          e->setCloneId(clone_id);
+          e->setCloneId(cloneId);
           e->setEventId(event);
         }
         """)
@@ -1047,11 +1047,17 @@ def gen_wrapper_util_h(allWrappers):
         exit
 
     log_entry_decl = textwrap.dedent("""\
+        const int eventBits = 8;
+        const int isOptionalBits = 3;
+        const int cloneIdBits = 20;
+        const int MAX_EVENTS = (1 << eventBits);
+        const int MAX_OPTIONAL_LEVEL = (1 << isOptionalBits);
+        const int MAX_CLONE_IDS = (1 << cloneIdBits);
         typedef struct {
           struct {
-            unsigned      event       :8;
-            unsigned      isOptional  :3;
-            unsigned      clone_id    :20;
+            unsigned      event       :eventBits;
+            unsigned      isOptional  :isOptionalBits;
+            unsigned      cloneId     :cloneIdBits;
             int           savedErrno  :32;
           } h;
           void* retval;
@@ -1060,8 +1066,8 @@ def gen_wrapper_util_h(allWrappers):
         typedef struct {
           event_code_t eventId() const { return (event_code_t) header.h.event; }
           void         setEventId(event_code_t e) { header.h.event = e; }
-          clone_id_t cloneId() const { return header.h.clone_id; }
-          void       setCloneId(clone_id_t c) { header.h.clone_id = c; }
+          clone_id_t cloneId() const { return header.h.cloneId; }
+          void       setCloneId(clone_id_t c) { header.h.cloneId = c; }
           bool       isOptional() const { return header.h.isOptional; }
           void       setIsOptional(bool i) { header.h.isOptional = i; }
           int        savedErrno() const { return header.h.savedErrno; }
