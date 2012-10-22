@@ -122,7 +122,12 @@ static void setupThreadStack(pthread_attr_t *attr_out,
   if (userStack) {
     mmap_size = stack_size;
   } else if (size == 0) {
-    JASSERT(!SYNC_IS_REPLAY);
+    /* It's possible the we got killed in the middle of pthread_create. If that
+     * happens, this assert is likely to trigger on REPLAY, as the correct
+     * stack size is recorded only after the _real_pthread_create returns.
+     JASSERT(!SYNC_IS_REPLAY);
+    */
+
     // Also figure out the default stack size for NPTL threads using the
     // architecture-specific limits defined in nptl/sysdeps/ARCH/pthreaddef.h
     struct rlimit rl;
