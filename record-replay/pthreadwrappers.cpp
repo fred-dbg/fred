@@ -54,9 +54,6 @@ struct create_arg
   int   userDetachState;
 };
 
-static int internal_pthread_mutex_lock(pthread_mutex_t *);
-static int internal_pthread_mutex_unlock(pthread_mutex_t *);
-
 static void *start_wrapper(void *arg)
 {
   dmtcp::ThreadInfo::postPthreadCreate();
@@ -160,114 +157,6 @@ static void disableDetachState(pthread_attr_t *attr)
   pthread_attr_setdetachstate(attr, PTHREAD_CREATE_JOINABLE);
 }
 
-/* Begin wrapper code */
-
-/* Performs the _real version with log and replay. Does NOT check
-   shouldSynchronize() and shouldn't be called directly unless you know what
-   you're doing. */
-static int internal_pthread_mutex_lock(pthread_mutex_t *mutex)
-{
-  int retval = 0;
-  log_entry_t my_entry = create_pthread_mutex_lock_entry(my_clone_id,
-                                                         pthread_mutex_lock_event,
-                                                         mutex);
-  if (SYNC_IS_REPLAY) {
-    WRAPPER_REPLAY(pthread_mutex_lock);
-  } else if (SYNC_IS_RECORD) {
-    retval = _real_pthread_mutex_lock(mutex);
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
-  }
-  return retval;
-}
-
-/* Performs the _real version with log and replay. Does NOT check
-   shouldSynchronize() and shouldn't be called directly unless you know what
-   you're doing. */
-static int internal_pthread_mutex_unlock(pthread_mutex_t *mutex)
-{
-  int retval = 0;
-  log_entry_t my_entry = create_pthread_mutex_unlock_entry(my_clone_id,
-                                                           pthread_mutex_unlock_event,
-                                                           mutex);
-
-  if (SYNC_IS_REPLAY) {
-    WRAPPER_REPLAY(pthread_mutex_unlock);
-  } else if (SYNC_IS_RECORD) {
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
-    retval = _real_pthread_mutex_unlock(mutex);
-    WRAPPER_LOG_UPDATE_ENTRY(my_entry);
-  }
-  return retval;
-}
-
-/* Performs the _real version with log and replay. Does NOT check
-   shouldSynchronize() and shouldn't be called directly unless you know what
-   you're doing. */
-static int internal_pthread_cond_signal(pthread_cond_t *cond)
-{
-  int retval = 0;
-  log_entry_t my_entry = create_pthread_cond_signal_entry(my_clone_id,
-                                                          pthread_cond_signal_event,
-                                                          cond);
-  if (SYNC_IS_REPLAY) {
-    WRAPPER_REPLAY(pthread_cond_signal);
-  } else  if (SYNC_IS_RECORD) {
-    dmtcp::ThreadInfo::setOptionalEvent();
-    retval = _real_pthread_cond_signal(cond);
-    dmtcp::ThreadInfo::unsetOptionalEvent();
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
-  }
-  return retval;
-}
-
-/* Performs the _real version with log and replay. Does NOT check
-   shouldSynchronize() and shouldn't be called directly unless you know what
-   you're doing. */
-static int internal_pthread_cond_wait(pthread_cond_t *cond,
-                                      pthread_mutex_t *mutex)
-{
-  /*
-   * pthread_cond_wait() internally consists of three events:
-   *   pthread_mutex_unlock()
-   *   block on cond-var cond
-   *   pthread_mutex_lock()
-   * Ideally we would like to log the pthread_mutex_{lock,unlock} calls, but
-   * since libpthread is making internal calls, we are unable to do so.
-   *
-   * Due to our inablility to force threads to acquire the mutex during REPLAY,
-   * on broadcast calls, all threads blocked on condition variable wake up and
-   * start to executing inside the critical section without acquiring the
-   * mutex. This is * totally undesired and incorrect.
-   *
-   * The solution is to make threads wait until the thread executing inside the
-   * critical section has left the critical section (This is done either by and
-   * explicit call to pthread_mutex_unlock() or a call to pthread_cond_wait()
-   * which involves unlocking the mutex).
-   *
-   * In order to do so, we introduce a _fake_ pthread_mutex_unlock() call (The
-   * call is fake in the sense that _real_XXX version is never called during
-   * record or replay). This extra log event makes sure that the other threads
-   * have to wait until the thread in critical section is able to process this
-   * event, hence making sure that only one thread is executing in the critical
-   * section during REPLAY.
-   */
-  FAKE_BASIC_SYNC_WRAPPER(int, pthread_mutex_unlock, mutex);
-
-  int retval = 0;
-  log_entry_t my_entry = create_pthread_cond_wait_entry(my_clone_id,
-                                                        pthread_cond_wait_event,
-                                                        cond, mutex);
-  if (SYNC_IS_REPLAY) {
-    WRAPPER_REPLAY(pthread_cond_wait);
-  } else if (SYNC_IS_RECORD) {
-    dmtcp::ThreadInfo::setOptionalEvent();
-    retval = _real_pthread_cond_wait(cond, mutex);
-    dmtcp::ThreadInfo::unsetOptionalEvent();
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
-  }
-  return retval;
-}
-
 /* Performs the _real version with log and replay. Does NOT check
    shouldSynchronize() and shouldn't be called directly unless you know what
    you're doing. */
@@ -352,12 +241,17 @@ static int internal_pthread_create(pthread_t *thread,
 
 extern "C" int pthread_mutex_lock(pthread_mutex_t *mutex)
 {
-  WRAPPER_HEADER_RAW(int, pthread_mutex_lock, _real_pthread_mutex_lock,
-                     mutex);
+  WRAPPER_HEADER(int, pthread_mutex_lock, _real_pthread_mutex_lock, mutex);
 
   /* NOTE: Don't call JTRACE (or anything that calls JTRACE) before
     this point. */
-  int retval = internal_pthread_mutex_lock(mutex);
+  if (SYNC_IS_REPLAY) {
+    WRAPPER_REPLAY(pthread_mutex_lock);
+  } else if (SYNC_IS_RECORD) {
+    retval = _real_pthread_mutex_lock(mutex);
+    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+  }
+  return retval;
   return retval;
 }
 
@@ -378,19 +272,31 @@ extern "C" int pthread_mutex_trylock(pthread_mutex_t *mutex)
 
 extern "C" int pthread_mutex_unlock(pthread_mutex_t *mutex)
 {
-  WRAPPER_HEADER_RAW(int, pthread_mutex_unlock, _real_pthread_mutex_unlock,
-                     mutex);
+  WRAPPER_HEADER(int, pthread_mutex_unlock, _real_pthread_mutex_unlock, mutex);
   /* NOTE: Don't call JTRACE (or anything that calls JTRACE) before
     this point. */
-  int retval = internal_pthread_mutex_unlock(mutex);
+
+  if (SYNC_IS_REPLAY) {
+    WRAPPER_REPLAY(pthread_mutex_unlock);
+  } else if (SYNC_IS_RECORD) {
+    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    retval = _real_pthread_mutex_unlock(mutex);
+    WRAPPER_LOG_UPDATE_ENTRY(my_entry);
+  }
   return retval;
 }
 
 extern "C" int pthread_cond_signal(pthread_cond_t *cond)
 {
-  WRAPPER_HEADER_RAW(int, pthread_cond_signal, _real_pthread_cond_signal,
-                     cond);
-  int retval = internal_pthread_cond_signal(cond);
+  WRAPPER_HEADER(int, pthread_cond_signal, _real_pthread_cond_signal, cond);
+  if (SYNC_IS_REPLAY) {
+    WRAPPER_REPLAY(pthread_cond_signal);
+  } else  if (SYNC_IS_RECORD) {
+    dmtcp::ThreadInfo::setOptionalEvent();
+    retval = _real_pthread_cond_signal(cond);
+    dmtcp::ThreadInfo::unsetOptionalEvent();
+    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+  }
   return retval;
 }
 
@@ -411,16 +317,49 @@ extern "C" int pthread_cond_broadcast(pthread_cond_t *cond)
 
 extern "C" int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex)
 {
-  WRAPPER_HEADER_RAW(int, pthread_cond_wait, _real_pthread_cond_wait,
-                     cond, mutex);
-  int retval = internal_pthread_cond_wait(cond, mutex);
+  WRAPPER_HEADER(int, pthread_cond_wait, _real_pthread_cond_wait, cond, mutex);
+  /*
+   * pthread_cond_wait() internally consists of three events:
+   *   pthread_mutex_unlock()
+   *   block on cond-var cond
+   *   pthread_mutex_lock()
+   * Ideally we would like to log the pthread_mutex_{lock,unlock} calls, but
+   * since libpthread is making internal calls, we are unable to do so.
+   *
+   * Due to our inablility to force threads to acquire the mutex during REPLAY,
+   * on broadcast calls, all threads blocked on condition variable wake up and
+   * start to executing inside the critical section without acquiring the
+   * mutex. This is * totally undesired and incorrect.
+   *
+   * The solution is to make threads wait until the thread executing inside the
+   * critical section has left the critical section (This is done either by and
+   * explicit call to pthread_mutex_unlock() or a call to pthread_cond_wait()
+   * which involves unlocking the mutex).
+   *
+   * In order to do so, we introduce a _fake_ pthread_mutex_unlock() call (The
+   * call is fake in the sense that _real_XXX version is never called during
+   * record or replay). This extra log event makes sure that the other threads
+   * have to wait until the thread in critical section is able to process this
+   * event, hence making sure that only one thread is executing in the critical
+   * section during REPLAY.
+   */
+  FAKE_BASIC_SYNC_WRAPPER(int, pthread_mutex_unlock, mutex);
+
+  if (SYNC_IS_REPLAY) {
+    WRAPPER_REPLAY(pthread_cond_wait);
+  } else if (SYNC_IS_RECORD) {
+    dmtcp::ThreadInfo::setOptionalEvent();
+    retval = _real_pthread_cond_wait(cond, mutex);
+    dmtcp::ThreadInfo::unsetOptionalEvent();
+    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+  }
   return retval;
 }
 
 extern "C" int pthread_cond_timedwait(pthread_cond_t *cond,
     pthread_mutex_t *mutex, const struct timespec *abstime)
 {
-  /* See the comments in internal_pthread_cond_wait() for the explanation of
+  /* See the comments in pthread_cond_wait() for the explanation of
    * the call to FAKE_BASIC_SYNC_WRAPPER()
    */
   FAKE_BASIC_SYNC_WRAPPER(int, pthread_mutex_unlock, mutex);
