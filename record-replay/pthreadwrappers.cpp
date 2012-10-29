@@ -79,7 +79,6 @@ static void *start_wrapper(void *arg)
 
   retval = (*user_fnc)(thread_arg);
   JTRACE ( "User start function over." );
-  dmtcp::ThreadInfo::reapThisThread();
   return retval;
 }
 
@@ -108,7 +107,6 @@ static void setupThreadStack(pthread_attr_t *attr_out,
       // User provided stack, Copy the user's attributes:
       JASSERT(stack_size != 0);
       *attr_out = *user_attr;
-      JASSERT(false);
       return;
     }
   }
@@ -317,8 +315,8 @@ static int internal_pthread_create(pthread_t *thread,
     pthread_attr_destroy(&the_attr);
 
   } else if (SYNC_IS_RECORD) {
-    dmtcp::ThreadInfo::prePthreadCreate();
     WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    dmtcp::ThreadInfo::prePthreadCreate();
 
     pthread_attr_init(&the_attr);
     // Possibly create a thread stack if the user has not provided one:
@@ -327,8 +325,11 @@ static int internal_pthread_create(pthread_t *thread,
     disableDetachState(&the_attr);
 
     createArg->attr = the_attr;
+    // MTCP may call jalib::malloc to allocate space for thread struct.
+    dmtcp::ThreadInfo::setOptionalEvent();
     retval = _real_pthread_create(thread, &the_attr,
                                   start_wrapper, (void *)createArg);
+    dmtcp::ThreadInfo::unsetOptionalEvent();
     my_entry.setRetval((void*)(unsigned long)retval);
     my_entry.setSavedErrno(errno);
 
@@ -563,20 +564,15 @@ extern "C" int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
 
 extern "C" void pthread_exit(void *value_ptr)
 {
-  if (SYNC_IS_NOOP) {
-    dmtcp::ThreadInfo::reapThisThread();
-  }
   WRAPPER_HEADER_NO_RETURN(pthread_exit, _real_pthread_exit, value_ptr);
 
   if (SYNC_IS_REPLAY) {
     waitForTurn(&my_entry, &pthread_exit_turn_check);
     getNextLogEntry();
-    dmtcp::ThreadInfo::reapThisThread();
     _real_pthread_exit(value_ptr);
   } else  if (SYNC_IS_RECORD) {
     // Not restart; we should be logging.
     addNextLogEntry(my_entry);
-    dmtcp::ThreadInfo::reapThisThread();
     _real_pthread_exit(value_ptr);
   }
   while(1); // to suppress compiler warning about 'noreturn' function returning

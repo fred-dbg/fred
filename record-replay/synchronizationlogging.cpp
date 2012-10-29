@@ -385,6 +385,7 @@ static inline bool is_optional_event_for(event_code_t event,
   case malloc_event:
   case calloc_event:
   case realloc_event:
+  case pthread_create_event:
     return query || opt_event == mmap_event;
   case fdopen_event:
     return query || opt_event == mmap_event || opt_event == malloc_event;
@@ -495,15 +496,15 @@ void waitForTurn(log_entry_t *my_entry, turn_pred_t pred)
     /* Also check for an optional event for this clone_id. */
     if (temp_entry.cloneId() == my_clone_id &&
         temp_entry.isOptional()) {
-#if DEBUG
       if (!is_optional_event_for(my_entry->eventId(), temp_entry.eventId(),
                                  false)) {
         JASSERT(false);
       }
-#endif
       memfence();
       dmtcp::ThreadInfo::wakeUpThread(my_clone_id);
       execute_optional_event(temp_entry.eventId());
+    } else {
+      JASSERT(false);
     }
   }
 

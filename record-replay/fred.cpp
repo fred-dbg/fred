@@ -212,6 +212,10 @@ EXTERNC void dmtcp_process_event(DmtcpEvent_t event, DmtcpEventData_t *data)
       fred_process_thread_start();
       break;
 
+    case DMTCP_EVENT_PTHREAD_RETURN:
+    case DMTCP_EVENT_PTHREAD_EXIT:
+      dmtcp::ThreadInfo::reapThisThread();
+      break;
 //    case DMTCP_EVENT_ATFORK_CHILD:
 //      pthread_atfork_child();
 //      break;
