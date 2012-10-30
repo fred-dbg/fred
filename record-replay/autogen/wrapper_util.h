@@ -34,139 +34,217 @@ extern "C"
 #endif
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_empty_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
   struct sockaddr_storage ret_addr;
   socklen_t ret_addrlen;
 } log_event_accept_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
   struct sockaddr_storage ret_addr;
   socklen_t ret_addrlen;
 } log_event_accept4_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_access_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_bind_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
   size_t nmemb;
   size_t size;
 } log_event_calloc_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_chmod_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_chown_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_close_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_connect_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_dup_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_dup2_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_dup3_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
   struct flock ret_flock;
 } log_event_fcntl_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_fchdir_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_fdatasync_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
   off_t data_offset;
 } log_event_getcwd_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
   struct timeval ret_tv;
   struct timezone ret_tz;
 } log_event_gettimeofday_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
   struct sockaddr_storage ret_addr;
   socklen_t ret_addrlen;
 } log_event_getpeername_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
   struct sockaddr_storage ret_addr;
   socklen_t ret_addrlen;
 } log_event_getsockname_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_link_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_symlink_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_listen_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
   struct tm ret_result;
 } log_event_localtime_r_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_utime_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_utimes_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_lutimes_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_futimes_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
   struct timespec ret_res;
 } log_event_clock_getres_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
   struct timespec ret_tp;
 } log_event_clock_gettime_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_clock_settime_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_lseek_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_lseek64_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_llseek_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
   size_t size;
 } log_event_malloc_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
   void* ptr;
 } log_event_free_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_mkdir_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_mkstemp_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
   void* addr;
   size_t length;
   int prot;
@@ -177,6 +255,8 @@ typedef struct {
 } log_event_mmap_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
   void* addr;
   size_t length;
   int prot;
@@ -187,124 +267,192 @@ typedef struct {
 } log_event_mmap64_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
   void* addr;
   size_t length;
 } log_event_munmap_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_mremap_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_open_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_open64_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_openat_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
   off_t data_offset;
 } log_event_pread_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
   off_t data_offset;
 } log_event_preadv_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_pwrite_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_pwritev_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_pthread_rwlock_unlock_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_pthread_rwlock_rdlock_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_pthread_rwlock_wrlock_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
   pthread_t ret_thread;
   void *stack_addr;
   size_t stack_size;
 } log_event_pthread_create_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_pthread_detach_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_pthread_exit_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
   pthread_t thread;
   void* ret_value_ptr;
 } log_event_pthread_join_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_pthread_kill_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_pthread_mutex_lock_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_pthread_mutex_trylock_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_pthread_mutex_unlock_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_rand_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_fork_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
   off_t data_offset;
 } log_event_read_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
   off_t data_offset;
 } log_event_readv_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
   off_t data_offset;
 } log_event_readlink_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
   off_t data_offset;
   size_t len;
 } log_event_realpath_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_realloc_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_rename_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_rmdir_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
   fd_set ret_readfds;
   fd_set ret_writefds;
 } log_event_select_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
   off_t data_offset;
 } log_event_ppoll_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_setsockopt_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
   socklen_t ret_optlen;
   off_t data_offset;
 } log_event_getsockopt_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
   off_t data_offset;
   struct winsize win_val;
   struct ifconf ifconf_val;
@@ -312,329 +460,509 @@ typedef struct {
 } log_event_ioctl_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_shutdown_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
   int ret_sig;
 } log_event_sigwait_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_srand_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_socket_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
   int ret_sv[2];
 } log_event_socketpair_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
   time_t ret_tloc;
 } log_event_time_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_truncate_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_ftruncate_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_truncate64_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_ftruncate64_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_unlink_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_write_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_writev_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_epoll_create_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_epoll_create1_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_epoll_ctl_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
   off_t data_offset;
 } log_event_epoll_wait_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
   struct passwd ret_pwd;
   struct passwd* ret_result;
   off_t data_offset;
 } log_event_getpwnam_r_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
   struct passwd ret_pwd;
   struct passwd* ret_result;
   off_t data_offset;
 } log_event_getpwuid_r_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
   struct group ret_grp;
   struct group* ret_result;
   off_t data_offset;
 } log_event_getgrnam_r_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
   struct group ret_grp;
   struct group* ret_result;
   off_t data_offset;
 } log_event_getgrgid_r_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
   struct addrinfo* ret_res;
   off_t data_offset;
   int num_results;
 } log_event_getaddrinfo_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_freeaddrinfo_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
   off_t data_offset;
   char ret_host[NI_MAXHOST];
   char ret_serv[NI_MAXSERV];
 } log_event_getnameinfo_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_sendto_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_sendmsg_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
   struct sockaddr_storage ret_src_addr;
   socklen_t ret_addrlen;
   off_t data_offset;
 } log_event_recvfrom_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
   struct msghdr ret_msg;
   off_t data_offset;
   off_t control_buf_offset;
 } log_event_recvmsg_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
   siginfo_t ret_infop;
 } log_event_waitid_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
   void* ret_status;
   struct rusage ret_rusage;
 } log_event_wait4_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_sigaction_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_signal_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_sigset_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
   FILE fopen_retval;
 } log_event_fopen_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
   FILE fopen64_retval;
 } log_event_fopen64_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
   FILE freopen_retval;
 } log_event_freopen_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_fclose_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
   FILE fdopen_retval;
 } log_event_fdopen_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
   off_t data_offset;
 } log_event_fgets_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_ferror_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_feof_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_fileno_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_fflush_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_setvbuf_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_fseek_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_fputs_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_puts_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_fputc_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_fsync_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_ftell_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_fgetpos_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_fgetpos64_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_fsetpos_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_fsetpos64_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_fwrite_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
   off_t data_offset;
 } log_event_fread_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_getc_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_fgetc_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_ungetc_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
   char* ret_lineptr;
   size_t ret_n;
   off_t data_offset;
 } log_event_getline_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
   char* ret_lineptr;
   size_t ret_n;
   off_t data_offset;
 } log_event_getdelim_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_putc_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_rewind_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
   FILE tmpfile_retval;
 } log_event_tmpfile_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_flockfile_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_ftrylockfile_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_funlockfile_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_closedir_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_opendir_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_fdopendir_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
   struct dirent readdir_retval;
 } log_event_readdir_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
   struct dirent ret_entry;
   struct dirent* ret_result;
 } log_event_readdir_r_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_pthread_cond_broadcast_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_pthread_cond_signal_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_pthread_cond_wait_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_pthread_cond_timedwait_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_pthread_cond_destroy_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
   struct stat ret_buf;
 } log_event_fxstat_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
   struct stat64 ret_buf;
 } log_event_fxstat64_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
   struct stat ret_buf;
 } log_event_lxstat_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
   struct stat64 ret_buf;
 } log_event_lxstat64_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
   struct stat ret_buf;
 } log_event_xstat_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
   struct stat64 ret_buf;
 } log_event_xstat64_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_libc_memalign_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_vfprintf_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
   off_t data_offset;
   int bytes;
 } log_event_vfscanf_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_exec_barrier_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
   int savedSig;
 } log_event_signal_handler_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_user_t;
 
 typedef struct {
+  int   savedErrno;
+  void* retval;
 } log_event_syscall_t;
 
 
@@ -812,27 +1140,24 @@ const int cloneIdBits = 20;
 const int MAX_EVENTS = (1 << eventBits);
 const int MAX_OPTIONAL_LEVEL = (1 << isOptionalBits);
 const int MAX_CLONE_IDS = (1 << cloneIdBits);
+
 typedef struct {
-  struct {
-    unsigned      event       :eventBits;
-    unsigned      isOptional  :isOptionalBits;
-    unsigned      cloneId     :cloneIdBits;
-    int           savedErrno  :32;
-  } h;
-  void* retval;
+  event_code_t event    :eventBits;
+  unsigned isOptional   :isOptionalBits;
+  unsigned retvalZero   :1;
+  unsigned cloneId      :cloneIdBits;
 } log_entry_header_t;
 
 typedef struct {
-  event_code_t eventId() const { return (event_code_t) header.h.event; }
-  void         setEventId(event_code_t e) { header.h.event = e; }
-  clone_id_t cloneId() const { return header.h.cloneId; }
-  void       setCloneId(clone_id_t c) { header.h.cloneId = c; }
-  bool       isOptional() const { return header.h.isOptional; }
-  void       setIsOptional(bool i) { header.h.isOptional = i; }
-  int        savedErrno() const { return header.h.savedErrno; }
-  void       setSavedErrno(int e) { header.h.savedErrno = e; }
-  void      *retval() const { return header.retval; }
-  void       setRetval(void *r) { header.retval = r; }
+  event_code_t eventId() const { return (event_code_t) header.event; }
+  void         setEventId(event_code_t e) { header.event = e; }
+  clone_id_t   cloneId() const { return header.cloneId; }
+  void         setCloneId(clone_id_t c) { header.cloneId = c; }
+  bool         isOptional() const { return header.isOptional; }
+  void         setIsOptional(bool i) { header.isOptional = i; }
+  bool         isRetvalZero() const { return header.retvalZero == 1; }
+  bool         setRetvalZero() { header.retvalZero = 1; }
+  bool         unsetRetvalZero() { header.retvalZero = 0; }
 
   // Shared among all events ("common area"):
   /* IMPORTANT: Adding new fields to the common area requires that you also
@@ -1332,6 +1657,7 @@ log_entry_t create_user_entry(clone_id_t cloneId, event_code_t event);
 log_entry_t create_syscall_entry(clone_id_t cloneId, event_code_t event,
                                  int num, void* a1, void* a2, void* a3, void* a4, void* a5, void* a6, void* a7);
 size_t getLogEventSize(const log_entry_t *entry);
+size_t getNumActualFieldsInLogEvent(const log_entry_t *entry);
 
 #ifdef __cplusplus
 }

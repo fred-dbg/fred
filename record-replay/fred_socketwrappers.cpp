@@ -54,7 +54,7 @@ int socket ( int domain, int type, int protocol )
     dmtcp::ThreadInfo::setOptionalEvent();
     retval = _real_socket(domain, type, protocol);
     dmtcp::ThreadInfo::unsetOptionalEvent();
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(socket);
   }
   return retval;
 }
@@ -97,7 +97,7 @@ int accept ( int sockfd, struct sockaddr *addr, socklen_t *addrlen )
       SET_FIELD2(my_entry, accept, ret_addrlen, *addrlen);
       memcpy(&GET_FIELD(my_entry, accept, ret_addr), addr, *addrlen);
     }
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(accept);
   }
   return retval;
 }
@@ -119,7 +119,7 @@ int accept4 ( int sockfd, struct sockaddr *addr, socklen_t *addrlen, int flags )
       SET_FIELD2(my_entry, accept4, ret_addrlen, *addrlen);
       memcpy(&GET_FIELD(my_entry, accept4, ret_addr), addr, *addrlen);
     }
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(accept4);
   }
   return retval;
 }
@@ -159,7 +159,7 @@ extern "C" int socketpair ( int domain, int type, int protocol, int sv[2] )
     if (retval != -1) {
       memcpy(GET_FIELD(my_entry, socketpair, ret_sv), sv, sizeof(sv));
     }
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(socketpair);
   }
   return retval;
 }
@@ -175,7 +175,7 @@ int setsockopt ( int sockfd, int  level,  int  optname,  const  void  *optval,
     dmtcp::ThreadInfo::setOptionalEvent();
     retval = _real_setsockopt(sockfd, level, optname, optval, optlen);
     dmtcp::ThreadInfo::unsetOptionalEvent();
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(setsockopt);
   }
   return retval;
 }
@@ -200,7 +200,7 @@ int getsockopt ( int sockfd, int  level,  int  optname,  void  *optval,
       WRAPPER_LOG_WRITE_INTO_READ_LOG(getsockopt, optval, *optlen);
       SET_FIELD2(my_entry, getsockopt, ret_optlen, *optlen);
     }
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(getsockopt);
   }
   return retval;
 }
@@ -252,7 +252,7 @@ extern "C" ssize_t recvfrom(int sockfd, void *buf, size_t len, int flags,
         SET_FIELD2(my_entry, recvfrom, ret_addrlen, *addrlen);
       }
     }
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(recvfrom);
   }
   return retval;
 }
@@ -286,7 +286,7 @@ extern "C" ssize_t recvmsg(int sockfd, struct msghdr *msg, int flags)
       _real_pthread_mutex_unlock(&read_data_mutex);
       errno = saved_errno;
     }
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(recvmsg);
   }
   return retval;
 }

@@ -26,8 +26,8 @@
 #include "jalloc.h"
 #include "dmtcpalloc.h"
 #include "jassert.h"
-#include "synchronizationlogging.h"
 #include "fred_interface.h"
+#include "synchronizationlogging.h"
 #include <unistd.h>
 
 #define DMTCP_PAGE_SIZE sysconf(_SC_PAGESIZE)
@@ -111,6 +111,7 @@ namespace dmtcp
       log_entry_t& getCurrentEntry();
       size_t appendEntry(log_entry_t& entry);
       void   updateEntry(const log_entry_t& entry, size_t offset);
+      void   updateEntryHeader(const log_entry_t& entry, size_t offset);
       void   moveMarkersToEnd();
 
     private:
@@ -119,7 +120,7 @@ namespace dmtcp
       { resetIndex(); *_dataSize = 0; *_numEntries = 0; *_numThreads = 0; }
 
       int    writeEntryAtOffset(const log_entry_t& entry, size_t index);
-      void   writeEntryHeaderAtOffset(const log_entry_t& entry, size_t index);
+      size_t writeEntryHeaderAtOffset(const log_entry_t& entry, size_t index);
       size_t getEntryHeaderAtOffset(log_entry_t& entry, size_t index);
       int    getEntryAtOffset(log_entry_t& entry, size_t index);
 

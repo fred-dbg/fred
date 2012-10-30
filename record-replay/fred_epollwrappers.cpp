@@ -83,7 +83,7 @@ extern "C" int epoll_wait(int epfd, struct epoll_event *events,
       size_t size = retval * sizeof(struct epoll_event);
       WRAPPER_LOG_WRITE_INTO_READ_LOG(epoll_wait, (void*) events, size);
     }
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(epoll_wait);
   }
   return retval;
 }

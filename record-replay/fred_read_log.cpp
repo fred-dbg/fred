@@ -44,10 +44,12 @@
 #include "autogen/fred_read_log.h"
 
 void print_log_entry_common(int idx, log_entry_t *entry) {
-  printf("%2d: clone_id=%ld, [%-20.20s]: ",
-         idx, entry->cloneId(), log_event_str[entry->eventId()]);
+  printf("%2d: clone_id=%ld, [%-20.20s]: isOpt=%d, isRetZero=%d",
+         idx, entry->cloneId(), log_event_str[entry->eventId()],
+         entry->isOptional(), entry->isRetvalZero());
 
-  switch ((long) (unsigned long) entry->retval()) {
+  /*
+  switch ((long) RETVAL(entry)) {
     case 0:
       printf("ret=  0      , "); break;
     case -1:
@@ -55,8 +57,7 @@ void print_log_entry_common(int idx, log_entry_t *entry) {
     default:
       printf("ret=%p, ", entry->retval()); break;
   }
-  printf("errno=%d, isOpt=%d",
-         entry->savedErrno(), entry->isOptional());
+  */
 }
 
 void rewriteLog(char *log_path)

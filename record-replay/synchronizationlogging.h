@@ -121,6 +121,20 @@ static inline bool isProcessGDB() {
   (GET_FIELD(e1, event, field) == GET_FIELD(e2, event, field))
 #define IS_EQUAL_FIELD_PTR(e1, e2, event, field) \
   (GET_FIELD_PTR(e1, event, field) == GET_FIELD_PTR(e2, event, field))
+
+#define RETVAL(entry, event) \
+  ((unsigned long) (entry.isRetvalZero() ? 0 : GET_FIELD(entry, event, retval)))
+
+#define ERRNO(entry, event) \
+  ((unsigned long) (entry.isRetvalZero() ? 0 : GET_FIELD(entry, event, savedErrno)))
+
+#define SET_RETVAL_ERRNO(entry, event, rv, err)                         \
+  do {                                                                  \
+    if ((void*) (long) rv == NULL) entry.setRetvalZero();               \
+    SET_FIELD2(entry, event, retval, (void*)(unsigned long) rv);        \
+    SET_FIELD2(entry, event, savedErrno, err);                          \
+  } while (0)
+
 #define WRAPPER_HEADER_VOID_RAW(name, real_func, ...)                   \
   void *return_addr = GET_RETURN_ADDRESS();                             \
   do {                                                                  \
@@ -171,7 +185,7 @@ static inline bool isProcessGDB() {
 #define WRAPPER_REPLAY_START_TYPED(ret_type, name)                    \
   do {                                                                \
     waitForTurn(&my_entry, &name##_turn_check);                       \
-    retval = (ret_type) (unsigned long) my_entry.retval();            \
+    retval = (ret_type) RETVAL(my_entry, name);                       \
   } while (0)
 
 #define WRAPPER_REPLAY_START(name)                                  \
@@ -179,11 +193,8 @@ static inline bool isProcessGDB() {
 
 #define WRAPPER_REPLAY_END(name)                                    \
   do {                                                              \
-    int saved_errno = my_entry.savedErrno();                        \
     getNextLogEntry();                                              \
-    if (saved_errno != 0) {                                         \
-      errno = saved_errno;                                          \
-    }                                                               \
+    errno = ERRNO(my_entry, name);                                  \
   } while (0)
 
 
@@ -198,11 +209,8 @@ static inline bool isProcessGDB() {
 #define WRAPPER_REPLAY_VOID(name)                                   \
   do {                                                              \
     waitForTurn(&my_entry, &name##_turn_check);                     \
-    int saved_errno = my_entry.savedErrno();                        \
     getNextLogEntry();                                              \
-    if (saved_errno != 0) {                                         \
-      errno = saved_errno;                                          \
-    }                                                               \
+    errno = ERRNO(my_entry, name);                                  \
   } while (0)
 
 #define WRAPPER_REPLAY_READ_FROM_READ_LOG(name, ptr, len)               \
@@ -253,46 +261,60 @@ static inline bool isProcessGDB() {
   } while (0)
 
 
-#define WRAPPER_LOG_WRITE_ENTRY_VOID(my_entry)                      \
+#define WRAPPER_LOG_WRITE_ENTRY_VOID(name)                          \
   size_t log_offset;                                                \
   do {                                                              \
-    my_entry.setSavedErrno(errno);                                  \
+    SET_RETVAL_ERRNO(my_entry, name, 0, errno);                     \
     my_entry.setIsOptional(dmtcp::ThreadInfo::isOptionalEvent());   \
     log_offset = addNextLogEntry(my_entry);                         \
-    errno = my_entry.savedErrno();                                  \
+    errno = ERRNO(my_entry, name);                                  \
   } while (0)
 
-#define WRAPPER_LOG_WRITE_ENTRY(my_entry)                           \
+#define WRAPPER_LOG_WRITE_ENTRY(name)                               \
   size_t log_offset;                                                \
   do {                                                              \
-    my_entry.setRetval((void*) (unsigned long) retval);             \
-    my_entry.setSavedErrno(errno);                                  \
+    SET_RETVAL_ERRNO(my_entry, name, retval, errno);                \
     my_entry.setIsOptional(dmtcp::ThreadInfo::isOptionalEvent());   \
     log_offset = addNextLogEntry(my_entry);                         \
-    errno = my_entry.savedErrno();                                  \
+    errno = ERRNO(my_entry, name);                                  \
   } while (0)
 
-#define WRAPPER_LOG_UPDATE_ENTRY(my_entry)                          \
+#define WRAPPER_LOG_RESERVE_SLOT(name)                              \
+  size_t log_offset;                                                \
   do {                                                              \
-    my_entry.setRetval((void*) (unsigned long) retval);             \
-    my_entry.setSavedErrno(errno);                                  \
+    SET_RETVAL_ERRNO(my_entry, name, -1, errno);                    \
+    my_entry.setIsOptional(dmtcp::ThreadInfo::isOptionalEvent());   \
+    log_offset = addNextLogEntry(my_entry);                         \
+    errno = ERRNO(my_entry, name);                                  \
+  } while (0)
+
+#define WRAPPER_LOG_UPDATE_ENTRY(name)                              \
+  do {                                                              \
+    SET_RETVAL_ERRNO(my_entry, name, retval, errno);                \
     my_entry.setIsOptional(dmtcp::ThreadInfo::isOptionalEvent());   \
     updateLogEntry(my_entry, log_offset);                           \
-    errno = my_entry.savedErrno();                                  \
+    errno = ERRNO(my_entry, name);                                  \
   } while (0)
 
-#define WRAPPER_LOG(real_func, ...)                                 \
+#define WRAPPER_LOG_UPDATE_HEADER(name)                             \
+  do {                                                              \
+    JASSERT(retval != 0);                                           \
+    SET_RETVAL_ERRNO(my_entry, name, retval, errno);                \
+    updateLogEntryHeader(my_entry, log_offset);                     \
+    errno = ERRNO(my_entry, name);                                  \
+  } while (0)
+
+
+#define WRAPPER_LOG(name, real_func, ...)                           \
   do {                                                              \
     retval = real_func(__VA_ARGS__);                                \
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);                              \
+    WRAPPER_LOG_WRITE_ENTRY(name);                                  \
   } while (0)
 
-#define WRAPPER_LOG_VOID(real_func, ...)                            \
+#define WRAPPER_LOG_VOID(name, real_func, ...)                      \
   do {                                                              \
     real_func(__VA_ARGS__);                                         \
-    my_entry.setSavedErrno(errno);                                  \
-    addNextLogEntry(my_entry);                                      \
-    errno = my_entry.savedErrno();                                  \
+    WRAPPER_LOG_WRITE_ENTRY_VOID(name);                             \
   } while (0)
 
 
@@ -318,7 +340,7 @@ static inline bool isProcessGDB() {
   if (SYNC_IS_REPLAY) {                                             \
     WRAPPER_REPLAY_TYPED(ret_type, name);                           \
   } else if (SYNC_IS_RECORD) {                                      \
-    WRAPPER_LOG(real_func, __VA_ARGS__);                            \
+    WRAPPER_LOG(name, real_func, __VA_ARGS__);                      \
   }                                                                 \
   return retval;
 
@@ -327,7 +349,7 @@ static inline bool isProcessGDB() {
   if (SYNC_IS_REPLAY) {                                             \
     WRAPPER_REPLAY_TYPED(ret_type, name);                           \
   } else if (SYNC_IS_RECORD) {                                      \
-    WRAPPER_LOG(real_func, __VA_ARGS__);                            \
+    WRAPPER_LOG(name, real_func, __VA_ARGS__);                      \
   }                                                                 \
 
 #define BASIC_SYNC_WRAPPER_VOID(name, real_func, ...)               \
@@ -335,7 +357,7 @@ static inline bool isProcessGDB() {
   if (SYNC_IS_REPLAY) {                                             \
     WRAPPER_REPLAY_VOID(name);                                      \
   } else if (SYNC_IS_RECORD) {                                      \
-    WRAPPER_LOG_VOID(real_func, __VA_ARGS__);                       \
+    WRAPPER_LOG_VOID(name, real_func, __VA_ARGS__);                 \
   }
 
 #define FAKE_BASIC_SYNC_WRAPPER(ret_type, name, ...)                \
@@ -347,21 +369,12 @@ static inline bool isProcessGDB() {
     if (SYNC_IS_REPLAY) {                                           \
       WRAPPER_REPLAY(name);                                         \
     } else if (SYNC_IS_RECORD) {                                    \
-      WRAPPER_LOG_WRITE_ENTRY(my_entry);                            \
+      WRAPPER_LOG_WRITE_ENTRY(name);                                \
     }                                                               \
   } while (0)
 
-#define NO_LOG_ENTRY_TO_BUFFER
 
-#ifdef NO_LOG_ENTRY_TO_BUFFER
-# define log_event_common_size (sizeof(log_entry_header_t))
-#else
-# define log_event_common_size                                         \
-  (sizeof(EMPTY_LOG_ENTRY.headher.h)  +    /* event */                 \
-   sizeof(EMPTY_LOG_ENTRY.headher.retval)) /* isOptional */
-#endif
-
-
+#define log_event_header_size (sizeof(log_entry_header_t))
 
 /* Typedefs */
 // Type for predicate to check for a turn in the log.
@@ -370,7 +383,7 @@ typedef int (*turn_pred_t) (log_entry_t*, log_entry_t*);
 /* Static constants: */
 // Clone id to indicate anyone may do this event (used for exec):
 static const int         CLONE_ID_ANYONE = -2;
-static const log_entry_t EMPTY_LOG_ENTRY = {{{empty_event, 0 , 0, 0}, 0}};
+static const log_entry_t EMPTY_LOG_ENTRY = {{empty_event, 0 , 0, 0}};
 // Number to start clone_ids at:
 static const int         RECORD_LOG_PATH_MAX = 256;
 
@@ -396,7 +409,8 @@ LIB_PRIVATE extern volatile off_t         read_log_pos;
 
 /* Functions */
 LIB_PRIVATE size_t addNextLogEntry(log_entry_t&);
-LIB_PRIVATE void   updateLogEntry(log_entry_t&, size_t offset = INVALID_LOG_OFFSET);
+LIB_PRIVATE void   updateLogEntry(log_entry_t&, size_t offset);
+LIB_PRIVATE void   updateLogEntryHeader(log_entry_t&, size_t offset);
 LIB_PRIVATE void   set_sync_mode(int mode);
 LIB_PRIVATE int    get_sync_mode();
 LIB_PRIVATE void   copyFdSet(fd_set *src, fd_set *dest);

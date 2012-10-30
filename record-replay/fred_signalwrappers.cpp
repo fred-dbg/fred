@@ -70,7 +70,7 @@ if (!shouldSynchronize(return_addr)) {
   } else if (SYNC_IS_RECORD) {
     (*user_sig_handlers[sig]) (sig);
     SET_FIELD2(my_entry, signal_handler, savedSig, sig);
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(signal_handler);
   }
 }
 
@@ -95,7 +95,7 @@ if (!shouldSynchronize(return_addr)) {
     (*user_sa_sigaction[sig]) (sig, info, data);
   } else if (SYNC_IS_RECORD) {
     (*user_sa_sigaction[sig]) (sig, info, data);
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(signal_handler);
   }
 }
 
@@ -182,7 +182,7 @@ EXTERNC int sigwait(const sigset_t *set, int *sig)
     if (sig != NULL) {
       SET_FIELD2(my_entry, sigwait, ret_sig, *sig);
     }
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(sigwait);
   }
   return retval;
 }

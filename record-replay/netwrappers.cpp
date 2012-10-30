@@ -81,7 +81,7 @@ extern "C" int getsockname(int sockfd, struct sockaddr *addr,
       SET_FIELD2(my_entry, getsockname, ret_addrlen, *addrlen);
       memcpy(&GET_FIELD(my_entry, getsockname, ret_addr), addr, *addrlen);
     }
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(getsockname);
   }
   WRAPPER_EXECUTION_ENABLE_CKPT();
   return retval;
@@ -106,7 +106,7 @@ extern "C" int getpeername(int sockfd, struct sockaddr *addr,
       SET_FIELD2(my_entry, getpeername, ret_addrlen, *addrlen);
       memcpy(&GET_FIELD(my_entry, getpeername, ret_addr), addr, *addrlen);
     }
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(getpeername);
   }
   WRAPPER_EXECUTION_ENABLE_CKPT();
   return retval;
@@ -198,7 +198,7 @@ extern "C" int getpwnam_r(const char *name, struct passwd *pwd,
       WRAPPER_LOG_WRITE_INTO_READ_LOG(getpwnam_r, buf, buflen);
     }
     SET_FIELD2(my_entry, getpwnam_r, ret_result, *result);
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(getpwnam_r);
   }
   return retval;
 }
@@ -225,7 +225,7 @@ extern "C" int getpwuid_r(uid_t uid, struct passwd *pwd,
       WRAPPER_LOG_WRITE_INTO_READ_LOG(getpwuid_r, buf, buflen);
     }
     SET_FIELD2(my_entry, getpwuid_r, ret_result, *result);
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(getpwuid_r);
   }
   return retval;
 }
@@ -252,7 +252,7 @@ extern "C" int getgrnam_r(const char *name, struct group *grp,
       WRAPPER_LOG_WRITE_INTO_READ_LOG(getgrnam_r, buf, buflen);
     }
     SET_FIELD2(my_entry, getgrnam_r, ret_result, *result);
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(getgrnam_r);
   }
   return retval;
 }
@@ -279,7 +279,7 @@ extern "C" int getgrgid_r(gid_t gid, struct group *grp,
       WRAPPER_LOG_WRITE_INTO_READ_LOG(getgrgid_r, buf, buflen);
     }
     SET_FIELD2(my_entry, getgrgid_r, ret_result, *result);
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(getgrgid_r);
   }
   return retval;
 }
@@ -385,7 +385,7 @@ extern "C" int getaddrinfo(const char *node, const char *service,
     }
     SET_FIELD2(my_entry, getaddrinfo, num_results, numResults);
 
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(getaddrinfo);
   }
   return retval;
 }
@@ -399,7 +399,7 @@ extern "C" void freeaddrinfo(struct addrinfo *res)
     dmtcp::ThreadInfo::setOptionalEvent();
     _real_freeaddrinfo(res);
     dmtcp::ThreadInfo::unsetOptionalEvent();
-    WRAPPER_LOG_WRITE_ENTRY_VOID(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY_VOID(freeaddrinfo);
   }
 }
 
@@ -430,7 +430,7 @@ extern "C" int getnameinfo(const struct sockaddr *sa, socklen_t salen,
       strncpy(GET_FIELD(my_entry, getnameinfo, ret_serv), serv, servlen);
     }
 
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(getnameinfo);
   }
   return retval;
 

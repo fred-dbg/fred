@@ -39,4 +39,7 @@
 
 #define ENABLE_MALLOC_WRAPPER
 #define ENV_VAR_LOG_REPLAY "DMTCP_LOG_REPLAY"
+
+#define MAX_LOG_LENGTH ((size_t)250 * 1024 * 1024)
+#define INVALID_LOG_OFFSET (~0U)
 #endif

@@ -736,6 +736,19 @@ class WrapperInfo:
     def groupName(self):
         return self.groupName
 
+    def get_num_actual_fields(self):
+        num_fields = 0;
+        for arg in self.args:
+            if self.debugMode or arg.save() or arg.save_retval():
+                if not arg.dont_save():
+                    num_fields += 1
+        if self.decl_retval:
+            num_fields += 1
+        if self.decl_data_offset:
+            num_fields += 1
+        num_fields += len(self.extra_fields_for_log_entry_struct)
+        return num_fields;
+
     def get_arg_signature(self):
         arg_sign = []
         for arg in self.args:
@@ -788,7 +801,9 @@ class WrapperInfo:
         return (sign, body)
 
     def get_struct_def(self):
-        ret = 'typedef struct {\n'
+        ret  = 'typedef struct {\n'
+        ret += '  int   savedErrno;\n'
+        ret += '  void* retval;\n'
         for arg in self.args:
             if not arg.dont_save():
                 if self.debugMode or arg.save():
@@ -811,8 +826,21 @@ class WrapperInfo:
     def get_print_entry_fn(self):
         sign =  'void print_log_entry_%s' % (self._name)
         sign += '(int idx, log_entry_t *entry)'
-        body =  ' {\n'
-        body += '  printf("'
+        body = textwrap.dedent("""\n\
+            {
+              if (entry->isRetvalZero()) {
+                printf(" ret= 0 errno= 0");
+              } else {
+                if ((long) GET_FIELD_PTR(entry, %s, retval) <= 4096) {
+                  printf(" ret= -1");
+                } else {
+                  printf(" ret= %%p", GET_FIELD_PTR(entry, %s, retval));
+                }
+                printf(" errno= %%d", GET_FIELD_PTR(entry, %s, savedErrno));
+              }
+        """)
+        body = body % (self._name, self._name, self._name)
+
         fmt_str = ''
         arg_list = ''
         for arg in self.args:
@@ -820,7 +848,7 @@ class WrapperInfo:
                 fmt_str += ' %s=%s' % (arg.name(), arg.ret_type().format_str())
                 arg_list += ',\n         GET_FIELD_PTR(entry, %s, %s)' \
                          % (self._name, arg.name())
-        body = '  {\n  printf("%s\\n" %s);\n}\n' % (fmt_str, arg_list)
+        body += '  printf("%s\\n" %s);\n}\n' % (fmt_str, arg_list)
         return (sign, body)
 
 copyrightHdr = """\
@@ -858,6 +886,9 @@ def gen_wrapper_util_cpp(allWrappers):
 
         """)
 
+    log_event_fields_start = 'static size_t log_event_actual_fields[numTotalWrappers] = {\n'
+    log_event_fields_end = '\n};\n\n'
+
     log_event_size_start = 'static size_t log_event_size[numTotalWrappers] = {\n'
     log_event_size_end = textwrap.dedent("""\
 
@@ -865,6 +896,9 @@ def gen_wrapper_util_cpp(allWrappers):
 
         size_t getLogEventSize(const log_entry_t *entry) {
           return log_event_size[entry->eventId()];
+        }
+        size_t getNumActualFieldsInLogEvent(const log_entry_t *entry) {
+          return log_event_actual_fields[entry->eventId()];
         }
         """)
 
@@ -888,10 +922,13 @@ def gen_wrapper_util_cpp(allWrappers):
         """)
 
     event_size = []
+    event_fields = []
     create_entry_fn = []
     turn_check_p_fn = []
     for winfo in allWrappers:
         event_size += ['  sizeof(log_event_%s_t),' % (winfo.name())]
+        event_fields += ['  %d, /* %s */' % (winfo.get_num_actual_fields(),
+                                             winfo.name())]
         (create_entry_sign, create_entry_body) = winfo.get_create_entry_fn()
         create_entry_fn += [create_entry_sign + create_entry_body]
         (turn_check_p_sign, turn_check_p_body) = winfo.get_turn_check_p_fn()
@@ -900,6 +937,10 @@ def gen_wrapper_util_cpp(allWrappers):
     fd = open('wrapper_util.cpp', 'w')
     fd.write(copyrightHdr)
     fd.write(header)
+
+    fd.write(log_event_fields_start)
+    fd.write(string.join(event_fields, '\n'))
+    fd.write(log_event_fields_end)
 
     fd.write(log_event_size_start)
     fd.write(string.join(event_size, '\n'))
@@ -1053,27 +1094,24 @@ def gen_wrapper_util_h(allWrappers):
         const int MAX_EVENTS = (1 << eventBits);
         const int MAX_OPTIONAL_LEVEL = (1 << isOptionalBits);
         const int MAX_CLONE_IDS = (1 << cloneIdBits);
+
         typedef struct {
-          struct {
-            unsigned      event       :eventBits;
-            unsigned      isOptional  :isOptionalBits;
-            unsigned      cloneId     :cloneIdBits;
-            int           savedErrno  :32;
-          } h;
-          void* retval;
+          event_code_t event    :eventBits;
+          unsigned isOptional   :isOptionalBits;
+          unsigned retvalZero   :1;
+          unsigned cloneId      :cloneIdBits;
         } log_entry_header_t;
 
         typedef struct {
-          event_code_t eventId() const { return (event_code_t) header.h.event; }
-          void         setEventId(event_code_t e) { header.h.event = e; }
-          clone_id_t cloneId() const { return header.h.cloneId; }
-          void       setCloneId(clone_id_t c) { header.h.cloneId = c; }
-          bool       isOptional() const { return header.h.isOptional; }
-          void       setIsOptional(bool i) { header.h.isOptional = i; }
-          int        savedErrno() const { return header.h.savedErrno; }
-          void       setSavedErrno(int e) { header.h.savedErrno = e; }
-          void      *retval() const { return header.retval; }
-          void       setRetval(void *r) { header.retval = r; }
+          event_code_t eventId() const { return (event_code_t) header.event; }
+          void         setEventId(event_code_t e) { header.event = e; }
+          clone_id_t   cloneId() const { return header.cloneId; }
+          void         setCloneId(clone_id_t c) { header.cloneId = c; }
+          bool         isOptional() const { return header.isOptional; }
+          void         setIsOptional(bool i) { header.isOptional = i; }
+          bool         isRetvalZero() const { return header.retvalZero == 1; }
+          bool         setRetvalZero() { header.retvalZero = 1; }
+          bool         unsetRetvalZero() { header.retvalZero = 0; }
 
           // Shared among all events ("common area"):
           /* IMPORTANT: Adding new fields to the common area requires that you also
@@ -1087,6 +1125,7 @@ def gen_wrapper_util_h(allWrappers):
 
     footer = textwrap.dedent("""\
         size_t getLogEventSize(const log_entry_t *entry);
+        size_t getNumActualFieldsInLogEvent(const log_entry_t *entry);
 
         #ifdef __cplusplus
         }
@@ -1096,14 +1135,14 @@ def gen_wrapper_util_h(allWrappers):
     log_entry_union_start = 'union log_entry_data {\n  '
     log_entry_union_end = '\n};\n'
 
-    event_size = []
+    #event_size = []
     log_entry_union = []
     struct_def = []
     turn_check_p = []
     create_entry = []
     for wInfo in allWrappers:
-        event_size += ['static const int log_event_%s_size = sizeof(log_event_%s_t);' \
-                       % (wInfo.name(), wInfo.name())]
+        #event_size += ['static const int log_event_%s_size = sizeof(log_event_%s_t);' \
+                       #% (wInfo.name(), wInfo.name())]
         log_entry_union += ['log_event_%s_t log_event_%s;' \
                             % (wInfo.name(), wInfo.name())]
         turn_check_p += ['int %s_turn_check(log_entry_t *e1, log_entry_t *e2);' \

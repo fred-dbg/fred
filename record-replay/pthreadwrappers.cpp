@@ -204,7 +204,7 @@ static int internal_pthread_create(pthread_t *thread,
     pthread_attr_destroy(&the_attr);
 
   } else if (SYNC_IS_RECORD) {
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_RESERVE_SLOT(pthread_create);
     dmtcp::ThreadInfo::prePthreadCreate();
 
     pthread_attr_init(&the_attr);
@@ -219,8 +219,7 @@ static int internal_pthread_create(pthread_t *thread,
     retval = _real_pthread_create(thread, &the_attr,
                                   start_wrapper, (void *)createArg);
     dmtcp::ThreadInfo::unsetOptionalEvent();
-    my_entry.setRetval((void*)(unsigned long)retval);
-    my_entry.setSavedErrno(errno);
+    SET_RETVAL_ERRNO(my_entry, pthread_create, retval, errno);
 
     // Log whatever stack we ended up using:
     pthread_attr_getstack(&the_attr, &stack_addr, &stack_size);
@@ -230,7 +229,7 @@ static int internal_pthread_create(pthread_t *thread,
     SET_FIELD2(my_entry, pthread_create, ret_thread, *thread);
 
     // Log annotation on the fly.
-    WRAPPER_LOG_UPDATE_ENTRY(my_entry);
+    WRAPPER_LOG_UPDATE_ENTRY(pthread_create);
   }
 
   if (retval != 0) {
@@ -249,9 +248,8 @@ extern "C" int pthread_mutex_lock(pthread_mutex_t *mutex)
     WRAPPER_REPLAY(pthread_mutex_lock);
   } else if (SYNC_IS_RECORD) {
     retval = _real_pthread_mutex_lock(mutex);
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(pthread_mutex_lock);
   }
-  return retval;
   return retval;
 }
 
@@ -265,7 +263,7 @@ extern "C" int pthread_mutex_trylock(pthread_mutex_t *mutex)
     WRAPPER_REPLAY(pthread_mutex_trylock);
   } else if (SYNC_IS_RECORD) {
     retval = _real_pthread_mutex_trylock(mutex);
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(pthread_mutex_trylock);
   }
   return retval;
 }
@@ -278,10 +276,34 @@ extern "C" int pthread_mutex_unlock(pthread_mutex_t *mutex)
 
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY(pthread_mutex_unlock);
+    if (!my_entry.isRetvalZero()) {
+      WRAPPER_REPLAY(pthread_mutex_unlock);
+    }
   } else if (SYNC_IS_RECORD) {
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    SET_RETVAL_ERRNO(my_entry, pthread_mutex_unlock, 0, 0);
+    WRAPPER_LOG_WRITE_ENTRY(pthread_mutex_unlock);
     retval = _real_pthread_mutex_unlock(mutex);
-    WRAPPER_LOG_UPDATE_ENTRY(my_entry);
+    /* If the call failed, we want to record the return-value and errno into
+     * the log entry. We can do it by doing reserve-slot/write-into-slot as we
+     * do with other wrappers (such as pthread-create). However, doing so would
+     * require us to write the full-entry (including the event-specific part
+     * that contains the return value/errno) for each call resulting in
+     * three-times the space requirement.
+     *
+     * In order to save space, we record the entry only once, before performing
+     * the syscall and assume it to be successful. If instead, this call fails,
+     * we record the failure by unsetting the 'retvalZero' bit and update the
+     * entry. We follow up with a new entry, that contains the correct return
+     * value.
+     *
+     * This way, the cost of unsuccessful calls increases by 25%, however, we
+     * save 75% on successful calls.
+     */
+    if (retval != 0) {
+      my_entry.unsetRetvalZero();
+      WRAPPER_LOG_UPDATE_HEADER(pthread_mutex_unlock);
+      WRAPPER_LOG_WRITE_ENTRY(pthread_mutex_unlock);
+    }
   }
   return retval;
 }
@@ -295,7 +317,7 @@ extern "C" int pthread_cond_signal(pthread_cond_t *cond)
     dmtcp::ThreadInfo::setOptionalEvent();
     retval = _real_pthread_cond_signal(cond);
     dmtcp::ThreadInfo::unsetOptionalEvent();
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(pthread_cond_signal);
   }
   return retval;
 }
@@ -310,7 +332,7 @@ extern "C" int pthread_cond_broadcast(pthread_cond_t *cond)
     dmtcp::ThreadInfo::setOptionalEvent();
     retval = _real_pthread_cond_broadcast(cond);
     dmtcp::ThreadInfo::unsetOptionalEvent();
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(pthread_cond_broadcast);
   }
   return retval;
 }
@@ -351,7 +373,7 @@ extern "C" int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex)
     dmtcp::ThreadInfo::setOptionalEvent();
     retval = _real_pthread_cond_wait(cond, mutex);
     dmtcp::ThreadInfo::unsetOptionalEvent();
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(pthread_cond_wait);
   }
   return retval;
 }
@@ -373,7 +395,7 @@ extern "C" int pthread_cond_timedwait(pthread_cond_t *cond,
     dmtcp::ThreadInfo::setOptionalEvent();
     retval = _real_pthread_cond_timedwait(cond, mutex, abstime);
     dmtcp::ThreadInfo::unsetOptionalEvent();
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(pthread_cond_timedwait);
   }
   return retval;
 }
@@ -386,7 +408,7 @@ extern "C" int pthread_cond_destroy(pthread_cond_t *cond)
     WRAPPER_REPLAY(pthread_cond_destroy);
   } else if (SYNC_IS_RECORD) {
     retval = _real_pthread_cond_destroy(cond);
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(pthread_cond_destroy);
   }
   return retval;
 }
@@ -397,10 +419,19 @@ extern "C" int pthread_rwlock_unlock(pthread_rwlock_t *rwlock)
                  rwlock);
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY(pthread_rwlock_unlock);
+    if (!my_entry.isRetvalZero()) {
+      WRAPPER_REPLAY(pthread_mutex_unlock);
+    }
   } else if (SYNC_IS_RECORD) {
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    SET_RETVAL_ERRNO(my_entry, pthread_mutex_unlock, 0, 0);
+    WRAPPER_LOG_WRITE_ENTRY(pthread_rwlock_unlock);
     retval = _real_pthread_rwlock_unlock(rwlock);
-    WRAPPER_LOG_UPDATE_ENTRY(my_entry);
+    if (retval != 0) {
+      // See the comments in pthread_mutex_unlock
+      my_entry.unsetRetvalZero();
+      WRAPPER_LOG_UPDATE_HEADER(pthread_rwlock_unlock);
+      WRAPPER_LOG_WRITE_ENTRY(pthread_rwlock_unlock);
+    }
   }
   return retval;
 }
@@ -413,7 +444,7 @@ extern "C" int pthread_rwlock_rdlock(pthread_rwlock_t *rwlock)
     WRAPPER_REPLAY(pthread_rwlock_rdlock);
   } else if (SYNC_IS_RECORD) {
     retval = _real_pthread_rwlock_rdlock(rwlock);
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(pthread_rwlock_rdlock);
   }
   return retval;
 }
@@ -426,7 +457,7 @@ extern "C" int pthread_rwlock_wrlock(pthread_rwlock_t *rwlock)
     WRAPPER_REPLAY(pthread_rwlock_wrlock);
   } else if (SYNC_IS_RECORD) {
     retval = _real_pthread_rwlock_wrlock(rwlock);
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(pthread_rwlock_wrlock);
   }
   return retval;
 }
@@ -538,7 +569,7 @@ extern "C" int pthread_detach(pthread_t thread)
     WRAPPER_REPLAY(pthread_detach);
   } else  if (SYNC_IS_RECORD) {
     retval = _real_pthread_detach(thread);
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(pthread_detach);
   }
 
   if (retval == 0) {
@@ -628,7 +659,7 @@ extern "C" int pthread_join (pthread_t thread, void **value_ptr)
       pthread_join_event, thread, value_ptr);
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_START(pthread_join);
-    int saved_retval = (long) my_entry.retval();
+    int saved_retval = (long) RETVAL(my_entry, pthread_join);
     WRAPPER_REPLAY_END(pthread_join);
     retval = _real_pthread_join(thread, value_ptr);
     JASSERT(retval == saved_retval);
@@ -636,12 +667,12 @@ extern "C" int pthread_join (pthread_t thread, void **value_ptr)
       JASSERT(*value_ptr == GET_FIELD(my_entry, pthread_join, ret_value_ptr));
     }
   } else if (SYNC_IS_RECORD) {
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_RESERVE_SLOT(pthread_join);
     retval = _real_pthread_join(thread, value_ptr);
     if (value_ptr != NULL) {
       SET_FIELD2(my_entry, pthread_join, ret_value_ptr, *value_ptr);
     }
-    WRAPPER_LOG_UPDATE_ENTRY(my_entry);
+    WRAPPER_LOG_UPDATE_ENTRY(pthread_join);
   }
   return retval;
 }
@@ -659,7 +690,7 @@ extern "C" int rand()
     WRAPPER_REPLAY(rand);
   } else if (SYNC_IS_RECORD) {
     retval = _real_rand();
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(rand);
   }
   return retval;
 }
@@ -702,7 +733,7 @@ extern "C" time_t time(time_t *tloc)
     if (tloc != NULL) {
       SET_FIELD2(my_entry, time, ret_tloc, *tloc);
     }
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(time);
   }
   return retval;
 }
@@ -727,7 +758,7 @@ extern "C" int gettimeofday(struct timeval *tv, struct timezone *tz)
     if (retval == 0 && tz != NULL) {
       SET_FIELD2(my_entry, gettimeofday, ret_tz, *tz);
     }
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(gettimeofday);
   }
   return retval;
 }
@@ -778,7 +809,7 @@ extern "C" struct tm *localtime_r(const time_t *timep, struct tm *result)
     if (retval != NULL) {
       SET_FIELD2(my_entry, localtime_r, ret_result, *retval);
     }
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(localtime_r);
   }
   return retval;
 }
@@ -797,7 +828,7 @@ extern "C" int clock_getres(clockid_t clk_id, struct timespec *res)
     if (retval == 0 && res != NULL) {
       SET_FIELD2(my_entry, clock_getres, ret_res, *res);
     }
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(clock_getres);
   }
   return retval;
 }
@@ -816,7 +847,7 @@ extern "C" int clock_gettime(clockid_t clk_id, struct timespec *tp)
     if (retval == 0 && tp != NULL) {
       SET_FIELD2(my_entry, clock_gettime, ret_tp, *tp);
     }
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(clock_gettime);
   }
   return retval;
 }

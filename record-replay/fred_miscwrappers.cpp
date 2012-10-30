@@ -47,7 +47,7 @@ pid_t fork()
     retval = _real_fork();
     if (retval != 0) {
       dmtcp::ThreadInfo::unsetOptionalEvent();
-      WRAPPER_LOG_WRITE_ENTRY(my_entry);
+      WRAPPER_LOG_WRITE_ENTRY(fork);
     }
   }
   return retval;

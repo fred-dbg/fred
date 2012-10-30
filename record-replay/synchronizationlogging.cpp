@@ -314,6 +314,13 @@ void updateLogEntry(log_entry_t& e, size_t offset)
   global_log.updateEntry(e, offset);
 }
 
+void updateLogEntryHeader(log_entry_t& e, size_t offset)
+{
+  JASSERT(my_clone_id != -1);
+  JASSERT(offset != INVALID_LOG_OFFSET);
+  global_log.updateEntryHeader(e, offset);
+}
+
 void getNextLogEntry()
 {
   JASSERT(my_clone_id != -1);

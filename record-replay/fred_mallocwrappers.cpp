@@ -262,13 +262,12 @@ static void my_free_hook (void *ptr, const void *caller)
         .Text ( #name " returned wrong address on replay" );            \
     } else if (SYNC_IS_RECORD) {                                        \
       _real_pthread_mutex_lock(&allocation_lock);                       \
-      WRAPPER_LOG_WRITE_ENTRY(my_entry);                                \
+      WRAPPER_LOG_RESERVE_SLOT(name);                                   \
       dmtcp::ThreadInfo::setOptionalEvent();                            \
       retval = _real_ ## name(__VA_ARGS__);                             \
       dmtcp::ThreadInfo::unsetOptionalEvent();                          \
-      my_entry.setRetval(retval);                                       \
-      my_entry.setSavedErrno(errno);                                    \
-      WRAPPER_LOG_UPDATE_ENTRY(my_entry);                               \
+      SET_RETVAL_ERRNO(my_entry, name, retval, errno);                  \
+      WRAPPER_LOG_UPDATE_ENTRY(name);                                   \
       _real_pthread_mutex_unlock(&allocation_lock);                     \
     }                                                                   \
   } while(0)
@@ -347,7 +346,7 @@ extern "C" void free(void *ptr)
     _real_pthread_mutex_unlock(&allocation_lock);
   } else if (SYNC_IS_RECORD) {
     _real_pthread_mutex_lock(&allocation_lock);
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(free);
     _real_free(ptr);
     _real_pthread_mutex_unlock(&allocation_lock);
   }
@@ -396,7 +395,7 @@ extern "C" void *fred_mmap(void *addr, size_t length, int prot, int flags,
     bool mmap_read_from_readlog = false;
     MMAP_WRAPPER_REPLAY_START(mmap);
     //JWARNING ( addr == NULL ).Text("Unimplemented to have non-null addr.");
-    addr = my_entry.retval();
+    addr = (void*) RETVAL(my_entry, mmap);
     if (retval != MAP_FAILED && fd != -1 &&
         ((flags & MAP_PRIVATE) != 0 || (flags & MAP_SHARED) != 0)) {
       flags &= ~MAP_SHARED;
@@ -413,8 +412,8 @@ extern "C" void *fred_mmap(void *addr, size_t length, int prot, int flags,
     JASSERT(!isPartOfAddrRangeAlreadyMmapped(addr, length));
     retval = (void*) _real_mmap(addr, length, prot | PROT_WRITE,
                                 flags, fd, offset);
-    JASSERT ( retval == my_entry.retval() ) (retval)
-      (my_entry.retval()) (JASSERT_ERRNO);
+    JASSERT ( retval == (void*) RETVAL(my_entry, mmap) ) (retval)
+      (RETVAL(my_entry, mmap)) (JASSERT_ERRNO);
     if (mmap_read_from_readlog) {
       WRAPPER_REPLAY_READ_FROM_READ_LOG(mmap, retval, length);
     }
@@ -427,7 +426,7 @@ extern "C" void *fred_mmap(void *addr, size_t length, int prot, int flags,
         ((flags & MAP_PRIVATE) != 0 || (flags & MAP_SHARED) != 0)) {
       WRAPPER_LOG_WRITE_INTO_READ_LOG(mmap, retval, length);
     }
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(mmap);
     _real_pthread_mutex_unlock(&mmap_lock);
   }
   return retval;
@@ -441,13 +440,13 @@ extern "C" int fred_munmap(void *addr, size_t length)
     WRAPPER_REPLAY_START(munmap);
     _real_pthread_mutex_lock(&mmap_lock);
     retval = _real_munmap(addr, length);
-    JASSERT (retval == (int)(unsigned long)my_entry.retval());
+    JASSERT (retval == (int) RETVAL(my_entry, munmap));
     _real_pthread_mutex_unlock(&mmap_lock);
     WRAPPER_REPLAY_END(munmap);
   } else if (SYNC_IS_RECORD) {
     _real_pthread_mutex_lock(&mmap_lock);
     retval = _real_munmap(addr, length);
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(munmap);
     _real_pthread_mutex_unlock(&mmap_lock);
   }
   return retval;
@@ -469,19 +468,19 @@ extern "C" void *fred_mremap(void *old_address, size_t old_size,
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_START_TYPED(void *, mremap);
     _real_pthread_mutex_lock(&mmap_lock);
-    void *addr = my_entry.retval();
+    void *addr = (void*) RETVAL(my_entry, mremap);
     flags |= (MREMAP_MAYMOVE | MREMAP_FIXED);
     JASSERT(!isPartOfAddrRangeAlreadyMmapped(addr, new_size));
     retval = (void*) _real_mremap(old_address, old_size, new_size,
                                   flags, addr);
-    JASSERT ( retval == my_entry.retval() );
+    JASSERT(retval == (void*) RETVAL(my_entry, mremap));
     _real_pthread_mutex_unlock(&mmap_lock);
     WRAPPER_REPLAY_END(mremap);
   } else if (SYNC_IS_RECORD) {
     _real_pthread_mutex_lock(&mmap_lock);
     retval = (void*) _real_mremap(old_address, old_size, new_size,
                                   flags, new_address);
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(mremap);
     _real_pthread_mutex_unlock(&mmap_lock);
   }
   return retval;
