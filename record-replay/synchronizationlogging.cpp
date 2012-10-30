@@ -149,6 +149,9 @@ void initializeLogNames()
 
 void initLogsForRecordReplay()
 {
+  if (isProcessGDB()) {
+    return;
+  }
   global_log.initialize(RECORD_LOG_PATH, MAX_LOG_LENGTH);
 
   if (read_data_fd == -1) {
