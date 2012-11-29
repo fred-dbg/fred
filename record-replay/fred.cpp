@@ -185,7 +185,7 @@ static void fred_process_thread_start()
   }
 }
 
-EXTERNC void dmtcp_process_event(DmtcpEvent_t event, void* data)
+EXTERNC void dmtcp_process_event(DmtcpEvent_t event, DmtcpEventData_t* data)
 {
   switch (event) {
     case DMTCP_EVENT_INIT:
@@ -194,22 +194,22 @@ EXTERNC void dmtcp_process_event(DmtcpEvent_t event, void* data)
     case DMTCP_EVENT_RESET_ON_FORK:
       fred_reset_on_fork();
       break;
-    case DMTCP_EVENT_POST_SUSPEND:
-      fred_post_suspend();
-      break;
-    case DMTCP_EVENT_POST_CKPT_RESUME:
-      fred_post_checkpoint_resume();
-      break;
-    case DMTCP_EVENT_POST_RESTART_RESUME:
-      fred_post_restart_resume();
-      break;
+    // case DMTCP_EVENT_POST_SUSPEND:
+    //   fred_post_suspend();
+    //   break;
+    // case DMTCP_EVENT_POST_CKPT_RESUME:
+    //   fred_post_checkpoint_resume();
+    //   break;
+    // case DMTCP_EVENT_POST_RESTART_RESUME:
+    //   fred_post_restart_resume();
+    //   break;
     case DMTCP_EVENT_THREAD_START:
       fred_process_thread_start();
       break;
     case DMTCP_EVENT_PRE_EXIT:
     case DMTCP_EVENT_PRE_CKPT:
-    case DMTCP_EVENT_POST_LEADER_ELECTION:
-    case DMTCP_EVENT_POST_DRAIN:
+    // case DMTCP_EVENT_POST_LEADER_ELECTION:
+    // case DMTCP_EVENT_POST_DRAIN:
     case DMTCP_EVENT_POST_CKPT:
     case DMTCP_EVENT_POST_RESTART:
     default:

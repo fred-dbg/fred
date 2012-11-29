@@ -33,3 +33,5 @@ test/malloc-to-mmap
 test/reader
 record-replay/aclocal.m4
 record-replay/config.h
+
+TAGS
