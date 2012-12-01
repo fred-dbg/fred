@@ -19,6 +19,7 @@ To set this up, you'll want to do several things.
     (gdb) run
     (gdb) fred-ckpt
     (gdb) break 30
+    (gdb) continue
     (gdb) fred-reverse-watch list_len(head)<17
     (gdb) where
     (gdb) list
