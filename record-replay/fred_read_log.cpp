@@ -44,19 +44,20 @@
 #include "autogen/fred_read_log.h"
 
 void print_log_entry_common(int idx, log_entry_t *entry) {
-  printf("%2d: clone_id=%ld, [%-20.20s]: ",
-         idx, GET_COMMON_PTR(entry, clone_id), log_event_str[entry->header.event]);
+  printf("%2d: clone_id=%ld, [%-20.20s]: isOpt=%d, isRetZero=%d",
+         idx, entry->cloneId(), log_event_str[entry->eventId()],
+         entry->isOptional(), entry->isRetvalZero());
 
-  switch ((long) (unsigned long) GET_COMMON_PTR(entry, retval)) {
+  /*
+  switch ((long) RETVAL(entry)) {
     case 0:
       printf("ret=  0      , "); break;
     case -1:
       printf("ret= -1      , "); break;
     default:
-      printf("ret=%p, ", GET_COMMON_PTR(entry, retval)); break;
+      printf("ret=%p, ", entry->retval()); break;
   }
-  printf("offset=%2ld, errno=%d, isOpt=%d",
-         GET_COMMON_PTR(entry, log_offset), GET_COMMON_PTR(entry, my_errno));
+  */
 }
 
 void rewriteLog(char *log_path)
@@ -99,6 +100,7 @@ void initializeJalib()
   INIT_JALIB_FPTR(fopen);
   INIT_JALIB_FPTR(close);
   INIT_JALIB_FPTR(fclose);
+  INIT_JALIB_FPTR(readlink);
 
   INIT_JALIB_FPTR(syscall);
   INIT_JALIB_FPTR(mmap);

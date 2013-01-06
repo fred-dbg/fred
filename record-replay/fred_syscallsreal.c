@@ -211,6 +211,12 @@ int _real_connect ( int sockfd, const struct sockaddr *serv_addr,
 }
 
 LIB_PRIVATE
+int _real_shutdown ( int sockfd, int how )
+{
+  REAL_FUNC_PASSTHROUGH ( shutdown ) ( sockfd,how );
+}
+
+LIB_PRIVATE
 int _real_bind ( int sockfd, const struct sockaddr *my_addr,
                  socklen_t addrlen )
 {
@@ -691,6 +697,10 @@ int _real_fputs(const char *s, FILE *stream) {
   REAL_FUNC_PASSTHROUGH_TYPED ( int, fputs ) ( s, stream );
 }
 
+int _real_puts(const char *s) {
+  REAL_FUNC_PASSTHROUGH_TYPED ( int, puts ) ( s );
+}
+
 LIB_PRIVATE
 int _real_fputc(int c, FILE *stream) {
   REAL_FUNC_PASSTHROUGH_TYPED ( int, fputc ) ( c, stream );
@@ -779,6 +789,11 @@ int _real_readdir_r(DIR *dirp, struct dirent *entry, struct dirent **result ) {
 LIB_PRIVATE
 int _real_rand(void) {
   REAL_FUNC_PASSTHROUGH_TYPED ( int,rand ) ( );
+}
+
+LIB_PRIVATE
+pid_t _real_fork(void) {
+  REAL_FUNC_PASSTHROUGH_TYPED ( pid_t,fork ) ( );
 }
 
 LIB_PRIVATE

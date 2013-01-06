@@ -34,14 +34,19 @@
 
 namespace dmtcp {
   struct ThreadLocalData {
-    void init(clone_id_t _id) {
+    void init(clone_id_t _id, pthread_t pth) {
       id = _id;
-      pthreadId = -1;
+      pthreadId = pth;
+      stackSize = 0;
+      stackAddr = NULL;
+      userStack = NULL;
+      userDetachState = PTHREAD_CREATE_JOINABLE;
       mmap_no_sync = 0;
       in_mmap_wrapper = 0;
       isOptionalEvent = 0;
       isOkToLogNextFnc = 0;
-      sem_init(&sem, 0 , 0);
+      semValue = 0;
+      sem_init(&sem, 0 , semValue);
     }
 
     void update(clone_id_t _id, pthread_t _pth) {
@@ -56,6 +61,11 @@ namespace dmtcp {
     clone_id_t id;
     pthread_t pthreadId;
 
+    size_t      stackSize;
+    void       *stackAddr;
+    void       *userStack;
+    int         userDetachState;
+
     int mmap_no_sync;
     int in_mmap_wrapper;
     unsigned char isOptionalEvent;
@@ -63,14 +73,17 @@ namespace dmtcp {
     // Semaphore used for waiting-for-turn and waking up threads according to
     // log entry.
     sem_t sem;
+    int   semValue;
   };
 
   namespace ThreadInfo {
 
     void init();
-    void registerThread(clone_id_t id = -1);
+    void registerThread(clone_id_t id);
     void destroyThread(pthread_t pth);
     void initThread();
+    void updateState(pthread_t pth, pthread_attr_t attr,
+                     void *userStack, int userDetachState);
     void resetOnFork();
 
     ThreadLocalData* getThreadLocalData(pthread_t pth);
@@ -78,6 +91,7 @@ namespace dmtcp {
     pthread_t cloneIdToPthreadId(clone_id_t clone_id);
 
     void postSuspend();
+    void postCkptResume();
     void postRestartResume();
 
     void wakeUpThread(clone_id_t id);
@@ -90,11 +104,21 @@ namespace dmtcp {
     void setOkToLogNextFnc();
     void unsetOkToLogNextFnc();
     bool isOkToLogNextFnc();
+    void reapThisThread();
+    void reapThreads();
+    void reapThread(pthread_t pth);
+    bool isUserJoinable(pthread_t pth);
+    void markDetached(pthread_t pth);
+
+    void prePthreadCreate();
+    void postPthreadCreate();
 
     extern dmtcp::map<clone_id_t, ThreadLocalData> *cloneIdTbl;
     extern dmtcp::map<pthread_t,  clone_id_t> *pthreadIdTbl;
     typedef dmtcp::map<clone_id_t, ThreadLocalData>::iterator CloneIdTblIt;
     typedef dmtcp::map<pthread_t,  clone_id_t>::iterator PthreadIdTblIt;
+
+    extern dmtcp::vector<clone_id_t> *threadsToBeReaped;
   };
 };
 

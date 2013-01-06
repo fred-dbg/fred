@@ -43,11 +43,9 @@
 // TODO: Do we need LIB_PRIVATE again here if we had already specified it in
 // the header file?
 /* Library private: */
-LIB_PRIVATE dmtcp::map<pthread_t, pthread_join_retval_t> pthread_join_retvals;
 LIB_PRIVATE char RECORD_LOG_PATH[RECORD_LOG_PATH_MAX];
 LIB_PRIVATE char RECORD_READ_DATA_LOG_PATH[RECORD_LOG_PATH_MAX];
 LIB_PRIVATE int             read_data_fd = -1;
-LIB_PRIVATE int             sync_logging_branch = 0;
 
 /* Setting this will log/replay *ALL* malloc family
    functions (i.e. including ones from DMTCP, std C++ lib, etc.). */
@@ -151,6 +149,9 @@ void initializeLogNames()
 
 void initLogsForRecordReplay()
 {
+  if (isProcessGDB()) {
+    return;
+  }
   global_log.initialize(RECORD_LOG_PATH, MAX_LOG_LENGTH);
 
   if (read_data_fd == -1) {
@@ -303,14 +304,24 @@ void close_read_log()
   read_data_fd = -1;
 }
 
-void addNextLogEntry(log_entry_t& e)
+size_t addNextLogEntry(log_entry_t& e)
 {
   JASSERT(my_clone_id != -1);
-  if (GET_COMMON(e, log_offset) == INVALID_LOG_OFFSET) {
-    global_log.appendEntry(e);
-  } else {
-    global_log.updateEntry(e);
-  }
+  return global_log.appendEntry(e);
+}
+
+void updateLogEntry(log_entry_t& e, size_t offset)
+{
+  JASSERT(my_clone_id != -1);
+  JASSERT(offset != INVALID_LOG_OFFSET);
+  global_log.updateEntry(e, offset);
+}
+
+void updateLogEntryHeader(log_entry_t& e, size_t offset)
+{
+  JASSERT(my_clone_id != -1);
+  JASSERT(offset != INVALID_LOG_OFFSET);
+  global_log.updateEntryHeader(e, offset);
 }
 
 void getNextLogEntry()
@@ -326,7 +337,7 @@ void getNextLogEntry()
   } else {
     memfence();
     const log_entry_t& temp_entry = global_log.getCurrentEntry();
-    clone_id_t clone_id = GET_COMMON(temp_entry, clone_id);
+    clone_id_t clone_id = temp_entry.cloneId();
     dmtcp::ThreadInfo::wakeUpThread(clone_id);
   }
 }
@@ -338,8 +349,8 @@ void logReadData(void *buf, int count)
         "This is probably not intended.");
   }
   JASSERT(read_data_fd != -1);
-  int written = _real_write(read_data_fd, buf, count);
-  JASSERT ( written == count );
+  int written = dmtcp::Util::writeAll(read_data_fd, buf, count);
+  JASSERT ( written == count ) (count) (JASSERT_ERRNO);
   read_log_pos += written;
 }
 
@@ -364,7 +375,7 @@ static inline bool is_optional_event_for(event_code_t event,
     return query || opt_event == calloc_event;
   case closedir_event:
   case fclose_event:
-    return query || opt_event == free_event;
+    return query || opt_event == free_event || opt_event == munmap_event;
   case accept4_event:
   case accept_event:
   case fgets_event:
@@ -375,6 +386,7 @@ static inline bool is_optional_event_for(event_code_t event,
   case vfprintf_event:
   case fputc_event:
   case fputs_event:
+  case puts_event:
   case vfscanf_event:
   case fseek_event:
   case fwrite_event:
@@ -383,6 +395,7 @@ static inline bool is_optional_event_for(event_code_t event,
   case malloc_event:
   case calloc_event:
   case realloc_event:
+  case pthread_create_event:
     return query || opt_event == mmap_event;
   case fdopen_event:
     return query || opt_event == mmap_event || opt_event == malloc_event;
@@ -427,6 +440,10 @@ static void execute_optional_event(int opt_event_num)
     int fd        = GET_FIELD(temp_entry, mmap, fd);
     off_t offset  = GET_FIELD(temp_entry, mmap, offset);
     JASSERT(mmap(NULL, length, prot, flags, fd, offset) != MAP_FAILED);
+  } else if (opt_event_num == munmap_event) {
+    void *addr = GET_FIELD(temp_entry, munmap, addr);
+    size_t length = GET_FIELD(temp_entry, munmap, length);
+    JASSERT(munmap(addr, length) == 0);
   } else if (opt_event_num == malloc_event) {
     size_t size = GET_FIELD(temp_entry, malloc, size);
     JASSERT(malloc(size) != NULL);
@@ -439,19 +456,32 @@ static void execute_optional_event(int opt_event_num)
     size_t nmemb = GET_FIELD(temp_entry, calloc, nmemb);
     JASSERT(calloc(nmemb, size) != NULL);
   } else if (opt_event_num == fopen_event) {
-    const char *path = GET_FIELD(temp_entry, fopen, path);
-    const char *mode = GET_FIELD(temp_entry, fopen, mode);
+    const char *path = "dummy";//GET_FIELD(temp_entry, fopen, path);
+    const char *mode = "dummy";//GET_FIELD(temp_entry, fopen, mode);
     dmtcp::ThreadInfo::setOkToLogNextFnc();
     FILE *fp = fopen(path, mode);
   } else if (opt_event_num == fclose_event) {
-    FILE *fp = GET_FIELD(temp_entry, fclose, fp);
+    FILE *fp = NULL;//GET_FIELD(temp_entry, fclose, fp);
     dmtcp::ThreadInfo::setOkToLogNextFnc();
     fclose(fp);
   } else if (opt_event_num == ftell_event) {
-    FILE *fp = GET_FIELD(temp_entry, ftell, stream);
+    FILE *fp = NULL;//GET_FIELD(temp_entry, ftell, stream);
     dmtcp::ThreadInfo::setOkToLogNextFnc();
     // No need to execute ftell().  It has no side effects.
     long int offset = ftell(fp);
+  } else if (opt_event_num == pthread_mutex_lock_event) {
+    pthread_mutex_t *mutex = NULL;//GET_FIELD(temp_entry, pthread_mutex_lock, mutex);
+    dmtcp::ThreadInfo::setOkToLogNextFnc();
+    pthread_mutex_lock(mutex);
+  } else if (opt_event_num == pthread_mutex_unlock_event) {
+    pthread_mutex_t *mutex = NULL;//GET_FIELD(temp_entry, pthread_mutex_lock, mutex);
+    dmtcp::ThreadInfo::setOkToLogNextFnc();
+    pthread_mutex_unlock(mutex);
+  } else if (opt_event_num == pthread_join_event) {
+    pthread_t thread = GET_FIELD(temp_entry, pthread_join, thread);
+    dmtcp::ThreadInfo::setOkToLogNextFnc();
+    pthread_join(thread, NULL);
+    dmtcp::ThreadInfo::reapThread(thread);
   } else {
     JASSERT (false)(opt_event_num).Text("No action known for optional event.");
   }
@@ -469,21 +499,22 @@ void waitForTurn(log_entry_t *my_entry, turn_pred_t pred)
     dmtcp::ThreadInfo::waitForTurn();
     memfence();
     log_entry_t& temp_entry = global_log.getCurrentEntry();
-    JASSERT(GET_COMMON(temp_entry, clone_id) == my_clone_id)
-      (GET_COMMON(temp_entry, clone_id)) (my_clone_id);
+    JASSERT(temp_entry.cloneId() == my_clone_id)
+      (temp_entry.cloneId()) (my_clone_id);
     if ((*pred)(&temp_entry, my_entry))
       break;
     /* Also check for an optional event for this clone_id. */
-    if (GET_COMMON(temp_entry, clone_id) == my_clone_id &&
-        GET_COMMON(temp_entry, isOptional) == 1) {
-      if (!is_optional_event_for((event_code_t)GET_COMMON_PTR(my_entry, event),
-                                 (event_code_t)GET_COMMON(temp_entry, event),
+    if (temp_entry.cloneId() == my_clone_id &&
+        temp_entry.isOptional()) {
+      if (!is_optional_event_for(my_entry->eventId(), temp_entry.eventId(),
                                  false)) {
         JASSERT(false);
       }
       memfence();
       dmtcp::ThreadInfo::wakeUpThread(my_clone_id);
-      execute_optional_event(GET_COMMON(temp_entry, event));
+      execute_optional_event(temp_entry.eventId());
+    } else {
+      JASSERT(false);
     }
   }
 
@@ -494,7 +525,7 @@ void waitForExecBarrier()
 {
   while (1) {
     const log_entry_t& temp_entry = global_log.getCurrentEntry();
-    if (GET_COMMON(temp_entry, event) == exec_barrier_event) {
+    if (temp_entry.eventId() == exec_barrier_event) {
       // We don't check clone ids because anyone can do an exec.
       break;
     }

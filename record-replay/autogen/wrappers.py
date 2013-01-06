@@ -34,7 +34,7 @@ import textwrap
 # wrapper-tuple := ('<type>', '<name>', <argument-list> [, <opt-wrapper-info>]*)
 # argument-list := <list of argument-tuples>
 # argument-tuple := ('<type>', '<name>' [,<argument-flag>]*)
-# argument-flag := '__save_retval' | '__no_save'
+# argument-flag := '__save_retval' | '__no_save' | '_save'
 # opt-wrapper-info := ('opt', <optional-flags>) | ('extra', <extra-fields-for-struct>)
 # optional-flags := 'decl_data_offset' | 'decl_retval'
 # extra-fields-for-struct := '<type> <name>'
@@ -42,6 +42,7 @@ import textwrap
 # Meaning of flags:
 #  '__save_retval' : decl a ret_XXX field which saves the return value of this arg
 #  '__no_save' : do not include this arg in log entry struct
+#  '_save' : include this arg in log entry struct even if debugMode is disabled
 #  'decl_data_offset' : add a 'off_t data_offset' field to the log entry struct
 #  'decl_retval' : add a '<ret-type> <name__retval' field to the log entry struct
 
@@ -61,8 +62,8 @@ miscWrappers = [
   ('int', 'bind', [('int', 'sockfd'),
                    ('const struct sockaddr*', 'my_addr'),
                    ('socklen_t', 'addrlen')]),
-  ('void*', 'calloc', [('size_t', 'nmemb'),
-                       ('size_t', 'size')]),
+  ('void*', 'calloc', [('size_t', 'nmemb', '__save'),
+                       ('size_t', 'size', '__save')]),
   ('int', 'chmod', [('const char*', 'path'),
                     ('mode_t', 'mode')]),
   ('int', 'chown', [('const char*', 'path'),
@@ -130,30 +131,30 @@ miscWrappers = [
   ('loff_t', 'llseek', [('int', 'fd'),
                         ('loff_t', 'offset'),
                         ('int', 'whence')]),
-  ('void*', 'malloc', [('size_t', 'size')]),
+  ('void*', 'malloc', [('size_t', 'size', '__save')]),
 
-  ('void', 'free', [('void*', 'ptr')]),
+  ('void', 'free', [('void*', 'ptr', '__save')]),
 
   ('int', 'mkdir', [('const char*', 'pathname'),
                     ('mode_t', 'mode')]),
   ('int', 'mkstemp', [('char*', 'temp')]),
-  ('void*', 'mmap', [('void*', 'addr'),
-                     ('size_t', 'length'),
-                     ('int', 'prot'),
-                     ('int', 'flags'),
-                     ('int', 'fd'),
-                     ('off_t', 'offset')],
+  ('void*', 'mmap', [('void*', 'addr', '__save'),
+                     ('size_t', 'length', '__save'),
+                     ('int', 'prot', '__save'),
+                     ('int', 'flags', '__save'),
+                     ('int', 'fd', '__save'),
+                     ('off_t', 'offset', '__save')],
                     ('opt', 'decl_data_offset'),
                     ('opt', 'decl_fred_xxx_fn')),
-  ('void*', 'mmap64', [('void*', 'addr'),
-                       ('size_t', 'length'),
-                       ('int', 'prot'),
-                       ('int', 'flags'),
-                       ('int', 'fd'),
-                       ('off64_t', 'offset')],
+  ('void*', 'mmap64', [('void*', 'addr', '__save'),
+                       ('size_t', 'length', '__save'),
+                       ('int', 'prot', '__save'),
+                       ('int', 'flags', '__save'),
+                       ('int', 'fd', '__save'),
+                       ('off64_t', 'offset', '__save')],
                       ('opt', 'decl_data_offset')),
-  ('int', 'munmap', [('void*', 'addr'),
-                     ('size_t', 'length')],
+  ('int', 'munmap', [('void*', 'addr', '__save'),
+                     ('size_t', 'length', '__save')],
                      ('opt', 'decl_fred_xxx_fn')),
   ('void*', 'mremap', [('void*', 'old_address'),
                        ('size_t', 'old_size'),
@@ -189,10 +190,10 @@ miscWrappers = [
                           ('const struct iovec*', 'iov'),
                           ('int', 'iovcnt'),
                           ('off_t', 'offset')]),
-  ('int', 'pthread_rwlock_unlock', [('pthread_rwlock_t*', 'rwlock', '__save_retval')]),
-  ('int', 'pthread_rwlock_rdlock', [('pthread_rwlock_t*', 'rwlock', '__save_retval')]),
-  ('int', 'pthread_rwlock_wrlock', [('pthread_rwlock_t*', 'rwlock', '__save_retval')]),
-  ('int', 'pthread_create', [('pthread_t*', 'thread'),
+  ('int', 'pthread_rwlock_unlock', [('pthread_rwlock_t*', 'rwlock')]),
+  ('int', 'pthread_rwlock_rdlock', [('pthread_rwlock_t*', 'rwlock')]),
+  ('int', 'pthread_rwlock_wrlock', [('pthread_rwlock_t*', 'rwlock')]),
+  ('int', 'pthread_create', [('pthread_t*', 'thread', '__save_retval'),
                              ('const pthread_attr_t*', 'attr'),
                              ('pthread_start_routine_t', 'start_routine'),
                              ('void*', 'arg')],
@@ -200,14 +201,15 @@ miscWrappers = [
                             ('extra', 'size_t stack_size')),
   ('int', 'pthread_detach', [('pthread_t', 'thread')]),
   ('void', 'pthread_exit', [('void*', 'value_ptr')]),
-  ('int', 'pthread_join', [('pthread_t', 'thread'),
-                           ('void**', 'value_ptr')]),
+  ('int', 'pthread_join', [('pthread_t', 'thread', '__save'),
+                           ('void**', 'value_ptr', '__save_retval')]),
   ('int', 'pthread_kill', [('pthread_t', 'thread'),
                            ('int', 'sig')]),
-  ('int', 'pthread_mutex_lock', [('pthread_mutex_t*', 'mutex', '__save_retval')]),
-  ('int', 'pthread_mutex_trylock', [('pthread_mutex_t*', 'mutex', '__save_retval')]),
-  ('int', 'pthread_mutex_unlock', [('pthread_mutex_t*', 'mutex', '__save_retval')]),
+  ('int', 'pthread_mutex_lock', [('pthread_mutex_t*', 'mutex')]),
+  ('int', 'pthread_mutex_trylock', [('pthread_mutex_t*', 'mutex')]),
+  ('int', 'pthread_mutex_unlock', [('pthread_mutex_t*', 'mutex')]),
   ('int', 'rand', []),
+  ('pid_t', 'fork', []),
   ('ssize_t', 'read', [('int', 'fd'),
                        ('void*', 'buf'),
                        ('size_t', 'count')],
@@ -258,6 +260,8 @@ miscWrappers = [
                    ('extra', 'struct winsize win_val'),
                    ('extra', 'struct ifconf ifconf_val'),
                    ('extra', 'int fionread_val')),
+  ('int', 'shutdown', [('int', 'sockfd'),
+                       ('int', 'how')]),
   ('int', 'sigwait', [('const sigset_t*', 'set'),
                       ('int*', 'sig', '__save_retval')]),
   ('void', 'srand', [('unsigned int', 'seed')]),
@@ -423,6 +427,8 @@ fstreamWrappers = [
   ('int', 'fputs', [('const char*', 's'),
                     ('FILE*', 'stream')]),
 
+  ('int', 'puts', [('const char*', 's')]),
+
   ('int', 'fputc', [('int', 'c'),
                     ('FILE*', 'stream')]),
 
@@ -500,14 +506,14 @@ fstreamWrappers = [
 
 # pthread_cond_* wrappers require special treatment as libc and libpthread both have different (and non-compatible) implementations.
 pthreadCondWrappers = [
-  ('int', 'pthread_cond_broadcast', [('pthread_cond_t*', 'cond', '__save_retval')]),
-  ('int', 'pthread_cond_signal', [('pthread_cond_t*', 'cond', '__save_retval')]),
-  ('int', 'pthread_cond_wait', [('pthread_cond_t*', 'cond', '__save_retval'),
-                                ('pthread_mutex_t*', 'mutex', '__save_retval')]),
-  ('int', 'pthread_cond_timedwait', [('pthread_cond_t*', 'cond', '__save_retval'),
-                                     ('pthread_mutex_t*', 'mutex', '__save_retval'),
+  ('int', 'pthread_cond_broadcast', [('pthread_cond_t*', 'cond')]),
+  ('int', 'pthread_cond_signal', [('pthread_cond_t*', 'cond')]),
+  ('int', 'pthread_cond_wait', [('pthread_cond_t*', 'cond'),
+                                ('pthread_mutex_t*', 'mutex')]),
+  ('int', 'pthread_cond_timedwait', [('pthread_cond_t*', 'cond'),
+                                     ('pthread_mutex_t*', 'mutex'),
                                      ('const struct timespec*', 'abstime')]),
-  ('int', 'pthread_cond_destroy', [('pthread_cond_t*', 'cond', '__save_retval')]),
+  ('int', 'pthread_cond_destroy', [('pthread_cond_t*', 'cond')]),
 ]
 
 
@@ -557,7 +563,8 @@ nonSyscallWrappers = [
   ('void', 'exec_barrier', []),
   ('void', 'signal_handler', [('int', 'sig'),
                               ('siginfo_t*', 'info'),
-                              ('void*', 'data')]),
+                              ('void*', 'data')],
+                              ('extra', 'int savedSig')),
   ('void', 'user', []),
 ]
 
@@ -598,9 +605,9 @@ class RetType:
                       'uid_t' : '%d',
                       'gid_t' : '%d',
                       'pid_t' : '%d',
-                      'off_t' : '%d',
+                      'off_t' : '%ld',
                       'loff_t' : '%lu',
-                      'off64_t' : '%l',
+                      'off64_t' : '%ld',
                       'unsigned' : '%u',
                       'unsigned int' : '%u',
                       'long' : '%ld',
@@ -623,11 +630,11 @@ class RetType:
                       'idtype_t' : '%u',
                       'id_t' : '%u',
                       'mode_t' : '%u',
-                      '__WAIT_STATUS' : '%d',
+                      '__WAIT_STATUS' : '%p',
                       'pthread_start_routine_t' : '%p',
                       'sighandler_t' : '%p',
-                      'nfds_t' : '%p',
-                      'pthread_t' : '%p'
+                      'nfds_t' : '%lud',
+                      'pthread_t' : '%lud'
                       }
         fmt = format_map.get(self.ret_type_str)
         if fmt == None:
@@ -646,7 +653,7 @@ class RetType:
         raise
         return None
 
-                      
+
 class ArgInfo:
     """Information about each wrapper argument"""
 
@@ -657,6 +664,7 @@ class ArgInfo:
         self._ret_type = RetType(atuple[0])
         self._name = atuple[1]
         self._save_retval = '__save_retval' in atuple[2:]
+        self._save = '__save' in atuple[2:]
         self._dont_save = '__no_save' in atuple[2:]
 
     def __str__(self):
@@ -671,6 +679,9 @@ class ArgInfo:
     def save_retval(self):
         return self._save_retval
 
+    def save(self):
+        return self._save
+
     def dont_save(self):
         return self._dont_save
 
@@ -684,7 +695,7 @@ class ArgInfo:
 class WrapperInfo:
     """Complete information about a wrapper function"""
 
-    def __init__(self, wtuple, groupName):
+    def __init__(self, wtuple, groupName, debugMode):
         if len(wtuple) < 3:
             print "Error: Invalid format"
             print wtuple
@@ -696,6 +707,7 @@ class WrapperInfo:
         self.decl_retval = False
         self.extra_fields_for_log_entry_struct = []
         self.groupName = groupName
+        self.debugMode = debugMode;
 
         for arg in wtuple[2]:
             self.args += [ArgInfo(arg)]
@@ -724,6 +736,19 @@ class WrapperInfo:
     def groupName(self):
         return self.groupName
 
+    def get_num_actual_fields(self):
+        num_fields = 0;
+        for arg in self.args:
+            if self.debugMode or arg.save() or arg.save_retval():
+                if not arg.dont_save():
+                    num_fields += 1
+        if self.decl_retval:
+            num_fields += 1
+        if self.decl_data_offset:
+            num_fields += 1
+        num_fields += len(self.extra_fields_for_log_entry_struct)
+        return num_fields;
+
     def get_arg_signature(self):
         arg_sign = []
         for arg in self.args:
@@ -746,18 +771,19 @@ class WrapperInfo:
     def get_create_entry_fn(self):
         sign = 'log_entry_t create_%s_entry(' % (self._name)
         slen = len(sign)
-        sign += 'clone_id_t clone_id, event_code_t event'
+        sign += 'clone_id_t cloneId, event_code_t event'
         if len(self.args) > 0:
             sign += ',\n%s%s' % (' ' * slen, self.get_arg_signature())
         sign += ')'
 
         body =  '\n{\n'
         body += '  log_entry_t e = EMPTY_LOG_ENTRY;\n'
-        body += '  setupCommonFields(&e, clone_id, event);\n'
+        body += '  setupCommonFields(&e, cloneId, event);\n'
 
         for arg in self.args:
-            if not arg.dont_save():
-                body += '  SET_FIELD(e, %s, %s);\n' % (self._name, arg.name())
+            if self.debugMode or arg.save():
+                if not arg.dont_save():
+                    body += '  SET_FIELD(e, %s, %s);\n' % (self._name, arg.name())
 
         body += '  return e;\n}\n'
         return (sign, body)
@@ -766,40 +792,63 @@ class WrapperInfo:
         sign = 'int %s_turn_check(log_entry_t *e1, log_entry_t *e2)' % (self._name)
         body = '\n{\n  return base_turn_check(e1,e2)'
         for arg in self.args:
-            body += '\n    && '
-            body += 'ARE_FIELDS_EQUAL_PTR (e1, e2, %s, %s)'  % (self._name, arg.name())
+            if self.debugMode or arg.save():
+                if not arg.dont_save():
+                    body += '\n    && '
+                    body += 'ARE_FIELDS_EQUAL_PTR (e1, e2, %s, %s)'  % \
+                            (self._name, arg.name())
         body += ';\n}\n'
         return (sign, body)
-    
+
     def get_struct_def(self):
-        ret = 'typedef struct {\n'
+        ret  = 'typedef struct {\n'
+        ret += '  int   savedErrno;\n'
+        ret += '  void* retval;\n'
         for arg in self.args:
-            ret += '  %s;\n' % (arg.arg_decl())
-            if arg.save_retval():
-                ret += '  %s %s;\n' % (arg.deref_type(), 'ret_' + arg.name())
+            if not arg.dont_save():
+                if self.debugMode or arg.save():
+                    ret += '  %s;\n' % (arg.arg_decl())
+                if arg.save_retval():
+                    if arg.deref_type() == 'struct sockaddr':
+                        ret += '  struct sockaddr_storage %s;\n' % ('ret_' + arg.name())
+                    else:
+                        ret += '  %s %s;\n' % (arg.deref_type(), 'ret_' + arg.name())
         if self.decl_data_offset:
             ret += '  off_t data_offset;\n'
         if self.decl_retval:
             ret += '  %s %s_retval;\n' % (self.ret_type.deref_type(), self._name)
         for extra in self.extra_fields_for_log_entry_struct:
             ret += '  %s;\n' % (extra)
-    
+
         ret += '} log_event_%s_t;\n' % (self._name)
         return ret
 
     def get_print_entry_fn(self):
         sign =  'void print_log_entry_%s' % (self._name)
         sign += '(int idx, log_entry_t *entry)'
-        body =  ' {\n'
-        body += '  printf("'
+        body = textwrap.dedent("""\n\
+            {
+              if (entry->isRetvalZero()) {
+                printf(" ret= 0 errno= 0");
+              } else {
+                if ((long) GET_FIELD_PTR(entry, %s, retval) <= 4096) {
+                  printf(" ret= -1");
+                } else {
+                  printf(" ret= %%p", GET_FIELD_PTR(entry, %s, retval));
+                }
+                printf(" errno= %%d", GET_FIELD_PTR(entry, %s, savedErrno));
+              }
+        """)
+        body = body % (self._name, self._name, self._name)
+
         fmt_str = ''
         arg_list = ''
         for arg in self.args:
-            if arg.dont_save() == False:
+            if arg.dont_save() == False and (self.debugMode or arg.save()):
                 fmt_str += ' %s=%s' % (arg.name(), arg.ret_type().format_str())
                 arg_list += ',\n         GET_FIELD_PTR(entry, %s, %s)' \
                          % (self._name, arg.name())
-        body = '  {\n  printf("%s\\n" %s);\n}\n' % (fmt_str, arg_list)
+        body += '  printf("%s\\n" %s);\n}\n' % (fmt_str, arg_list)
         return (sign, body)
 
 copyrightHdr = """\
@@ -837,41 +886,49 @@ def gen_wrapper_util_cpp(allWrappers):
 
         """)
 
+    log_event_fields_start = 'static size_t log_event_actual_fields[numTotalWrappers] = {\n'
+    log_event_fields_end = '\n};\n\n'
+
     log_event_size_start = 'static size_t log_event_size[numTotalWrappers] = {\n'
     log_event_size_end = textwrap.dedent("""\
 
         };
 
         size_t getLogEventSize(const log_entry_t *entry) {
-          return log_event_size[entry->header.event];
+          return log_event_size[entry->eventId()];
+        }
+        size_t getNumActualFieldsInLogEvent(const log_entry_t *entry) {
+          return log_event_actual_fields[entry->eventId()];
         }
         """)
 
     setup_common_fields = textwrap.dedent("""\
-        static void setupCommonFields(log_entry_t *e, clone_id_t clone_id,
+        static void setupCommonFields(log_entry_t *e, clone_id_t cloneId,
                                       event_code_t event)
         {
           // Zero out all fields:
           memset(&(e->header), 0, sizeof(e->header));
-          SET_COMMON_PTR(e, clone_id);
-          SET_COMMON_PTR(e, event);
-          SET_COMMON_PTR2(e, log_offset, INVALID_LOG_OFFSET);
+          e->setCloneId(cloneId);
+          e->setEventId(event);
         }
         """)
 
     base_turn_check = textwrap.dedent("""\
         static int base_turn_check(log_entry_t *e1, log_entry_t *e2) {
           // Predicate function for a basic check -- event # and clone id.
-          return GET_COMMON_PTR(e1,clone_id) == GET_COMMON_PTR(e2,clone_id) &&
-                 GET_COMMON_PTR(e1,event) == GET_COMMON_PTR(e2,event);
+          return e1->cloneId() == e2->cloneId() &&
+                 e1->eventId() == e2->eventId();
         }
         """)
 
     event_size = []
+    event_fields = []
     create_entry_fn = []
     turn_check_p_fn = []
     for winfo in allWrappers:
         event_size += ['  sizeof(log_event_%s_t),' % (winfo.name())]
+        event_fields += ['  %d, /* %s */' % (winfo.get_num_actual_fields(),
+                                             winfo.name())]
         (create_entry_sign, create_entry_body) = winfo.get_create_entry_fn()
         create_entry_fn += [create_entry_sign + create_entry_body]
         (turn_check_p_sign, turn_check_p_body) = winfo.get_turn_check_p_fn()
@@ -880,6 +937,10 @@ def gen_wrapper_util_cpp(allWrappers):
     fd = open('wrapper_util.cpp', 'w')
     fd.write(copyrightHdr)
     fd.write(header)
+
+    fd.write(log_event_fields_start)
+    fd.write(string.join(event_fields, '\n'))
+    fd.write(log_event_fields_end)
 
     fd.write(log_event_size_start)
     fd.write(string.join(event_size, '\n'))
@@ -905,7 +966,7 @@ def gen_fred_read_log_h(allWrappers):
         void printEntry(int idx, log_entry_t *entry)
         {
           print_log_entry_common(idx, entry);
-          switch (entry->header.event) {
+          switch (entry->eventId()) {
           """)
 
     print_entry_end = '  }\n}\n'
@@ -938,9 +999,9 @@ def gen_fred_read_log_h(allWrappers):
 
     fd.close()
 
-############################## 
+##############################
 # Generate fred_wrappers.h
-############################## 
+##############################
 
 def gen_fred_wrappers_raw_h(allWrappers):
     header = textwrap.dedent("""\
@@ -1021,17 +1082,37 @@ def gen_wrapper_util_h(allWrappers):
 
         """)
 
+    if len(allWrappers) > 255:
+        print "Total number of events exceeded 255, "\
+              "update log entry header accordingly"
+        exit
+
     log_entry_decl = textwrap.dedent("""\
+        const int eventBits = 8;
+        const int isOptionalBits = 3;
+        const int cloneIdBits = 20;
+        const int MAX_EVENTS = (1 << eventBits);
+        const int MAX_OPTIONAL_LEVEL = (1 << isOptionalBits);
+        const int MAX_CLONE_IDS = (1 << cloneIdBits);
+
         typedef struct {
-          event_code_t event;
-          unsigned char isOptional;
-          log_off_t log_offset;
-          clone_id_t clone_id;
-          int my_errno;
-          void* retval;
+          event_code_t event    :eventBits;
+          unsigned isOptional   :isOptionalBits;
+          unsigned retvalZero   :1;
+          unsigned cloneId      :cloneIdBits;
         } log_entry_header_t;
 
         typedef struct {
+          event_code_t eventId() const { return (event_code_t) header.event; }
+          void         setEventId(event_code_t e) { header.event = e; }
+          clone_id_t   cloneId() const { return header.cloneId; }
+          void         setCloneId(clone_id_t c) { header.cloneId = c; }
+          bool         isOptional() const { return header.isOptional; }
+          void         setIsOptional(bool i) { header.isOptional = i; }
+          bool         isRetvalZero() const { return header.retvalZero == 1; }
+          bool         setRetvalZero() { header.retvalZero = 1; }
+          bool         unsetRetvalZero() { header.retvalZero = 0; }
+
           // Shared among all events ("common area"):
           /* IMPORTANT: Adding new fields to the common area requires that you also
            * update the log_event_common_size definition. */
@@ -1044,6 +1125,7 @@ def gen_wrapper_util_h(allWrappers):
 
     footer = textwrap.dedent("""\
         size_t getLogEventSize(const log_entry_t *entry);
+        size_t getNumActualFieldsInLogEvent(const log_entry_t *entry);
 
         #ifdef __cplusplus
         }
@@ -1053,14 +1135,14 @@ def gen_wrapper_util_h(allWrappers):
     log_entry_union_start = 'union log_entry_data {\n  '
     log_entry_union_end = '\n};\n'
 
-    event_size = []
+    #event_size = []
     log_entry_union = []
     struct_def = []
     turn_check_p = []
     create_entry = []
     for wInfo in allWrappers:
-        event_size += ['static const int log_event_%s_size = sizeof(log_event_%s_t);' \
-                       % (wInfo.name(), wInfo.name())]
+        #event_size += ['static const int log_event_%s_size = sizeof(log_event_%s_t);' \
+                       #% (wInfo.name(), wInfo.name())]
         log_entry_union += ['log_event_%s_t log_event_%s;' \
                             % (wInfo.name(), wInfo.name())]
         turn_check_p += ['int %s_turn_check(log_entry_t *e1, log_entry_t *e2);' \
@@ -1092,7 +1174,6 @@ def gen_wrapper_util_h(allWrappers):
     fd.write(string.join(create_entry, '\n'))
     fd.write('\n')
 
-
     fd.write(footer)
     fd.close()
 
@@ -1100,9 +1181,10 @@ def gen_wrapper_util_h(allWrappers):
 def main():
     """Start hook"""
     allWrappers = []
+    debugMode = False
     for (wrapperGroup, groupName) in wrapperGroups:
         for wrapper in wrapperGroup:
-            allWrappers += [WrapperInfo(wrapper, groupName)]
+            allWrappers += [WrapperInfo(wrapper, groupName, debugMode)]
     gen_fred_read_log_h(allWrappers)
     gen_wrapper_util_cpp(allWrappers)
     gen_fred_wrappers_raw_h(allWrappers)

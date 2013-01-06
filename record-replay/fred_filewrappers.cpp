@@ -70,7 +70,7 @@ extern "C" int fclose(FILE *fp)
     dmtcp::ThreadInfo::setOptionalEvent();
     retval = _real_fclose(fp);
     dmtcp::ThreadInfo::unsetOptionalEvent();
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(fclose);
   }
   return retval;
 }
@@ -78,6 +78,16 @@ extern "C" int fclose(FILE *fp)
 extern "C" int fchdir(int fd)
 {
   BASIC_SYNC_WRAPPER(int, fchdir, _real_fchdir, fd);
+}
+
+extern "C" int __open_2 (const char *path, int flags)
+{
+  BASIC_SYNC_WRAPPER(int, open, _real_open, path, flags, 0);
+}
+
+extern "C" int __open64_2 (const char *path, int flags)
+{
+  BASIC_SYNC_WRAPPER(int, open64, _real_open64, path, flags, 0);
 }
 
 extern "C" int open (const char *path, int flags, ... )
@@ -130,7 +140,7 @@ extern "C" FILE *fdopen(int fd, const char *mode)
     if (retval != NULL) {
       SET_FIELD2(my_entry, fdopen, fdopen_retval, *retval);
     }
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(fdopen);
   }
   return retval;
 }
@@ -156,7 +166,7 @@ extern "C" DIR *opendir(const char *name)
     dmtcp::ThreadInfo::setOptionalEvent();
     retval = _real_opendir(name);
     dmtcp::ThreadInfo::unsetOptionalEvent();
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(opendir);
   }
   return retval;
 }
@@ -175,7 +185,7 @@ extern "C" DIR *fdopendir(int fd)
     dmtcp::ThreadInfo::setOptionalEvent();
     retval = _real_fdopendir(fd);
     dmtcp::ThreadInfo::unsetOptionalEvent();
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(fdopendir);
   }
   return retval;
 }
@@ -190,7 +200,7 @@ extern "C" int closedir(DIR *dirp)
     dmtcp::ThreadInfo::setOptionalEvent();
     retval = _real_closedir(dirp);
     dmtcp::ThreadInfo::unsetOptionalEvent();
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(closedir);
   }
   return retval;
 }
@@ -215,7 +225,7 @@ extern "C" ssize_t __getdelim(char **lineptr, size_t *n, int delim, FILE *stream
       SET_FIELD2(my_entry, getdelim, ret_n, *n);
       WRAPPER_LOG_WRITE_INTO_READ_LOG(getdelim, *lineptr, *n);
     }
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(getdelim);
   }
   return retval;
 }
@@ -249,7 +259,7 @@ extern "C" ssize_t getline(char **lineptr, size_t *n, FILE *stream)
       SET_FIELD2(my_entry, getline, ret_n, *n);
       WRAPPER_LOG_WRITE_INTO_READ_LOG(getline, *lineptr, *n);
     }
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(getline);
   }
   return retval;
 }
@@ -449,7 +459,7 @@ extern "C" int __isoc99_fscanf (FILE *stream, const char *format, ...)
       _real_pthread_mutex_unlock(&read_data_mutex);
     }
     errno = saved_errno;
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(vfscanf);
   }
   return retval;
 }
@@ -472,7 +482,7 @@ extern "C" char *fgets(char *s, int size, FILE *stream)
     if (retval != NULL) {
       WRAPPER_LOG_WRITE_INTO_READ_LOG(fgets, s, size);
     }
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(fgets);
   }
   return retval;
 }
@@ -518,14 +528,14 @@ extern "C" int __fprintf_chk (FILE *stream, int flag, const char *format, ...)
     // the other FILE related syscalls are NOT made on replay.
     /*if (stream == stdout || stream == stderr) {
       retval = _fprintf(stream, format, arg);
-      }*/
-    retval = (int)(unsigned long)GET_COMMON(my_entry,
-                                            retval);
+      }
+    retval = (int) RETVAL(my_entry, vfprintf);
+      */
   } else if (SYNC_IS_RECORD) {
     dmtcp::ThreadInfo::setOptionalEvent();
     retval = _fprintf(stream, format, arg);
     dmtcp::ThreadInfo::unsetOptionalEvent();
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(vfprintf);
   }
   return retval;
 }
@@ -545,14 +555,43 @@ extern "C" int fprintf (FILE *stream, const char *format, ...)
     // the other FILE related syscalls are NOT made on replay.
     /*if (stream == stdout || stream == stderr) {
       retval = _fprintf(stream, format, arg);
-      }*/
-    retval = (int)(unsigned long)GET_COMMON(my_entry, retval);
+      }
+      retval = (int) RETVAL(my_entry, vfprintf);
+    */
     WRAPPER_REPLAY_END(vfprintf);
   } else if (SYNC_IS_RECORD) {
     dmtcp::ThreadInfo::setOptionalEvent();
     retval = _fprintf(stream, format, arg);
     dmtcp::ThreadInfo::unsetOptionalEvent();
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(vfprintf);
+  }
+  return retval;
+}
+
+extern "C" int printf (const char *format, ...)
+{
+  va_list arg;
+  va_start (arg, format);
+  FILE *stream = stdout;
+  WRAPPER_HEADER(int, vfprintf, _fprintf, stream, format, arg);
+
+  if (SYNC_IS_REPLAY) {
+    WRAPPER_REPLAY(vfprintf);
+    /* If we're writing to stdout, we want to see the data to screen.
+     * Thus execute the real system call. */
+    // XXX We can't do this so easily. If we make the _real_printf call here,
+    // it can call mmap() on replay at a different time as on record, since
+    // the other FILE related syscalls are NOT made on replay.
+    /*if (stream == stdout || stream == stderr) {
+      retval = _fprintf(stream, format, arg);
+      }
+      retval = (int) RETVAL(my_entry, vfprintf);
+    */
+  } else if (SYNC_IS_RECORD) {
+    dmtcp::ThreadInfo::setOptionalEvent();
+    retval = _fprintf(stream, format, arg);
+    dmtcp::ThreadInfo::unsetOptionalEvent();
+    WRAPPER_LOG_WRITE_ENTRY(vfprintf);
   }
   return retval;
 }
@@ -566,7 +605,7 @@ extern "C" int fseek(FILE *stream, long offset, int whence)
     dmtcp::ThreadInfo::setOptionalEvent();
     retval = _real_fseek(stream, offset, whence);
     dmtcp::ThreadInfo::unsetOptionalEvent();
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(fseek);
   }
   return retval;
 }
@@ -580,7 +619,7 @@ extern "C" int _IO_getc(FILE *stream)
     dmtcp::ThreadInfo::setOptionalEvent();
     retval = _real_getc(stream);
     dmtcp::ThreadInfo::unsetOptionalEvent();
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(getc);
   }
   return retval;
 }
@@ -601,7 +640,7 @@ extern "C" int fgetc(FILE *stream)
     dmtcp::ThreadInfo::setOptionalEvent();
     retval = _real_fgetc(stream);
     dmtcp::ThreadInfo::unsetOptionalEvent();
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(fgetc);
   }
   return retval;
 }
@@ -639,7 +678,7 @@ extern "C" char *getcwd(char *buf, size_t size)
       JASSERT(size > 0).Text("Unimplemented.");
       WRAPPER_LOG_WRITE_INTO_READ_LOG(getcwd, retval, size);
     }
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(getcwd);
   }
   return retval;
 }
@@ -653,7 +692,35 @@ extern "C" int fputs(const char *s, FILE *stream)
     dmtcp::ThreadInfo::setOptionalEvent();
     retval = _real_fputs(s, stream);
     dmtcp::ThreadInfo::unsetOptionalEvent();
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(fputs);
+  }
+  return retval;
+}
+
+extern "C" int _IO_puts(const char *s)
+{
+  WRAPPER_HEADER(int, puts, _real_puts, s);
+  if (SYNC_IS_REPLAY) {
+    WRAPPER_REPLAY_TYPED(int, puts);
+  } else if (SYNC_IS_RECORD) {
+    dmtcp::ThreadInfo::setOptionalEvent();
+    retval = _real_puts(s);
+    dmtcp::ThreadInfo::unsetOptionalEvent();
+    WRAPPER_LOG_WRITE_ENTRY(puts);
+  }
+  return retval;
+}
+
+extern "C" int puts(const char *s)
+{
+  WRAPPER_HEADER(int, puts, _real_puts, s);
+  if (SYNC_IS_REPLAY) {
+    WRAPPER_REPLAY_TYPED(int, puts);
+  } else if (SYNC_IS_RECORD) {
+    dmtcp::ThreadInfo::setOptionalEvent();
+    retval = _real_puts(s);
+    dmtcp::ThreadInfo::unsetOptionalEvent();
+    WRAPPER_LOG_WRITE_ENTRY(puts);
   }
   return retval;
 }
@@ -667,14 +734,23 @@ extern "C" int fputc(int c, FILE *stream)
     dmtcp::ThreadInfo::setOptionalEvent();
     retval = _real_fputc(c, stream);
     dmtcp::ThreadInfo::unsetOptionalEvent();
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(fputc);
   }
   return retval;
 }
 
 extern "C" int _IO_putc(int c, FILE *stream)
 {
-  BASIC_SYNC_WRAPPER(int, putc, _real_putc, c, stream);
+  WRAPPER_HEADER(int, putc, _real_putc, c, stream);
+  if (SYNC_IS_REPLAY) {
+    WRAPPER_REPLAY_TYPED(int, putc);
+  } else if (SYNC_IS_RECORD) {
+    dmtcp::ThreadInfo::setOptionalEvent();
+    retval = _real_putc(c, stream);
+    dmtcp::ThreadInfo::unsetOptionalEvent();
+    WRAPPER_LOG_WRITE_ENTRY(putc);
+  }
+  return retval;
 }
 
 // WARNING:  Early versions of glibc (e.g. glibc 2.3) define this
@@ -682,6 +758,7 @@ extern "C" int _IO_putc(int c, FILE *stream)
 # if __GLIBC_PREREQ (2,4)
 extern "C" int putchar(int c)
 {
+  dmtcp::ThreadInfo::setOkToLogNextFnc();
   return _IO_putc(c, stdout);
 }
 # else
@@ -698,7 +775,7 @@ extern "C" size_t fwrite(const void *ptr, size_t size, size_t nmemb,
     dmtcp::ThreadInfo::setOptionalEvent();
     retval = _real_fwrite(ptr, size, nmemb, stream);
     dmtcp::ThreadInfo::unsetOptionalEvent();
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(fwrite);
   }
   return retval;
 }
@@ -721,7 +798,7 @@ extern "C" size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream)
       // fread() returns the number of items (NOT bytes) read.
       WRAPPER_LOG_WRITE_INTO_READ_LOG(fread, ptr, retval*size);
     }
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(fread);
   }
   return retval;
 }
@@ -804,7 +881,7 @@ extern "C" FILE *fopen (const char* path, const char* mode)
     if (retval != NULL) {
       SET_FIELD2(my_entry, fopen, fopen_retval, *retval);
     }
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(fopen);
   }
   return retval;
 }
@@ -825,7 +902,7 @@ extern "C" FILE *fopen64 (const char* path, const char* mode)
     if (retval != NULL) {
       SET_FIELD2(my_entry, fopen64, fopen64_retval, *retval);
     }
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(fopen64);
   }
   return retval;
 }
@@ -846,7 +923,7 @@ extern "C" FILE *freopen(const char* path, const char* mode, FILE *stream)
     if (retval != NULL) {
       SET_FIELD2(my_entry, freopen, freopen_retval, *retval);
     }
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(freopen);
   }
   return retval;
 }
@@ -867,7 +944,7 @@ extern "C" FILE *tmpfile()
     if (retval != NULL) {
       SET_FIELD2(my_entry, tmpfile, tmpfile_retval, *retval);
     }
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(tmpfile);
   }
   return retval;
 }
@@ -886,20 +963,16 @@ extern "C" int chown(const char *path, uid_t owner, gid_t group)
   do {                                                                      \
     if (SYNC_IS_REPLAY) {                                                   \
       WRAPPER_REPLAY_START(name);                                           \
-      int saved_errno = GET_COMMON(my_entry, my_errno);                     \
       if (retval == 0 && buf != NULL) {                                     \
         *buf = GET_FIELD(my_entry, name, ret_buf);                          \
       }                                                                     \
       WRAPPER_REPLAY_END(name);                                             \
-      if (saved_errno != 0) {                                               \
-        errno = saved_errno;                                                \
-      }                                                                     \
     } else if (SYNC_IS_RECORD) {                                            \
       retval = _real_ ## name(__VA_ARGS__);                                 \
       if (retval != -1 && buf != NULL) {                                    \
         SET_FIELD2(my_entry, name, ret_buf, *buf);                          \
       }                                                                     \
-      WRAPPER_LOG_WRITE_ENTRY(my_entry);                                    \
+      WRAPPER_LOG_WRITE_ENTRY(name);                                        \
     }                                                                       \
   }  while(0)
 
@@ -973,7 +1046,7 @@ extern "C" READLINK_RET_TYPE readlink(const char *path, char *buf,
     if (retval > 0 && buf != NULL) {
       WRAPPER_LOG_WRITE_INTO_READ_LOG(readlink, buf, retval);
     }
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(readlink);
   }
   return retval;
 }
@@ -999,7 +1072,7 @@ extern "C" char *realpath(const char *path, char *resolved_path)
       SET_FIELD(my_entry, realpath, len);
       WRAPPER_LOG_WRITE_INTO_READ_LOG(realpath, retval, len);
     }
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(realpath);
   }
   return retval;
 }
@@ -1025,7 +1098,7 @@ extern "C" int select(int nfds, fd_set *readfds, fd_set *writefds,
       copyFdSet(writefds, &GET_FIELD(my_entry, select, ret_writefds));
     }
     errno = saved_errno;
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(select);
   }
   return retval;
 }
@@ -1050,7 +1123,7 @@ extern "C" int ppoll(struct pollfd *fds, nfds_t nfds,
                                       nfds * sizeof(struct pollfd));
     }
     errno = saved_errno;
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(ppoll);
   }
   return retval;
 }
@@ -1096,7 +1169,7 @@ extern "C" ssize_t read(int fd, void *buf, size_t count)
     if (retval > 0) {
       WRAPPER_LOG_WRITE_INTO_READ_LOG(read, buf, retval);
     }
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(read);
   }
   return retval;
 }
@@ -1126,7 +1199,7 @@ extern "C" ssize_t pread(int fd, void *buf, size_t count, off_t offset)
     if (retval > 0) {
       WRAPPER_LOG_WRITE_INTO_READ_LOG(pread, buf, retval);
     }
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(pread);
   }
   return retval;
 }
@@ -1158,7 +1231,7 @@ extern "C" ssize_t readv(int fd, const struct iovec *iov, int iovcnt)
     if (retval > 0) {
       WRAPPER_LOG_WRITE_VECTOR_INTO_READ_LOG(readv, iov, iovcnt, retval);
     }
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(readv);
   }
   return retval;
 }
@@ -1190,7 +1263,7 @@ extern "C" ssize_t preadv(int fd, const struct iovec *iov, int iovcnt,
     if (retval > 0) {
       WRAPPER_LOG_WRITE_VECTOR_INTO_READ_LOG(preadv, iov, iovcnt, retval);
     }
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(preadv);
   }
   return retval;
 }
@@ -1292,7 +1365,7 @@ extern "C" struct dirent * /*__attribute__ ((optimize(0)))*/ readdir(DIR *dirp)
       JASSERT(retval->d_reclen < 256);
       SET_FIELD2(my_entry, readdir, readdir_retval, *retval);
     }
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(readdir);
   }
   return retval;
 }
@@ -1327,7 +1400,7 @@ extern "C" int readdir_r(DIR *dirp, struct dirent *entry,
     if (retval == 0 && result != NULL) {
       SET_FIELD2(my_entry, readdir_r, ret_result, *result);
     }
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(readdir_r);
   }
   return retval;
 }
@@ -1352,7 +1425,7 @@ extern "C" int fflush(FILE *stream)
       }*/
   } else if (SYNC_IS_RECORD) {
     retval = _real_fflush(stream);
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(fflush);
   }
   return retval;
 }
@@ -1388,7 +1461,7 @@ extern "C" int setvbuf(FILE *stream, char *buf, int mode, size_t size)
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_TYPED(int, setvbuf);
   } else if (SYNC_IS_RECORD) {
-    WRAPPER_LOG(_real_setvbuf, stream, buf, mode, size);
+    WRAPPER_LOG(setvbuf, _real_setvbuf, stream, buf, mode, size);
   }
   return retval;
 }
@@ -1414,7 +1487,7 @@ extern "C" int fcntl(int fd, int cmd, ...)
     if (cmd == F_GETLK && retval != -1 && arg != NULL) {
       SET_FIELD2(my_entry, fcntl, ret_flock, *(struct flock*)arg);
     }
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(fcntl);
   }
 
   return retval;
@@ -1519,7 +1592,7 @@ extern "C" int ioctl(int d,  unsigned long int request, ...)
         break;
       }
     }
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(ioctl);
   }
 
   return retval;
@@ -1551,7 +1624,7 @@ extern "C" int waitid(idtype_t idtype, id_t id, siginfo_t *infop, int options)
     if (retval != -1 && infop != NULL) {
       SET_FIELD2(my_entry, waitid, ret_infop, *infop);
     }
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(waitid);
   }
   return retval;
 }
@@ -1583,7 +1656,7 @@ extern "C" pid_t wait4(pid_t pid, __WAIT_STATUS status, int options,
     if (retval != -1 && rusage != NULL) {
       SET_FIELD2(my_entry, wait4, ret_rusage, *rusage);
     }
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(wait4);
   }
   return retval;
 }

@@ -38,18 +38,25 @@
 #include "synchronizationlogging.h"
 #include "fred_wrappers.h"
 #include "fred_interface.h"
-#include "threadinfo.h"
 #include "autogen/wrapper_util.h"
 #include "util.h"
 #include "jassert.h"
 
 static log_entry_t _currentEntry = EMPTY_LOG_ENTRY;
+LIB_PRIVATE int sync_logging_branch = SYNC_NOOP;
 
 static void fred_interface_get_shm_file_name(char *name)
 {
   dmtcp::ostringstream o;
   o << dmtcp_get_tmpdir() << "/fred-shm." << getpid();
   strcpy(name, o.str().c_str());
+}
+
+static size_t getEntrySize(log_entry_t *entry) {
+  if (getNumActualFieldsInLogEvent(entry) > 0 || !entry->isRetvalZero()) {
+    return log_event_header_size + getLogEventSize(entry);
+  }
+  return log_event_header_size;
 }
 
 void dmtcp::SynchronizationLog::initialize(const char *path, size_t size)
@@ -82,7 +89,7 @@ void dmtcp::SynchronizationLog::initialize(const char *path, size_t size)
 
     _index = _entryOffsetMarker;
     _entryIndex = _entryIndexMarker;
-    _sharedInterfaceInfo->current_clone_id = GET_COMMON(temp_entry, clone_id);
+    _sharedInterfaceInfo->current_clone_id = temp_entry.cloneId();
     _sharedInterfaceInfo->current_log_entry_index = _entryIndex;
 
     JTRACE ("Restored log to index and offset from intermediate checkpoint.")
@@ -298,7 +305,7 @@ int dmtcp::SynchronizationLog::advanceToNextEntry()
     _sharedInterfaceInfo->breakpoint_at_index = FRED_INTERFACE_BP_HIT;
   }
 
-  int entrySize = log_event_common_size + getLogEventSize(&_currentEntry);
+  int entrySize = getEntrySize(&_currentEntry);
   JASSERT(entrySize > 0);
   atomicIncrementIndex(entrySize);
   atomicIncrementEntryIndex();
@@ -311,7 +318,7 @@ int dmtcp::SynchronizationLog::advanceToNextEntry()
   getEntryAtOffset(_currentEntry, getIndex());
 
   /* Keep interface info up to date. */
-  _sharedInterfaceInfo->current_clone_id = GET_COMMON(_currentEntry, clone_id);
+  _sharedInterfaceInfo->current_clone_id = _currentEntry.cloneId();
   _sharedInterfaceInfo->current_log_entry_index = _entryIndex;
 
   return 1;
@@ -346,66 +353,83 @@ int dmtcp::SynchronizationLog::getEntryAtOffset(log_entry_t& entry, size_t index
     return 0;
   }
 
-  JASSERT(GET_COMMON(entry, event) > 0);
+  JASSERT(entry.eventId() > 0);
   size_t event_size = getLogEventSize(&entry);
 
-  if (index + log_event_common_size + event_size > currentDataSize) {
-    JASSERT ((index + log_event_common_size + event_size) <= currentDataSize)
-      (index) (log_event_common_size) (event_size) (currentDataSize);
+  if (getNumActualFieldsInLogEvent(&entry) > 0 || !entry.isRetvalZero()) {
+    JASSERT(event_size > 0);
+    if (index + log_event_header_size + event_size > currentDataSize) {
+      JASSERT ((index + log_event_header_size + event_size) <= currentDataSize)
+        (index) (log_event_header_size) (event_size) (currentDataSize);
+    }
+    JNOTE("ASDF");
+    memcpy(&entry.edata, &_log[index + log_event_header_size], event_size);
+    return log_event_header_size + event_size;
   }
-
-  memcpy(&entry.edata, &_log[index + log_event_common_size], getLogEventSize(&entry));
-  return log_event_common_size + event_size;
+  return log_event_header_size;
 }
 
-void dmtcp::SynchronizationLog::appendEntry(log_entry_t& entry)
+size_t dmtcp::SynchronizationLog::appendEntry(log_entry_t& entry)
 {
-  int eventSize = -1;
   log_off_t offset;
 
-  eventSize = getLogEventSize(&entry);
-  JASSERT( eventSize > 0 );
-  eventSize += log_event_common_size;
+  size_t eventSize = getEntrySize(&entry);
+  JASSERT( eventSize >= 0 );
   offset = atomicIncrementOffset(eventSize);
   __sync_fetch_and_add(_numEntries, 1);
-  SET_COMMON2(entry, log_offset, offset);
 
   JASSERT(eventSize == writeEntryAtOffset(entry, offset));
+  return offset;
 }
 
-void dmtcp::SynchronizationLog::updateEntry(const log_entry_t& entry)
+static void validateEntry(const log_entry_t& entry, size_t offset)
 {
+  JASSERT(offset != INVALID_LOG_OFFSET);
+
   // only allow it for pthread_create and malloc calls
-  JASSERT(GET_COMMON(entry, event) == pthread_create_event ||
-	  GET_COMMON(entry, event) == pthread_rwlock_unlock_event ||
-	  GET_COMMON(entry, event) == pthread_mutex_unlock_event ||
-	  GET_COMMON(entry, event) == malloc_event ||
-	  GET_COMMON(entry, event) == libc_memalign_event ||
-	  GET_COMMON(entry, event) == calloc_event ||
-	  GET_COMMON(entry, event) == realloc_event);
+  JASSERT(entry.eventId() == pthread_create_event ||
+          entry.eventId() == pthread_join_event ||
+          entry.eventId() == pthread_rwlock_unlock_event ||
+          entry.eventId() == pthread_mutex_unlock_event ||
+          entry.eventId() == malloc_event ||
+          entry.eventId() == libc_memalign_event ||
+          entry.eventId() == calloc_event ||
+          entry.eventId() == realloc_event);
 
 #ifdef DEBUG
   log_entry_t old_entry = EMPTY_LOG_ENTRY;
-  JASSERT(getEntryAtOffset(old_entry, GET_COMMON(entry, log_offset)) != 0);
+  JASSERT(getEntryAtOffset(old_entry, offset) != 0);
 
   // Only allow replacing events of the same type. Allowing it for differing
   // types (which means differing sizes) would take more work.
-  JASSERT(GET_COMMON(entry, event) == GET_COMMON(old_entry, event));
+  JASSERT(entry.eventId() == old_entry.eventId());
 
-  if (GET_COMMON(entry, event) == pthread_create_event) {
-    JASSERT(GET_COMMON(entry, log_offset) == GET_COMMON(old_entry, log_offset) &&
-	    IS_EQUAL_FIELD(entry, old_entry, pthread_create, thread) &&
-	    IS_EQUAL_FIELD(entry, old_entry, pthread_create, thread) &&
-	    IS_EQUAL_FIELD(entry, old_entry, pthread_create, start_routine) &&
-	    IS_EQUAL_FIELD(entry, old_entry, pthread_create, attr) &&
-	    IS_EQUAL_FIELD(entry, old_entry, pthread_create, arg));
-  } else if (GET_COMMON(entry, event) == malloc_event) {
-    JASSERT(GET_COMMON(entry, log_offset) == GET_COMMON(old_entry, log_offset) &&
-	    IS_EQUAL_FIELD(entry, old_entry, malloc, size));
+  if (entry.eventId() == pthread_create_event) {
+    JASSERT(IS_EQUAL_FIELD(entry, old_entry, pthread_create, thread) &&
+            IS_EQUAL_FIELD(entry, old_entry, pthread_create, thread) &&
+            IS_EQUAL_FIELD(entry, old_entry, pthread_create, start_routine) &&
+            IS_EQUAL_FIELD(entry, old_entry, pthread_create, attr) &&
+            IS_EQUAL_FIELD(entry, old_entry, pthread_create, arg));
+  } else if (entry.eventId() == malloc_event) {
+    JASSERT(IS_EQUAL_FIELD(entry, old_entry, malloc, size));
   }
 #endif
+}
 
-  writeEntryAtOffset(entry, GET_COMMON(entry, log_offset));
+void dmtcp::SynchronizationLog::updateEntry(const log_entry_t& entry,
+                                            size_t offset)
+{
+  JASSERT(offset <= *_dataSize);
+  validateEntry(entry, offset);
+  writeEntryAtOffset(entry, offset);
+}
+
+void dmtcp::SynchronizationLog::updateEntryHeader(const log_entry_t& entry,
+                                                  size_t offset)
+{
+  JASSERT(offset <= *_dataSize);
+  validateEntry(entry, offset);
+  writeEntryHeaderAtOffset(entry, offset);
 }
 
 /* Move appropriate markers to the end, so that we enter "append" mode. */
@@ -426,78 +450,42 @@ int dmtcp::SynchronizationLog::writeEntryAtOffset(const log_entry_t& entry,
   JASSERT( event_size > 0 );
 
   JASSERT ((LOG_OFFSET_FROM_START + index +
-            log_event_common_size + event_size) < *_size)
+            log_event_header_size + event_size) < *_size)
     ( *_size ) .Text ("Log size too small. Please increase MAX_LOG_LENGTH"
                       " in synchronizationlogging.h");
 
-  writeEntryHeaderAtOffset(entry, index);
+  size_t ret = writeEntryHeaderAtOffset(entry, index);
 
-  memcpy(&_log[index + log_event_common_size], &entry.edata, getLogEventSize(&entry));
-  return log_event_common_size + event_size;
+  if (getNumActualFieldsInLogEvent(&entry) > 0 || !entry.isRetvalZero()) {
+    JASSERT(event_size > 0);
+    memcpy(&_log[index + ret], &entry.edata, event_size);
+    ret += event_size;
+  }
+  return ret;
 }
 
 size_t dmtcp::SynchronizationLog::getEntryHeaderAtOffset(log_entry_t& entry,
-                                                      size_t index)
+                                                         size_t index)
 {
   size_t currentDataSize = getDataSize();
-  JASSERT ((index + log_event_common_size) <= currentDataSize)
+  JASSERT ((index + log_event_header_size) <= currentDataSize)
     (index) (currentDataSize);
 
-#ifdef NO_LOG_ENTRY_TO_BUFFER
-  memcpy(&entry.header, &_log[index], log_event_common_size);
-#else
-  char* buffer = &_log[index];
+  memcpy(&entry.header, &_log[index], log_event_header_size);
 
-  memcpy(&GET_COMMON(entry, event), buffer, sizeof(GET_COMMON(entry, event)));
-  buffer += sizeof(GET_COMMON(entry, event));
-  memcpy(&GET_COMMON(entry, isOptional), buffer, sizeof(GET_COMMON(entry, isOptional)));
-  buffer += sizeof(GET_COMMON(entry, isOptional));
-  memcpy(&GET_COMMON(entry, log_offset), buffer, sizeof(GET_COMMON(entry, log_offset)));
-  buffer += sizeof(GET_COMMON(entry, log_offset));
-  memcpy(&GET_COMMON(entry, clone_id), buffer, sizeof(GET_COMMON(entry, clone_id)));
-  buffer += sizeof(GET_COMMON(entry, clone_id));
-  memcpy(&GET_COMMON(entry, my_errno), buffer, sizeof(GET_COMMON(entry, my_errno)));
-  buffer += sizeof(GET_COMMON(entry, my_errno));
-  memcpy(&GET_COMMON(entry, retval), buffer, sizeof(GET_COMMON(entry, retval)));
-  buffer += sizeof(GET_COMMON(entry, retval));
-
-  JASSERT((buffer - &_log[index]) == log_event_common_size)
-    (index) (log_event_common_size) (buffer);
-#endif
-
-  if (GET_COMMON(entry, clone_id) == 0) {
+  if (entry.cloneId() == 0) {
     return 0;
   }
-  return log_event_common_size;
+  return log_event_header_size;
 }
 
-void dmtcp::SynchronizationLog::writeEntryHeaderAtOffset(const log_entry_t& entry,
-                                                        size_t index)
+size_t dmtcp::SynchronizationLog::writeEntryHeaderAtOffset(const log_entry_t& entry,
+                                                           size_t index)
 {
+  JASSERT(entry.cloneId() > 0);
 
-  JASSERT(GET_COMMON(entry, clone_id) > 0);
-
-#ifdef NO_LOG_ENTRY_TO_BUFFER
-  memcpy(&_log[index], &entry.header, log_event_common_size);
-#else
-  char* buffer = &_log[index];
-
-  memcpy(buffer, &GET_COMMON(entry, event), sizeof(GET_COMMON(entry, event)));
-  buffer += sizeof(GET_COMMON(entry, event));
-  memcpy(buffer, &GET_COMMON(entry, isOptional), sizeof(GET_COMMON(entry, isOptional)));
-  buffer += sizeof(GET_COMMON(entry, isOptional));
-  memcpy(buffer, &GET_COMMON(entry, log_offset), sizeof(GET_COMMON(entry, log_offset)));
-  buffer += sizeof(GET_COMMON(entry, log_offset));
-  memcpy(buffer, &GET_COMMON(entry, clone_id), sizeof(GET_COMMON(entry, clone_id)));
-  buffer += sizeof(GET_COMMON(entry, clone_id));
-  memcpy(buffer, &GET_COMMON(entry, my_errno), sizeof(GET_COMMON(entry, my_errno)));
-  buffer += sizeof(GET_COMMON(entry, my_errno));
-  memcpy(buffer, &GET_COMMON(entry, retval), sizeof(GET_COMMON(entry, retval)));
-  buffer += sizeof(GET_COMMON(entry, retval));
-
-  JASSERT((buffer - &_log[index]) == log_event_common_size)
-    (index) (log_event_common_size) (buffer);
-#endif
+  memcpy(&_log[index], &entry.header, log_event_header_size);
+  return log_event_header_size;
 }
 
 size_t dmtcp::SynchronizationLog::getIndex()

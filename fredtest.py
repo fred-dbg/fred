@@ -37,8 +37,6 @@ import fred.dmtcpmanager
 import fred.fredmanager
 import fred.fredio
 
-GS_PASSED_STRING = "Passed"
-GS_FAILED_STRING = "Failed"
 # XXX this path shouldn't be hardcoded.
 GS_TEST_PROGRAMS_DIRECTORY = "test"
 
@@ -82,6 +80,18 @@ def end_session():
     g_debugger.destroy()
     g_debugger = None
 
+def passed(msg=None):
+    if msg:
+        print "Passed: %s" % msg
+    else:
+        print "Passed"
+
+def failed(msg=None):
+    if msg:
+        print "Failed: %s" % msg
+    else:
+        print "Failed"
+
 def execute_commands(l_cmds):
     """Execute the given list of commands as if they were a source file."""
     fredapp.source_from_list(l_cmds)
@@ -119,14 +129,37 @@ def gdb_record_replay(n_count=1):
     l_cmd = ["gdb", GS_TEST_PROGRAMS_DIRECTORY + "/pthread-test"]
     for i in range(0, n_count):
         print_test_name("gdb record/replay %d" % i)
+        pass1 = False
+        pass2 = False
+
         start_session(l_cmd)
+        # Checkpoint before threads were created
         execute_commands(["b main", "b print_solution", "r", "fred-ckpt", "c"])
         store_variable("solution")
         execute_commands(["fred-restart", "c"])
         if check_stored_variable("solution"):
-            print GS_PASSED_STRING
+            pass1 = True
+        end_session()
+
+        start_session(l_cmd)
+        # Checkpoint after threads were created.
+        execute_commands(["b print_checkpoint_now", "b print_solution",
+                          "r", "fred-ckpt", "c"])
+        store_variable("solution")
+        execute_commands(["fred-restart", "c"])
+        if check_stored_variable("solution"):
+            pass2 = True
+
+        if pass1 and pass2:
+            passed()
         else:
-            print GS_FAILED_STRING
+            if not pass1:
+                if not pass2:
+                    failed("Both")
+                else:
+                    failed("Ckpt at main")
+            else:
+                failed("Ckpt after thread creation")
         end_session()
 
 def gdb_record_replay_mmap(n_count=1):
@@ -137,7 +170,7 @@ def gdb_record_replay_mmap(n_count=1):
         print_test_name("gdb record/replay mmap %d" % i)
         start_session(l_cmd)
         execute_commands(["b main", "r", "fred-ckpt", "c", "fred-restart", "c"])
-        print GS_PASSED_STRING
+        passed()
         end_session()
 
 def gdb_record_replay_past_end(n_count=1):
@@ -151,7 +184,7 @@ def gdb_record_replay_past_end(n_count=1):
         execute_commands(["b main", "r", "fred-ckpt", "b 30",
                           "c", "fred-restart", "next 128",
                           "fred-restart", "c", "c"])
-        print GS_PASSED_STRING
+        passed()
         end_session()
 
 def gdb_record_replay_pthread_cond(n_count=1):
@@ -165,9 +198,9 @@ def gdb_record_replay_pthread_cond(n_count=1):
         store_variable("solution")
         execute_commands(["fred-restart", "c"])
         if check_stored_variable("solution"):
-            print GS_PASSED_STRING
+            passed()
         else:
-            print GS_FAILED_STRING
+            failed()
         end_session()
 
 def gdb_record_replay_time(n_count=1):
@@ -179,7 +212,7 @@ def gdb_record_replay_time(n_count=1):
         start_session(l_cmd)
         execute_commands(["b main", "r", "fred-ckpt", "c"])
         execute_commands(["fred-restart", "c"])
-        print GS_PASSED_STRING
+        passed()
         end_session()
 
 def gdb_reader(n_count=1):
@@ -192,7 +225,7 @@ def gdb_reader(n_count=1):
         execute_commands(["b main", "r", "fred-ckpt", "c",
                           "fred-restart", "b checkpoint_now",
                           "c", "fred-ckpt", "c", "fred-restart 1", "c"])
-        print GS_PASSED_STRING
+        passed()
         end_session()
 
 def gdb_multiple_checkpoints_record_st(n_count=1):
@@ -207,7 +240,7 @@ def gdb_multiple_checkpoints_record_st(n_count=1):
                           "p list_len(head)", "fred-restart 1",
                           "p list_len(head)", "fred-restart 2",
                           "p list_len(head)"])
-        print GS_PASSED_STRING
+        passed()
         end_session()
 
 def gdb_multiple_checkpoints_replay_st(n_count=1):
@@ -223,7 +256,7 @@ def gdb_multiple_checkpoints_replay_st(n_count=1):
                           "p list_len(head)", "fred-restart 1",
                           "p list_len(head)", "fred-restart 2",
                           "p list_len(head)"])
-        print GS_PASSED_STRING
+        passed()
         end_session()
     
 def gdb_syscall_tester(n_count=1):
@@ -237,9 +270,49 @@ def gdb_syscall_tester(n_count=1):
         store_variable("whole_test")
         execute_commands(["fred-restart", "c"])
         if check_stored_variable("whole_test"):
-            print GS_PASSED_STRING
+            passed()
         else:
-            print GS_FAILED_STRING
+            failed()
+        end_session()
+
+def gdb_many_threads(n_count=1):
+    """Run a test on deterministic record/replay on many-threads example."""
+    global GS_TEST_PROGRAMS_DIRECTORY
+    l_cmd = ["gdb", GS_TEST_PROGRAMS_DIRECTORY + "/many-threads"]
+    for i in range(0, n_count):
+        print_test_name("gdb many-threads %d" % i)
+        start_session(l_cmd)
+        execute_commands(["b main", "r", "fred-ckpt", "c",
+                          "fred-restart", "c"])
+        end_session()
+        pass1 = True
+        start_session(l_cmd)
+        execute_commands(["b main", "r", "fred-ckpt", "b pthread_create",
+                          "c 100", "d 2", "fred-ckpt", "c",
+                          "fred-restart 1", "c", "fred-restart 0", "c"])
+        pass2 = True
+        if pass1 and pass2:
+            passed()
+        else:
+            if not pass1:
+                if not pass2:
+                    failed("Both")
+                else:
+                    failed("First")
+            else:
+                failed("Mult. ckpts")
+        end_session()
+
+def gdb_many_threads2(n_count=1):
+    """Run a test on deterministic record/replay on many-threads2 example."""
+    global GS_TEST_PROGRAMS_DIRECTORY
+    l_cmd = ["gdb", GS_TEST_PROGRAMS_DIRECTORY + "/many-threads2"]
+    for i in range(0, n_count):
+        print_test_name("gdb many-threads-2 %d" % i)
+        start_session(l_cmd)
+        execute_commands(["b main", "r", "fred-ckpt", "c",
+                          "fred-restart", "c"])
+        passed()
         end_session()
 
 def gdb_reverse_watch(n_count=1):
@@ -254,11 +327,11 @@ def gdb_reverse_watch(n_count=1):
         if check_variable("list_len(head)", "9"):
             execute_commands(["n"])
             if check_variable("list_len(head)", "10"):
-                print GS_PASSED_STRING
+                passed()
             else:
-                print GS_FAILED_STRING
+                failed()
         else:
-            print GS_FAILED_STRING
+            failed()
         end_session()
 
 def gdb_reverse_watch_n_rs(n_count=1):
@@ -273,9 +346,9 @@ def gdb_reverse_watch_n_rs(n_count=1):
                           "n", "fred-rs"])
         current_backtrace_frame = g_debugger.current_position()
         if current_backtrace_frame.line() == 41:
-            print GS_PASSED_STRING
+            passed()
         else:
-            print GS_FAILED_STRING
+            failed()
         end_session()
 
 def gdb_reverse_watch_n_rn(n_count=1):
@@ -290,9 +363,9 @@ def gdb_reverse_watch_n_rn(n_count=1):
                           "n", "fred-rn"])
         current_backtrace_frame = g_debugger.current_position()
         if current_backtrace_frame.line() == 26:
-            print GS_PASSED_STRING
+            passed()
         else:
-            print GS_FAILED_STRING
+            failed()
         end_session()
 
 def gdb_reverse_watch_mt(n_count=1):
@@ -307,11 +380,11 @@ def gdb_reverse_watch_mt(n_count=1):
         if int(evaluate_variable("solution")) < 100:
             execute_commands(["s"])
             if int(evaluate_variable("solution")) >= 100:
-                print GS_PASSED_STRING
+                passed()
             else:
-                print GS_FAILED_STRING
+                failed()
         else:
-            print GS_FAILED_STRING
+            failed()
         end_session()
 
 def gdb_reverse_watch_mt_priv(n_count=1):
@@ -329,11 +402,11 @@ def gdb_reverse_watch_mt_priv(n_count=1):
         if check_variable("main_thread_private_data", "2"):
             execute_commands(["s"])
             if check_variable("main_thread_private_data", "3"):
-                print GS_PASSED_STRING
+                passed()
             else:
-                print GS_FAILED_STRING
+                failed()
         else:
-            print GS_FAILED_STRING
+            failed()
         end_session()
 
 def gdb_reverse_watch_no_log(n_count=1):
@@ -349,11 +422,11 @@ def gdb_reverse_watch_no_log(n_count=1):
         if check_variable("list_len()", "9"):
             execute_commands(["n"])
             if check_variable("list_len()", "10"):
-                print GS_PASSED_STRING
+                passed()
             else:
-                print GS_FAILED_STRING
+                failed()
         else:
-            print GS_FAILED_STRING
+            failed()
         end_session()
 
 def gdb_reverse_next(n_count=1):
@@ -367,9 +440,9 @@ def gdb_reverse_next(n_count=1):
                           "c", "fred-reverse-next"])
         current_backtrace_frame = g_debugger.current_position()
         if current_backtrace_frame.line() == 89:
-            print GS_PASSED_STRING
+            passed()
         else:
-            print GS_FAILED_STRING
+            failed()
         end_session()
 
 def gdb_reverse_step(n_count=1):
@@ -383,9 +456,9 @@ def gdb_reverse_step(n_count=1):
                           "c", "n", "n", "fred-reverse-step"])
         current_backtrace_frame = g_debugger.current_position()
         if current_backtrace_frame.line() == 63:
-            print GS_PASSED_STRING
+            passed()
         else:
-            print GS_FAILED_STRING
+            failed()
         end_session()
 
 def gdb_reverse_continue(n_count=1):
@@ -399,9 +472,9 @@ def gdb_reverse_continue(n_count=1):
                           "b 89", "c", "c", "c", "fred-rc"])
         current_backtrace_frame = g_debugger.current_position()
         if g_debugger.at_breakpoint() and current_backtrace_frame.line() == 89:
-            print GS_PASSED_STRING
+            passed()
         else:
-            print GS_FAILED_STRING
+            failed()
         end_session()
 
 def gdb_reverse_finish(n_count=1):
@@ -415,9 +488,9 @@ def gdb_reverse_finish(n_count=1):
                           "fred-reverse-finish"])
         current_backtrace_frame = g_debugger.current_position()
         if current_backtrace_frame.line() == 22:
-            print GS_PASSED_STRING
+            passed()
         else:
-            print GS_FAILED_STRING
+            failed()
         end_session()
 
 def gdb_reverse_finish_2(n_count=1):
@@ -431,9 +504,9 @@ def gdb_reverse_finish_2(n_count=1):
                           "fred-reverse-finish"])
         current_backtrace_frame = g_debugger.current_position()
         if current_backtrace_frame.line() == 22:
-            print GS_PASSED_STRING
+            passed()
         else:
-            print GS_FAILED_STRING
+            failed()
         end_session()
 
 def run_integration_tests(n_iters):
@@ -447,6 +520,8 @@ def run_integration_tests(n_iters):
     gdb_multiple_checkpoints_record_st(n_iters)
     gdb_multiple_checkpoints_replay_st(n_iters)
     gdb_syscall_tester(n_iters)
+    gdb_many_threads(n_iters)
+    gdb_many_threads2(n_iters)
     gdb_reverse_watch(n_iters)
     gdb_reverse_watch_n_rs(n_iters)
     gdb_reverse_watch_n_rn(n_iters)
@@ -551,6 +626,8 @@ def initialize_tests():
                  "gdb-record-replay-pthread-cond" : 
                  gdb_record_replay_pthread_cond,
                  "gdb-syscall-tester" : gdb_syscall_tester,
+                 "gdb-many-threads" : gdb_many_threads,
+                 "gdb-many-threads-2" : gdb_many_threads2,
                  "gdb-reverse-watch" : gdb_reverse_watch,
                  "gdb-reverse-watch-n-rs" : gdb_reverse_watch_n_rs,
                  "gdb-reverse-watch-n-rn" : gdb_reverse_watch_n_rn,

@@ -47,12 +47,26 @@ extern "C"
 {
 int socket ( int domain, int type, int protocol )
 {
-  BASIC_SYNC_WRAPPER(int, socket, _real_socket, domain, type, protocol);
+  WRAPPER_HEADER(int, socket, _real_socket, domain, type, protocol);
+  if (SYNC_IS_REPLAY) {
+    WRAPPER_REPLAY(socket);
+  } else if (SYNC_IS_RECORD) {
+    dmtcp::ThreadInfo::setOptionalEvent();
+    retval = _real_socket(domain, type, protocol);
+    dmtcp::ThreadInfo::unsetOptionalEvent();
+    WRAPPER_LOG_WRITE_ENTRY(socket);
+  }
+  return retval;
 }
 
 int connect ( int sockfd,  const  struct sockaddr *serv_addr, socklen_t addrlen )
 {
   BASIC_SYNC_WRAPPER(int, connect, _real_connect, sockfd, serv_addr, addrlen);
+}
+
+int shutdown ( int sockfd,  int how )
+{
+  BASIC_SYNC_WRAPPER(int, shutdown, _real_shutdown, sockfd, how);
 }
 
 int bind ( int sockfd,  const struct  sockaddr  *addr,  socklen_t addrlen )
@@ -71,8 +85,8 @@ int accept ( int sockfd, struct sockaddr *addr, socklen_t *addrlen )
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_START(accept);
     if (retval != -1) {
-      *addr = GET_FIELD(my_entry, accept, ret_addr);
       *addrlen = GET_FIELD(my_entry, accept, ret_addrlen);
+      memcpy(addr, &GET_FIELD(my_entry, accept, ret_addr), *addrlen);
     }
     WRAPPER_REPLAY_END(accept);
   } else if (SYNC_IS_RECORD) {
@@ -80,10 +94,10 @@ int accept ( int sockfd, struct sockaddr *addr, socklen_t *addrlen )
     retval = _real_accept(sockfd, addr, addrlen);
     dmtcp::ThreadInfo::unsetOptionalEvent();
     if (retval != -1) {
-      SET_FIELD2(my_entry, accept, ret_addr, *addr);
       SET_FIELD2(my_entry, accept, ret_addrlen, *addrlen);
+      memcpy(&GET_FIELD(my_entry, accept, ret_addr), addr, *addrlen);
     }
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(accept);
   }
   return retval;
 }
@@ -95,17 +109,17 @@ int accept4 ( int sockfd, struct sockaddr *addr, socklen_t *addrlen, int flags )
   if (SYNC_IS_REPLAY) {
     WRAPPER_REPLAY_START(accept4);
     if (retval != -1) {
-      *addr = GET_FIELD(my_entry, accept4, ret_addr);
       *addrlen = GET_FIELD(my_entry, accept4, ret_addrlen);
+      memcpy(addr, &GET_FIELD(my_entry, accept4, ret_addr), *addrlen);
     }
     WRAPPER_REPLAY_END(accept4);
   } else if (SYNC_IS_RECORD) {
     retval = _real_accept4(sockfd, addr, addrlen, flags);
     if (retval != -1) {
-      SET_FIELD2(my_entry, accept4, ret_addr, *addr);
       SET_FIELD2(my_entry, accept4, ret_addrlen, *addrlen);
+      memcpy(&GET_FIELD(my_entry, accept4, ret_addr), addr, *addrlen);
     }
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(accept4);
   }
   return retval;
 }
@@ -145,7 +159,7 @@ extern "C" int socketpair ( int domain, int type, int protocol, int sv[2] )
     if (retval != -1) {
       memcpy(GET_FIELD(my_entry, socketpair, ret_sv), sv, sizeof(sv));
     }
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(socketpair);
   }
   return retval;
 }
@@ -161,7 +175,7 @@ int setsockopt ( int sockfd, int  level,  int  optname,  const  void  *optval,
     dmtcp::ThreadInfo::setOptionalEvent();
     retval = _real_setsockopt(sockfd, level, optname, optval, optlen);
     dmtcp::ThreadInfo::unsetOptionalEvent();
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(setsockopt);
   }
   return retval;
 }
@@ -186,7 +200,7 @@ int getsockopt ( int sockfd, int  level,  int  optname,  void  *optval,
       WRAPPER_LOG_WRITE_INTO_READ_LOG(getsockopt, optval, *optlen);
       SET_FIELD2(my_entry, getsockopt, ret_optlen, *optlen);
     }
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(getsockopt);
   }
   return retval;
 }
@@ -238,7 +252,7 @@ extern "C" ssize_t recvfrom(int sockfd, void *buf, size_t len, int flags,
         SET_FIELD2(my_entry, recvfrom, ret_addrlen, *addrlen);
       }
     }
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(recvfrom);
   }
   return retval;
 }
@@ -272,7 +286,7 @@ extern "C" ssize_t recvmsg(int sockfd, struct msghdr *msg, int flags)
       _real_pthread_mutex_unlock(&read_data_mutex);
       errno = saved_errno;
     }
-    WRAPPER_LOG_WRITE_ENTRY(my_entry);
+    WRAPPER_LOG_WRITE_ENTRY(recvmsg);
   }
   return retval;
 }

@@ -42,6 +42,11 @@
 static inline void memfence() {  asm volatile ("mfence" ::: "memory"); }
 void fred_setup_trampolines();
 
+extern "C"
+int fred_record_replay_enabled() {
+  return 1;
+}
+
 static int sync_mode_pre_ckpt = SYNC_NOOP;
 
 static void pthread_atfork_child()
@@ -150,6 +155,7 @@ void fred_post_checkpoint_resume()
   set_sync_mode(sync_mode_pre_ckpt);
   sync_mode_pre_ckpt = SYNC_NOOP;
   initLogsForRecordReplay();
+  dmtcp::ThreadInfo::postCkptResume();
   log_all_allocs = 1;
 }
 
@@ -164,8 +170,6 @@ void fred_post_restart_resume()
     set_sync_mode(SYNC_RECORD);
   } else {
     dmtcp::ThreadInfo::postRestartResume();
-    log_entry_t temp_entry = global_log.getCurrentEntry();
-    dmtcp::ThreadInfo::wakeUpThread(GET_COMMON(temp_entry, clone_id));
   }
   log_all_allocs = 1;
 }
@@ -185,7 +189,7 @@ static void fred_process_thread_start()
   }
 }
 
-EXTERNC void dmtcp_process_event(DmtcpEvent_t event, DmtcpEventData_t* data)
+EXTERNC void dmtcp_process_event(DmtcpEvent_t event, DmtcpEventData_t *data)
 {
   switch (event) {
     case DMTCP_EVENT_INIT:
@@ -194,24 +198,27 @@ EXTERNC void dmtcp_process_event(DmtcpEvent_t event, DmtcpEventData_t* data)
     case DMTCP_EVENT_RESET_ON_FORK:
       fred_reset_on_fork();
       break;
-    // case DMTCP_EVENT_POST_SUSPEND:
-    //   fred_post_suspend();
-    //   break;
-    // case DMTCP_EVENT_POST_CKPT_RESUME:
-    //   fred_post_checkpoint_resume();
-    //   break;
-    // case DMTCP_EVENT_POST_RESTART_RESUME:
-    //   fred_post_restart_resume();
-    //   break;
+    case DMTCP_EVENT_SUSPENDED:
+      fred_post_suspend();
+      break;
+    case DMTCP_EVENT_RESUME:
+      if (data->resumeInfo.isRestart) {
+        fred_post_restart_resume();
+      } else {
+        fred_post_checkpoint_resume();
+      }
+      break;
     case DMTCP_EVENT_THREAD_START:
       fred_process_thread_start();
       break;
-    case DMTCP_EVENT_PRE_EXIT:
-    case DMTCP_EVENT_PRE_CKPT:
-    // case DMTCP_EVENT_POST_LEADER_ELECTION:
-    // case DMTCP_EVENT_POST_DRAIN:
-    case DMTCP_EVENT_POST_CKPT:
-    case DMTCP_EVENT_POST_RESTART:
+
+    case DMTCP_EVENT_PTHREAD_RETURN:
+    case DMTCP_EVENT_PTHREAD_EXIT:
+      dmtcp::ThreadInfo::reapThisThread();
+      break;
+//    case DMTCP_EVENT_ATFORK_CHILD:
+//      pthread_atfork_child();
+//      break;
     default:
       break;
   }

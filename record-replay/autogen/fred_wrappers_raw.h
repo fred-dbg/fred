@@ -95,6 +95,7 @@ extern "C"
     pthread_mutex_trylock_event,
     pthread_mutex_unlock_event,
     rand_event,
+    fork_event,
     read_event,
     readv_event,
     readlink_event,
@@ -107,6 +108,7 @@ extern "C"
     setsockopt_event,
     getsockopt_event,
     ioctl_event,
+    shutdown_event,
     sigwait_event,
     srand_event,
     socket_event,
@@ -152,6 +154,7 @@ extern "C"
     setvbuf_event,
     fseek_event,
     fputs_event,
+    puts_event,
     fputc_event,
     fsync_event,
     ftell_event,
@@ -259,6 +262,7 @@ extern "C"
   int _real_pthread_mutex_trylock(pthread_mutex_t* mutex);;
   int _real_pthread_mutex_unlock(pthread_mutex_t* mutex);;
   int _real_rand();;
+  pid_t _real_fork();;
   ssize_t _real_read(int fd, void* buf, size_t count);;
   ssize_t _real_readv(int fd, const struct iovec* iov, int iovcnt);;
   ssize_t _real_readlink(const char* path, char* buf, size_t bufsiz);;
@@ -271,6 +275,7 @@ extern "C"
   int _real_setsockopt(int s, int level, int optname, const void* optval, socklen_t optlen);;
   int _real_getsockopt(int s, int level, int optname, void* optval, socklen_t* optlen);;
   int _real_ioctl(int d, int request, void* arg);;
+  int _real_shutdown(int sockfd, int how);;
   int _real_sigwait(const sigset_t* set, int* sig);;
   void _real_srand(unsigned int seed);;
   int _real_socket(int domain, int type, int protocol);;
@@ -316,6 +321,7 @@ extern "C"
   int _real_setvbuf(FILE* stream, char* buf, int mode, size_t size);;
   int _real_fseek(FILE* stream, long offset, int whence);;
   int _real_fputs(const char* s, FILE* stream);;
+  int _real_puts(const char* s);;
   int _real_fputc(int c, FILE* stream);;
   int _real_fsync(int fd);;
   long _real_ftell(FILE* stream);;

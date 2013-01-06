@@ -25,6 +25,7 @@
 
 #include "fred_wrappers.h"
 #include "dmtcpplugin.h"
+#include "threadinfo.h"
 
 extern "C"
 int shmget(key_t key, size_t size, int shmflg)
@@ -32,6 +33,26 @@ int shmget(key_t key, size_t size, int shmflg)
   errno = ENOMEM;
   return -1;
 }
+
+// DISABLED FOR NOW
+#if 0
+extern "C"
+pid_t fork()
+{
+  WRAPPER_HEADER(pid_t, fork, _real_fork);
+  if (SYNC_IS_REPLAY) {
+    WRAPPER_REPLAY_TYPED(pid_t, fork);
+  } else if (SYNC_IS_RECORD) {
+    dmtcp::ThreadInfo::setOptionalEvent();
+    retval = _real_fork();
+    if (retval != 0) {
+      dmtcp::ThreadInfo::unsetOptionalEvent();
+      WRAPPER_LOG_WRITE_ENTRY(fork);
+    }
+  }
+  return retval;
+}
+#endif
 
 #define SYSCALL_GET_ARG(type,arg) type arg = va_arg(ap, type)
 
