@@ -6,7 +6,9 @@
 # DMTCP_ROOT=/home/gene/dmtcp-ptrace
 # DMTCP_ROOT=/home/gene/dmtcp-asplos
 # DMTCP_ROOT=/tmp/gene/dmtcp-tmp
-DMTCP_ROOT=/home/ning/Dropbox/code/dmtcp
+if [ -z "$DMTCP_ROOT" ]; then
+    DMTCP_ROOT=/home/gene/dmtcp-vanilla2
+fi
 
 if echo $PATH | grep --quiet $DMTCP_ROOT/bin; then
   echo PATH already set 1>&2
