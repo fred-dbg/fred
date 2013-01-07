@@ -35,3 +35,5 @@ test/many-threads
 test/many-threads2
 record-replay/aclocal.m4
 record-replay/config.h
+
+TAGS
