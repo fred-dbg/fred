@@ -362,7 +362,6 @@ int dmtcp::SynchronizationLog::getEntryAtOffset(log_entry_t& entry, size_t index
       JASSERT ((index + log_event_header_size + event_size) <= currentDataSize)
         (index) (log_event_header_size) (event_size) (currentDataSize);
     }
-    JNOTE("ASDF");
     memcpy(&entry.edata, &_log[index + log_event_header_size], event_size);
     return log_event_header_size + event_size;
   }

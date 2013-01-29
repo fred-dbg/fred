@@ -192,10 +192,11 @@ static bool shouldLogArea(char *area_name)
 {
   int n = sizeof(logLibraryBlacklistPattern) / sizeof(char*);
 
-  if (dmtcp::Util::strEndsWith(area_name, "dmtcphijack.so")  ||
-      dmtcp::Util::strEndsWith(area_name, "ptracehijack.so") ||
-      dmtcp::Util::strEndsWith(area_name, "pidvirt.so")      ||
+  if (dmtcp::Util::strEndsWith(area_name, "libdmtcp.so")  ||
+      dmtcp::Util::strEndsWith(area_name, "libdmtcp_ptrace.so") ||
+      dmtcp::Util::strEndsWith(area_name, "libdmtcp_pid.so")      ||
       dmtcp::Util::strEndsWith(area_name, "fredhijack.so")   ||
+      dmtcp::Util::strEndsWith(area_name, "libdmtcp_ipc.so")   ||
       strstr(area_name, "libmtcp.so.1") != NULL) {
     return false;
   }
@@ -508,7 +509,8 @@ void waitForTurn(log_entry_t *my_entry, turn_pred_t pred)
         temp_entry.isOptional()) {
       if (!is_optional_event_for(my_entry->eventId(), temp_entry.eventId(),
                                  false)) {
-        JASSERT(false);
+        JASSERT(false) (my_entry->eventId()) (temp_entry.eventId())
+          (global_log.getIndex());
       }
       memfence();
       dmtcp::ThreadInfo::wakeUpThread(my_clone_id);

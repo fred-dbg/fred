@@ -100,6 +100,8 @@ void initializeJalib()
   INIT_JALIB_FPTR(fopen);
   INIT_JALIB_FPTR(close);
   INIT_JALIB_FPTR(fclose);
+  INIT_JALIB_FPTR(dup);
+  INIT_JALIB_FPTR(dup2);
   INIT_JALIB_FPTR(readlink);
 
   INIT_JALIB_FPTR(syscall);
@@ -115,6 +117,7 @@ void initializeJalib()
   INIT_JALIB_FPTR(bind);
   INIT_JALIB_FPTR(listen);
   INIT_JALIB_FPTR(accept);
+  INIT_JALIB_FPTR(setsockopt);
 
   INIT_JALIB_FPTR(pthread_mutex_lock);
   INIT_JALIB_FPTR(pthread_mutex_trylock);
