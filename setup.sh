@@ -6,7 +6,9 @@
 # DMTCP_ROOT=/home/gene/dmtcp-ptrace
 # DMTCP_ROOT=/home/gene/dmtcp-asplos
 # DMTCP_ROOT=/tmp/gene/dmtcp-tmp
-DMTCP_ROOT=/home/gene/dmtcp-vanilla2
+if [ -z "$DMTCP_ROOT" ]; then
+    DMTCP_ROOT=/home/gene/dmtcp-vanilla2
+fi
 
 if echo $PATH | grep --quiet $DMTCP_ROOT/bin; then
   echo PATH already set 1>&2
@@ -17,7 +19,7 @@ fi
 if grep --quiet -- --with-record-replay $DMTCP_ROOT/config.log; then
   echo do nothing > /dev/null
 else
-  echo DMTCP was not configured with --with-record-replay;  Please remake.
+  echo DMTCP was not configured with --with-record-replay\;  Please remake.
 fi
 
 (cd test; make test-list 1>2&)
