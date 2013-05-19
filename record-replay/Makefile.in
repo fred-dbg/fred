@@ -10,8 +10,11 @@ ifndef DMTCP_ROOT
     DMTCP_ROOT=../..
   endif
 endif
-DMTCP_SRC=${DMTCP_ROOT}/dmtcp/src
-JALIB=${DMTCP_ROOT}/dmtcp/jalib
+
+DMTCP_INCLUDE_PATH = $(DMTCP_ROOT)/dmtcp/include
+JALIB = $(DMTCP_ROOT)/dmtcp/jalib
+
+INCLUDES = -I$(JALIB) -I$(DMTCP_INCLUDE_PATH) -I.
 
 HEADERS = constants.h fred_interface.h fred_wrappers.h log.h fred_types.h \
 	  synchronizationlogging.h threadinfo.h  autogen/fred_wrappers_raw.h \
@@ -30,8 +33,8 @@ JALIB_OBJS = $(JALIB)/jassert.o $(JALIB)/jalib.o $(JALIB)/jalloc.o \
 FRED_READ_LOG_OBJS = fred_read_log.o nosyscallsreal.o util.o stubs.o log.o \
 		     wrapper_util.o ${notdir ${JALIB_OBJS}}
 
-CFLAGS += -I${DMTCP_SRC} -DDMTCP -fPIC -DPIC -c --std=gnu99 -g
-CXXFLAGS += -I${DMTCP_SRC} -DDMTCP -fPIC -DPIC -c -g
+CFLAGS += -DDMTCP -fPIC -DPIC -c --std=gnu99 -g
+CXXFLAGS += -DDMTCP -fPIC -DPIC -c -g
 
 # For 32-bits, g++ will try to compile for generic 32-bit unless it knows
 #   it can assume i486 or better.
@@ -60,12 +63,12 @@ j%.o: ${JALIB}/j%.o
 %.o: autogen/%.c ${HEADERS}
 	${CC} ${CFLAGS} -I. -o $@ $<
 %.o: autogen/%.cpp ${HEADERS}
-	${CXX} ${CXXFLAGS} -I${DMTCP_SRC} -I${JALIB} -I. -o $@ $<
+	${CXX} ${CXXFLAGS} ${INCLUDES} -o $@ $<
 
 %.o: %.c ${HEADERS}
-	${CC} ${CFLAGS} -I. -o $@ $<
+	${CC} ${CFLAGS} ${INCLUDES} -o $@ $<
 %.o: %.cpp ${HEADERS}
-	${CXX} ${CXXFLAGS} -I${DMTCP_SRC} -I${JALIB} -I. -o $@ $<
+	${CXX} ${CXXFLAGS} ${INCLUDES} -o $@ $<
 
 check:
 	@ echo ${LIBNAME} does not have any local checks.

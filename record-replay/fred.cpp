@@ -195,13 +195,13 @@ EXTERNC void dmtcp_process_event(DmtcpEvent_t event, DmtcpEventData_t *data)
     case DMTCP_EVENT_INIT:
       recordReplayInit();
       break;
-    case DMTCP_EVENT_RESET_ON_FORK:
+    case DMTCP_EVENT_ATFORK_CHILD:
       fred_reset_on_fork();
       break;
-    case DMTCP_EVENT_SUSPENDED:
+    case DMTCP_EVENT_THREADS_SUSPEND:
       fred_post_suspend();
       break;
-    case DMTCP_EVENT_RESUME:
+    case DMTCP_EVENT_THREADS_RESUME:
       if (data->resumeInfo.isRestart) {
         fred_post_restart_resume();
       } else {

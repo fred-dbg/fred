@@ -2,7 +2,7 @@ Prerequisites:
 =============
 1. DMTCP sources must be present in order to compile the module. They are not
    needed to use the module.
-2. Requires DMTCP revision 1839+.
+2. Requires DMTCP revision 1956+.
 
 Build:
 ======

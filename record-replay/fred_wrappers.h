@@ -48,6 +48,7 @@
 #include <sys/stat.h>
 #include <sys/mman.h>
 #include <sys/epoll.h>
+#include <sys/resource.h>
 #include <dirent.h>
 #include <unistd.h>
 #include <poll.h>
