@@ -151,13 +151,13 @@ def _start_output_thread():
 def _reset_last_printed():
     """Reset the tracking of the debugger's last few printed characters."""
     global gs_last_printed
-    gs_last_printed = ""    
+    gs_last_printed = ""
 
 def _send_child_input(input):
     """Write the given input string to the child process."""
     global gn_child_fd
     os.write(gn_child_fd, input)
-        
+
 def _get_child_output():
     """Read and return a string of output from the child process."""
     global gn_child_fd
@@ -192,7 +192,7 @@ def wait_for_prompt():
             break
     # Reset for next time
     g_prompt_ready_event.clear()
-    
+
 def _start_output_capture(wait_for_prompt):
     """Start recording output from child into global gs_captured_output.
     wait_for_prompt flag will cause all output until the next debugger prompt
@@ -299,7 +299,7 @@ def kill_child():
     fredutil.fred_debug("Killing child process pid %d" % gn_child_pid)
     signal_child(signal.SIGKILL)
     os.close(gn_child_fd)
-    
+
 def signal_child(signum):
     """Send the signal to the child process."""
     global gn_child_pid
@@ -338,7 +338,7 @@ def send_command(command):
     gb_need_user_input = False
     _send_child_input(command+'\n')
     wait_for_prompt()
-    
+
 def reexec(argv):
     """Replace the current child process with the new given one."""
     if GB_FRED_DEMO:
@@ -355,7 +355,8 @@ def setup(l_argv, b_spawn_child=True):
     if b_spawn_child:
         _spawn_child(["dmtcp_checkpoint",
                       "--quiet",
-                      "--with-module",
+                      "--ptrace",
+                      "--with-plugin",
                       fredmanager.get_fredhijack_path()] +
                      l_argv)
 

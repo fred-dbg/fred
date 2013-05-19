@@ -46,13 +46,6 @@ else
 		It is not necessary to first build DMTCP.])
 fi
 
-test -r "$dmtcp_root/config.log" && \
-  grep -q '\$ .* --with-record-replay' $dmtcp_root/config.log || \
-    AC_MSG_WARN([$dmtcp_root/config.log missing or not showing
-                 --with-record-replay.  When you use this module, make sure
-                 to use it with a DMTCP configured with:
-                 [  ./configure --with-record-replay]])
-
 AC_DEFINE([DMTCP],[],[Always enable this.])
 
 AC_OUTPUT

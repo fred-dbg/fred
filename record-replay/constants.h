@@ -28,8 +28,6 @@
 #include "linux/version.h"
 #include "config.h"
 
-#define RECORD_REPLAY
-
 #ifndef DMTCP
 #define DMTCP
 #endif
