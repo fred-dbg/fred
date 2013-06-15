@@ -268,7 +268,7 @@ def setup_debugger(s_debugger_name):
         from fred.personality.personalityGdb import PersonalityGdb
         g_debugger = freddebugger.ReversibleDebugger(PersonalityGdb())
         del PersonalityGdb
-    elif s_debugger_name == "pdb":
+    elif s_debugger_name == "python":
         fredutil.fred_debug("Using python personality.")
         from fred.personality.personalityPython import PersonalityPython
         g_debugger = freddebugger.ReversibleDebugger(PersonalityPython())
@@ -307,7 +307,7 @@ def setup_fredio(l_cmd, b_spawn_child=True):
     fredio.gls_needs_user_input    = g_debugger.get_ls_needs_input()
     fredio.gb_show_child_output    = gb_show_child_output
     fredio.setup(l_cmd, b_spawn_child)
-    
+
 def interactive_debugger_setup():
     """Perform any debugger setup that requires a debugger prompt."""
     global g_debugger, g_source_script
@@ -429,6 +429,6 @@ def main():
     main_io_loop(b_skip_prompt)
     # If we get here, quit.
     fredutil.fred_quit(0)
-    
+
 if __name__ == '__main__':
     main()
