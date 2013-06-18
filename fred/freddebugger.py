@@ -183,8 +183,9 @@ class ReversibleDebugger(debugger.Debugger):
         self.set_real_debugger_pid(fredio.get_child_pid())
         del fredio
         self.update_state()
-        # Reset real inferior pid, as it gets a new real pid on restart.
-        fredmanager.reset_real_inferior_pid(self.get_real_debugger_pid())
+        if self.personality_name() == "gdb":
+            # Reset real inferior pid, as it gets a new real pid on restart.
+            fredmanager.reset_real_inferior_pid(self.get_real_debugger_pid())
 
     def do_restart_previous(self):
         """Restart from the previous checkpoint."""
@@ -206,18 +207,20 @@ class ReversibleDebugger(debugger.Debugger):
     def log_command(self, s_command):
         """Convert given command to FredCommand instance and add to current
         history."""
-        # XXX: Figure out a more elegant way to do this. We can't set the
-        # inferior pids until we know the inferior is alive, so we keep trying
-        # to update them with every command issued until it succeeds.
-        if fredmanager.get_real_inferior_pid() == -1:
-            fredmanager.reset_real_inferior_pid(self.get_real_debugger_pid())
-        if fredmanager.get_virtual_inferior_pid() == -1:
-            s_virt_pid = self.evaluate_expression("getpid()")
-            if s_virt_pid != GS_NO_SYMBOL_ERROR:
-                fredmanager.set_virtual_inferior_pid(int(s_virt_pid))
-            else:
-                fredutil.fred_debug("Can't set virtual pid; no getpid() " +
-                                    "symbol available.")
+
+        if self.personality_name() == "gdb":
+            # XXX: Figure out a more elegant way to do this. We can't set the
+            # inferior pids until we know the inferior is alive, so we keep trying
+            # to update them with every command issued until it succeeds.
+            if fredmanager.get_real_inferior_pid() == -1:
+                fredmanager.reset_real_inferior_pid(self.get_real_debugger_pid())
+            if fredmanager.get_virtual_inferior_pid() == -1:
+                s_virt_pid = self.evaluate_expression("getpid()")
+                if s_virt_pid != GS_NO_SYMBOL_ERROR:
+                    fredmanager.set_virtual_inferior_pid(int(s_virt_pid))
+                else:
+                    fredutil.fred_debug("Can't set virtual pid; no getpid() " +
+                                        "symbol available.")
         if self.current_checkpoint() != None:
             # identify_command() sets native representation
             cmd = self._p.identify_command(s_command)
@@ -656,7 +659,7 @@ class FredCommand():
 
     def set_count(self, n):
         """Set s_args flag to the given count."""
-        fredutil.fred_assert(self.b_count_cmd,
+        fredutil.fred_assert(self.b_count_cmd or n == 1,
                              "Tried to set count of non-count cmd.")
         self.s_args = str(n)
 

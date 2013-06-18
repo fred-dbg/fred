@@ -353,12 +353,16 @@ def setup(l_argv, b_spawn_child=True):
     #readline.parse_and_bind('tab: complete')
     #readline.set_completer(_fred_completer)
     if b_spawn_child:
-        _spawn_child(["dmtcp_checkpoint",
-                      "--quiet",
-                      "--ptrace",
-                      "--with-plugin",
-                      fredmanager.get_fredhijack_path()] +
-                     l_argv)
+        if l_argv[0] == 'python':
+            _spawn_child(["dmtcp_checkpoint", "--quiet"] + l_argv)
+        else:
+            _spawn_child(["dmtcp_checkpoint",
+                          "--quiet"
+                          "--quiet",
+                          "--ptrace",
+                          "--with-plugin",
+                          fredmanager.get_fredhijack_path()] +
+                         l_argv)
 
 def teardown():
     """Perform any cleanup associated with fredio module."""

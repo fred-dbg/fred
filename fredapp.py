@@ -164,8 +164,10 @@ def handle_fred_command(s_command):
         n_index = fredutil.to_int(s_command_args, 0)
         g_debugger.do_restart(n_index, b_clear_history=True)
     elif s_command_name in ["reverse-watch", "rw"]:
-        reverse_watch.reverse_watch_for_mt(g_debugger, s_command_args)
-        #reverse_watch.reverse_watch(g_debugger, s_command_args)
+        if g_debugger.personality_name() == 'Pdb':
+            reverse_watch.reverse_watch(g_debugger, s_command_args)
+        else:
+            reverse_watch.reverse_watch_for_mt(g_debugger, s_command_args)
     elif s_command_name == "source":
         source_from_file(s_command_args)
     elif s_command_name == "list":
@@ -390,7 +392,7 @@ def verify_critical_files_present():
 
 def main_io_loop(b_skip_prompt=False):
     """Main I/O loop to get and handle user commands."""
-    global g_source_script
+    global g_source_script, g_debugger
     if not b_skip_prompt:
        # This is true typically on resume. gdb doesn't print the prompt when
        # resuming from a checkpoint, so we don't wait for it here.
@@ -407,7 +409,8 @@ def main_io_loop(b_skip_prompt=False):
             dispatch_command(s_command)
             s_last_command = s_command
         except KeyboardInterrupt:
-            g_debugger.interrupt_inferior()
+            if g_debugger.personality_name() != 'Pdb':
+                g_debugger.interrupt_inferior()
             fredio.wait_for_prompt()
 
 def setup_critical_files():

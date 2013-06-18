@@ -165,6 +165,9 @@ class Debugger():
 
     def stop_inferior(self):
         """Sends SIGSTOP to inferior process."""
+
+        fredutil.fred_assert(self.personality_name() == 'gdb',
+                             "Unimplemented")
         n_pid = fredmanager.get_real_inferior_pid()
         fredutil.fred_assert(n_pid != -1)
         os.kill(n_pid, signal.SIGSTOP)
@@ -186,6 +189,10 @@ class Debugger():
 
     def interrupt_inferior(self):
         """Sends a ^C to the inferior process."""
+
+        fredutil.fred_assert(self.personality_name() == 'gdb',
+                             "Unimplemented")
+
         n_pid = fredmanager.get_real_inferior_pid()
         if n_pid != -1:
             os.kill(n_pid, signal.SIGINT)

@@ -29,6 +29,7 @@ import pdb
 from .. import freddebugger
 from .. import fredio
 from .. import fredutil
+from .. import debugger
 
 gn_user_code_min = 0
 gn_user_code_max = 0
@@ -59,12 +60,12 @@ class PersonalityPython(personality.Personality):
 
         self.GS_PROMPT = "(Pdb) "
         self.gre_prompt = re.compile("\(Pdb\) $")
-        self.gre_backtrace_frame = ".+/(.+?)\((\d+)\)(.+?)\(.*?\).*?\n-\>" 
+        self.gre_backtrace_frame = ".+/(.+?)\((\d+)\)(.+?)\(.*?\).*?\n-\>"
         self.gre_breakpoint = "(\d+)\s+(\w+)\s+(\w+)\s+(\w+)\s+at .+/(.+):(\d+)\s+(?:breakpoint already hit (\d+) time)?"
         # List of regexes that match debugger prompts for user input
         self.ls_needs_user_input = []
         # Things like 'next 5' are allowed:
-        self.b_has_count_commands = False 
+        self.b_has_count_commands = False
         self.b_coalesce_support = False
         self.n_top_backtrace_frame = 0
 
@@ -112,4 +113,4 @@ class PersonalityPython(personality.Personality):
         return breakpoint
 
     def _parse_backtrace_internal(self, backtrace):
-        return re.findall(self.gre_backtrace_frame, backtrace, re.MULTILINE) 
+        return re.findall(self.gre_backtrace_frame, backtrace, re.MULTILINE)
