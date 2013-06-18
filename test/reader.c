@@ -19,7 +19,7 @@ int main()
 
   file = tmpfile();
   assert(file != NULL);
-  
+
   /* Write some data to the file. */
   retval = fwrite(&buf[0], sizeof(buf[0]), 1, file);
   assert(retval == 1);

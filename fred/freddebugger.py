@@ -139,7 +139,7 @@ class ReversibleDebugger(debugger.Debugger):
         self.branch.set_current_checkpoint(self.branch.get_checkpoint(0))
         self.update_state()
         fredutil.fred_info("Switched to branch '%s'." % s_name)
-        
+
     def setup_from_resume(self):
         """Set up data structures from a resume."""
         global GS_FRED_MASTER_BRANCH_NAME
@@ -185,7 +185,7 @@ class ReversibleDebugger(debugger.Debugger):
         self.update_state()
         # Reset real inferior pid, as it gets a new real pid on restart.
         fredmanager.reset_real_inferior_pid(self.get_real_debugger_pid())
-            
+
     def do_restart_previous(self):
         """Restart from the previous checkpoint."""
         self.do_restart(self.current_checkpoint().get_index() - 1)
@@ -195,14 +195,14 @@ class ReversibleDebugger(debugger.Debugger):
         for branch in self.l_branches:
             if branch.get_name() == self.branch.get_name():
                 print "*",
-            print "%s: %s" % (branch.get_name(), 
+            print "%s: %s" % (branch.get_name(),
                               branch.get_all_checkpoints())
-    
+
     # Gene - bad name?  Maybe checkpoint_history() or ckpt_history() ?
     def history(self):
         """Return the history of all Checkpoints."""
         return self.branch.all_history()
-    
+
     def log_command(self, s_command):
         """Convert given command to FredCommand instance and add to current
         history."""
@@ -227,7 +227,7 @@ class ReversibleDebugger(debugger.Debugger):
         """Directly log the given FredCommand instance."""
         if self.current_checkpoint() != None:
             self.current_checkpoint().log_command(cmd)
-    
+
     def execute_fred_command(self, cmd, b_update=True):
         """Execute the given FredCommand."""
         if cmd.b_ignore:
@@ -276,7 +276,7 @@ class ReversibleDebugger(debugger.Debugger):
             fredutil.fred_debug("'next' command timed out (probably a deadlock).")
             return (True, output)
         return (False, output)
-    
+
     def do_step(self, n=1):
         """Perform n 'step' commands. Returns output."""
         cmd = fred_step_cmd()
@@ -343,7 +343,7 @@ class ReversibleDebugger(debugger.Debugger):
             self.do_restart(b_clear_history = True)
             self.replay_history(l_history)
 	return l_history
-        
+
     def do_continue(self, b_wait_for_prompt=True):
         """Perform n 'continue' commands. Returns output."""
         cmd = fred_continue_cmd()
@@ -355,7 +355,7 @@ class ReversibleDebugger(debugger.Debugger):
         if b_wait_for_prompt:
             self.update_state()
         return output
-        
+
     def do_breakpoint(self, expr):
         """Perform 'break expr' command. Returns output."""
         cmd = fred_breakpoint_cmd()
@@ -365,7 +365,7 @@ class ReversibleDebugger(debugger.Debugger):
         output = self._breakpoint(expr)
         self.update_state()
         return output
-    
+
     def do_print(self, expr):
         """Perform 'print expr' command. Returns output."""
         # TODO: We should log some print statements, since they can contain
@@ -379,7 +379,7 @@ class ReversibleDebugger(debugger.Debugger):
         cmd.s_args = str(n_tid)
         self.log_fred_command(cmd)
         self._switch_to_thread(n_tid)
-        
+
     def set_log_breakpoint(self, n_log_index):
         """Set a log breakpoint on the given log entry index."""
         cmd = fred_log_breakpoint_cmd()
@@ -417,11 +417,11 @@ class ReversibleDebugger(debugger.Debugger):
     def current_checkpoint(self):
         """Return the current Checkpoint."""
         return self.branch.get_current_checkpoint()
-    
+
     def copy_current_checkpoint_history(self):
         """Return a copy of the current checkpoint's history."""
         return self._copy_fred_commands(self.current_checkpoint().get_history())
-        
+
     def _coalesce_history(self, l_history):
         """Return a modified version of l_history with as much condensing done
         as possible. Example: [n,n,n,n,n] => [n 5]."""
@@ -478,7 +478,7 @@ class ReversibleDebugger(debugger.Debugger):
                             str(l_temp))
         for cmd in l_temp:
             self.execute_fred_command(cmd, b_update=False)
-        self.update_state()        
+        self.update_state()
 
     def first_n_commands(self, l_history, n):
         """Return the first 'n' commands from given history."""
@@ -516,7 +516,7 @@ class ReversibleDebugger(debugger.Debugger):
                     continue
             n -= 1
             l_history.pop()
-                
+
     # Gene - We should generalize this.  self.evaluate_expression could
     #  convert "1" to "true" and "0" to "false".  Then test_expression
     #  does:  return self.evaluate_expression(s_expr) == s_expr_val
@@ -609,7 +609,7 @@ class FredCommand():
         s = self.s_native
         if self.s_args != "":
             s += " " + self.s_args
-        return s        
+        return s
 
     def set_native(self, s_repr):
         """Set the native representation to the given string."""
@@ -618,7 +618,7 @@ class FredCommand():
     def set_ignore(self):
         """Set the ignore flag to true."""
         self.b_ignore = True
-        
+
     def set_count_cmd(self, b_allowed):
         """Set the count cmd flag to true if b_allowed."""
         if b_allowed:
@@ -722,18 +722,18 @@ class Branch():
             self.get_current_checkpoint().clear_history()
         #fredutil.fred_debug("!! Sleeping after restart (ptrace instability hack)")
         #time.sleep(1)
-    
+
     def add_checkpoint(self, ckpt):
         """Append the given Checkpoint object to list of checkpoints."""
         if ckpt.get_index() == -1:
             ckpt.set_index(self.n_next_checkpoint)
         self.n_next_checkpoint += 1
         self.l_checkpoints.append(ckpt)
-    
+
     def get_checkpoint(self, n_index):
         """Return the Checkpoint object at the given index."""
         return self.l_checkpoints[n_index]
-    
+
     def get_last_checkpoint(self):
         """Return the latest available Checkpoint object."""
         return self.get_checkpoint(-1)
@@ -745,7 +745,7 @@ class Branch():
     def get_current_checkpoint(self):
         """Return the current Checkpoint object."""
         return self.checkpoint
-    
+
     def set_current_checkpoint(self, ckpt):
         """Set the current checkpoint to the given Checkpoint object."""
         self.checkpoint = ckpt
@@ -753,7 +753,7 @@ class Branch():
     def get_num_checkpoints(self):
         """Return the number of checkpoints associated with this Branch."""
         return self.n_next_checkpoint
-    
+
     def get_name(self):
         """Return the name of this Branch."""
         return self.s_name
@@ -770,7 +770,7 @@ class Branch():
 class Checkpoint():
     """ This class will represent a checkpoint.  A checkpoint has an
     index number and a command history."""
-    
+
     def __init__(self, n_index=-1):
         # Index number:
         self.n_index = n_index
@@ -825,7 +825,7 @@ class Checkpoint():
             if not cmd.b_ignore:
                 return cmd
         return None
-    
+
     def trim_non_ignore(self, n):
         """Trim last n non-ignore commands.
         Also adjust things like 'next 5' to be 'next 4'."""

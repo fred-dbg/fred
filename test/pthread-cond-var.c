@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <pthread.h>
 
-#define NUM_WORKER_THREADS 15 
+#define NUM_WORKER_THREADS 15
 #define CV_HITS_LIMIT (NUM_WORKER_THREADS * 1000)
 
 static pthread_cond_t *cv = NULL;
@@ -109,7 +109,7 @@ int main()
             return 1;
         }
     }
-    
+
     destroy_cond_objects();
     print_solution();
     return 0;

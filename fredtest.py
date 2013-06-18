@@ -258,7 +258,7 @@ def gdb_multiple_checkpoints_replay_st(n_count=1):
                           "p list_len(head)"])
         passed()
         end_session()
-    
+
 def gdb_syscall_tester(n_count=1):
     """Run a test on deterministic record/replay on syscall-tester example."""
     global GS_TEST_PROGRAMS_DIRECTORY
@@ -533,7 +533,7 @@ def run_integration_tests(n_iters):
     gdb_reverse_watch_mt(n_iters)
     gdb_reverse_watch_mt_priv(n_iters)
     gdb_reverse_watch_no_log(n_iters)
-    
+
 def run_unit_tests():
     """Run all available unit tests."""
     pass
@@ -623,7 +623,7 @@ def initialize_tests():
                      gdb_multiple_checkpoints_record_st,
                  "gdb-multiple-checkpoints-replay-st" :
                      gdb_multiple_checkpoints_replay_st,
-                 "gdb-record-replay-pthread-cond" : 
+                 "gdb-record-replay-pthread-cond" :
                  gdb_record_replay_pthread_cond,
                  "gdb-syscall-tester" : gdb_syscall_tester,
                  "gdb-many-threads" : gdb_many_threads,
@@ -646,7 +646,7 @@ def main():
     fredapp.setup_critical_files()
     # Don't do anything if we can't find DMTCP.
     fredapp.verify_critical_files_present()
-    
+
     initialize_tests()
 
     ls_test_list = parse_fredtest_args()

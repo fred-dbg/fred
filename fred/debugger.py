@@ -35,15 +35,15 @@ class Debugger():
     def _next(self, n, b_timeout=False):
         """Perform n 'next' commands. Returns output."""
         return self._p.do_next(n, b_timeout_prompt=b_timeout)
-        
+
     def _step(self, n, b_timeout=False):
         """Perform n 'step' commands. Returns output."""
         return self._p.do_step(n, b_timeout_prompt=b_timeout)
-        
+
     def _continue(self, b_wait_for_prompt):
         """Perform 'continue' command. Returns output."""
         return self._p.do_continue(b_wait_for_prompt)
-        
+
     def _breakpoint(self, expr):
         """Perform 'break expr' command. Returns output."""
         return self._p.do_breakpoint(expr)
@@ -83,7 +83,7 @@ class Debugger():
         fredutil.fred_assert(self.personality_name() == "gdb")
         fredutil.fred_debug("Turning scheduler locking to %s" % str(n_on))
         self._p.set_scheduler_locking(n_on)
-        
+
     def get_alive_threads(self):
         """Return a list of debugger tids for all threads currently alive."""
         l_threads = self._p.get_threads()
@@ -95,7 +95,7 @@ class Debugger():
         for tup in l_threads:
             if tup[0]:
                 return tup[1]
-            
+
     def within_user_code(self):
         """Return True if the current position is within user code."""
         fredutil.fred_assert(self.personality_name() == "gdb")
@@ -104,7 +104,7 @@ class Debugger():
     def current_position(self):
         """Return a BacktraceFrame representing current debugger position."""
         return self._p.current_position()
-    
+
     def at_breakpoint(self):
         """Return True if debugger is currently on a breakpoint."""
         bt_frame = self._p.current_position()
@@ -138,7 +138,7 @@ class Debugger():
         """Return a list of regexes from the personality that match lines
         requesting additional user input."""
         return self._p.ls_needs_user_input
-    
+
     def prompt(self):
         """Bring user back to debugger prompt."""
         self._p.prompt()
@@ -257,7 +257,7 @@ class Breakpoint():
         return "bp: " + str((self.n_number, self.s_type, self.s_display,
                              self.s_enable, self.s_address, self.s_function,
                              self.s_file, self.n_line, self.n_count))
-    
+
     def __eq__(self, other):
         return other != None and \
                self.n_number == other.n_number and \

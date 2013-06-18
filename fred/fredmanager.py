@@ -55,7 +55,7 @@ def get_virtual_inferior_pid():
     """Return the virtual pid of the inferior."""
     global gn_virtual_inferior_pid
     return gn_virtual_inferior_pid
-    
+
 def _read_real_inferior_pid(n_gdb_pid):
     """Given the pid of gdb, return the pid of the inferior or -1 on error.
     This is inefficiently implemented by scanning entries in /proc."""
@@ -98,7 +98,7 @@ def set_fredhijack_path(s_path):
     """Sets the path to fredhijack.so."""
     global GS_FREDHIJACK_PATH
     GS_FREDHIJACK_PATH = s_path
-    
+
 def _execute_fred_command(s_cmd, s_arg=None):
     """Execute the given fred_command command and return its output."""
     global g_child_subprocess

@@ -47,7 +47,7 @@ def start_coordinator(n_port):
                                                       "--background",
                                                       "-p", str(n_port)])
     return status == 0
-    
+
 def kill_coordinator(n_port):
     """Kills the coordinator on given port."""
     try:
@@ -135,14 +135,14 @@ def create_master_branch(s_name):
     # Copy current tmpdir to correct path.
     relocate_dmtcp_tmpdir(s_name)
     load_dmtcp_tmpdir(s_name)
-    
+
 def create_branch(s_name):
     """Create and switch to a new branch. This call is blocking."""
     global gn_index_suffix
-    
+
     if branch_exists(s_name):
         fredutil.fred_error("Branch named '%s' already exists.")
-        return    
+        return
     fredutil.fred_debug("Creating branch '%s'" % s_name)
 
     # CREATE the branch: Take the branch base checkpoint. When it
@@ -164,7 +164,7 @@ def create_branch(s_name):
 
     # Reset checkpoint indexing past the base checkpoint.
     reset_checkpoint_indexing()
-    
+
     # Restart from the base checkpoint. This is required so the logs
     # will be closed and reopened in the new branch.
     restart(0)
@@ -180,7 +180,7 @@ def switch_branch(s_name):
     load_dmtcp_tmpdir(s_name)
 
     reset_checkpoint_indexing()
-    
+
     # Restart from branch base checkpoint
     restart(0)
 
@@ -193,7 +193,7 @@ def checkpoint():
     global gn_index_suffix
 
     remove_stale_ptrace_files()
-    
+
     s_checkpoint_re = "ckpt_.+\.dmtcp\..*"
     l_ckpts_before = [os.path.join(os.environ["DMTCP_TMPDIR"], x) \
                       for x in os.listdir(os.environ["DMTCP_TMPDIR"]) \
@@ -229,13 +229,13 @@ def restart(n_index):
     fredmanager.kill_inferior()
     kill_peers()
     fredio.kill_child()
-    
+
     # Wait until the peers are really gone
     while get_num_peers() != 0:
         time.sleep(0.01)
 
     remove_stale_ptrace_files()
-    
+
     l_ckpt_files = [os.path.join(os.environ["DMTCP_TMPDIR"], x) \
                     for x in os.listdir(os.environ["DMTCP_TMPDIR"]) \
                     if x.endswith(".dmtcp.%d" % n_index)]
@@ -283,7 +283,7 @@ def relocate_dmtcp_tmpdir(s_name):
         s_new_path = get_dmtcp_tmpdir_path(s_name)
         os.rename(os.environ["DMTCP_TMPDIR"], s_new_path)
         return
-    
+
     s_current_path = os.path.normpath(os.readlink(os.environ["DMTCP_TMPDIR"]))
     if not os.path.isabs(s_current_path):
         # Resolve relative to absolute path.
@@ -364,7 +364,7 @@ def reset_checkpoint_indexing():
                            for x in l_files])
         gn_index_suffix = n_max_index + 1
     fredutil.fred_debug("Reset ckpt index to %d" % gn_index_suffix)
-    
+
 def resume(s_fred_tmpdir, s_resume_dir):
     """Set up tmpdir structure from a given path."""
     global gn_index_suffix
@@ -382,7 +382,7 @@ def resume(s_fred_tmpdir, s_resume_dir):
     fredutil.fred_info("Resuming session.")
     reset_checkpoint_indexing()
     restart(0)
-    
+
 
 def manager_teardown():
     global gn_index_suffix
