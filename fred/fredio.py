@@ -357,7 +357,7 @@ def setup(l_argv, b_spawn_child=True):
             _spawn_child(["dmtcp_checkpoint", "--quiet"] + l_argv)
         else:
             _spawn_child(["dmtcp_checkpoint",
-                          "--quiet"
+                          "--quiet",
                           "--quiet",
                           "--ptrace",
                           "--with-plugin",
