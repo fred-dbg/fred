@@ -1,5 +1,4 @@
 #!/usr/bin/python
-# Translation of test_list.c to Python. Useful for testing reverse expression watchpoints for Python.
 
 class list_el:
     def __init__(self, val=None, next=None):
@@ -18,6 +17,7 @@ def list_len(elt):
 
 if __name__ == "__main__":
     head = None
+    print "Initial Linked list length: %d" % list_len(head)
 
     for i in range(1, 21):
         curr = list_el(i, head)
