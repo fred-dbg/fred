@@ -44,7 +44,7 @@ def is_dmtcp_in_path():
 def start_coordinator(n_port):
     """Start a coordinator on given port. Return False on error."""
     status = fredutil.execute_shell_command_and_wait(["dmtcp_coordinator",
-                                                      "--background",
+                                                      "--daemon",
                                                       "-p", str(n_port)])
     return status == 0
 
