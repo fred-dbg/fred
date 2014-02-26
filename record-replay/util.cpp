@@ -187,7 +187,7 @@ char dmtcp::Util::readChar (int fd)
 }
 
 
-int dmtcp::Util::readProcMapsLine(int mapsfd, dmtcp::Util::ProcMapsArea *area)
+int dmtcp::Util::readProcMapsLine(int mapsfd, ProcMapsArea *area)
 {
   char c, rflag, sflag, wflag, xflag;
   int i;

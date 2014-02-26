@@ -25,7 +25,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
-#include "dmtcpplugin.h"
+#include "dmtcp.h"
 #include "fred_wrappers.h"
 #include "synchronizationlogging.h"
 #include "jfilesystem.h"

@@ -26,7 +26,7 @@
 #include "constants.h"
 #include "dmtcpalloc.h"
 #include "util.h"
-#include "dmtcpplugin.h"
+#include "dmtcp.h"
 #include "jassert.h"
 #include "jfilesystem.h"
 #include "fred_wrappers.h"

@@ -361,7 +361,7 @@ extern "C" void *realloc(void *ptr, size_t size)
 static bool isPartOfAddrRangeAlreadyMmapped(void *addr, size_t length)
 {
   int mapsFd = -1;
-  dmtcp::Util::ProcMapsArea area;
+  ProcMapsArea area;
   char *startAddr = (char*) addr;
   char *endAddr = startAddr + length;
   bool result = false;

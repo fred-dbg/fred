@@ -91,8 +91,6 @@ void initializeJalib()
 
 #define INIT_JALIB_FPTR(name) jalibFuncPtrs.name = name;
 
-  jalibFuncPtrs.dmtcp_get_tmpdir = dmtcp_get_tmpdir;
-  jalibFuncPtrs.dmtcp_get_uniquepid_str = dmtcp_get_uniquepid_str;
   jalibFuncPtrs.writeAll = dmtcp::Util::writeAll;
   jalibFuncPtrs.readAll = dmtcp::Util::readAll;
 

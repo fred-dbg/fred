@@ -31,7 +31,7 @@
 
 #include "constants.h"
 #include "fred_wrappers.h"
-#include "dmtcpplugin.h"
+#include "dmtcp.h"
 #include "jassert.h"
 #include "jfilesystem.h"
 
@@ -189,7 +189,7 @@ static void fred_process_thread_start()
   }
 }
 
-EXTERNC void dmtcp_process_event(DmtcpEvent_t event, DmtcpEventData_t *data)
+EXTERNC void dmtcp_event_hook(DmtcpEvent_t event, DmtcpEventData_t *data)
 {
   switch (event) {
     case DMTCP_EVENT_INIT:
@@ -223,7 +223,7 @@ EXTERNC void dmtcp_process_event(DmtcpEvent_t event, DmtcpEventData_t *data)
       break;
   }
 
-  DMTCP_CALL_NEXT_PROCESS_DMTCP_EVENT(event, data);
+  DMTCP_NEXT_EVENT_HOOK(event, data);
   return;
 }
 

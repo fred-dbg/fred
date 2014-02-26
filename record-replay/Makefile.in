@@ -11,12 +11,12 @@ ifndef DMTCP_ROOT
   endif
 endif
 
-DMTCP_INCLUDE_PATH = $(DMTCP_ROOT)/dmtcp/include
-JALIB = $(DMTCP_ROOT)/dmtcp/jalib
+DMTCP_INCLUDE_PATH = $(DMTCP_ROOT)/include
+JALIB = $(DMTCP_ROOT)/jalib
 
 INCLUDES = -I$(JALIB) -I$(DMTCP_INCLUDE_PATH) -I.
 
-HEADERS = constants.h fred_interface.h fred_wrappers.h log.h fred_types.h \
+HEADERS = fred_interface.h fred_wrappers.h log.h fred_types.h \
 	  synchronizationlogging.h threadinfo.h  autogen/fred_wrappers_raw.h \
 	  autogen/wrapper_util.h autogen/fred_read_log.h
 # As you add new files to your hijack library, add the object file names here.

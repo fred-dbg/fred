@@ -19,7 +19,7 @@
  * along with FReD.  If not, see <http://www.gnu.org/licenses/>.            *
  ****************************************************************************/
 
-#include "dmtcpplugin.h"
+#include "dmtcp.h"
 #include "constants.h"
 #include "jassert.h"
 
@@ -33,10 +33,20 @@
 // dmtcphijack.so and libsyscallsreal.a contain the wrappers and other code
 //   that executes within the end user process
 
+
+#undef dmtcpIsEnabled
+#undef dmtcpCheckpoint
+#undef dmtcpDelayCheckpointsLock
+#undef dmtcpDelayCheckpointsUnlock
+#undef dmtcpInstallHooks
+#undef dmtcpGetCoordinatorStatus
+#undef dmtcpGetLocalStatus
+#undef dmtcp_get_uniquepid_str
+#undef dmtcp_get_ckpt_filename
 // dmtcphijack.so defines this differently
 void _dmtcp_setup_trampolines() {}
 
-void dmtcp_process_event(DmtcpEvent_t id, void* data)
+void dmtcp_event_hook(DmtcpEvent_t id, void* data)
 {
   return;
 }

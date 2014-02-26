@@ -24,7 +24,7 @@
 #include <sys/syscall.h>
 
 #include "fred_wrappers.h"
-#include "dmtcpplugin.h"
+#include "dmtcp.h"
 #include "threadinfo.h"
 
 extern "C"

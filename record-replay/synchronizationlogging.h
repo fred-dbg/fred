@@ -47,7 +47,7 @@
 #include "constants.h"
 #include "dmtcpalloc.h"
 #include "util.h"
-#include "dmtcpplugin.h"
+#include "dmtcp.h"
 #include "jfilesystem.h"
 #include "fred_wrappers.h"
 #include "threadinfo.h"

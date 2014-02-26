@@ -29,7 +29,7 @@
 #include <time.h>
 #include <algorithm>
 #include "fred_wrappers.h"
-#include "dmtcpplugin.h"
+#include "dmtcp.h"
 #include "util.h"
 #include  "jassert.h"
 #include  "jtimer.h"
@@ -174,7 +174,7 @@ void initLogsForRecordReplay()
 
 
 #define MAX_PROC_MAPS_AREAS 32
-static dmtcp::Util::ProcMapsArea areasToNotLog[MAX_PROC_MAPS_AREAS];
+static ProcMapsArea areasToNotLog[MAX_PROC_MAPS_AREAS];
 static size_t areasToNotLogLen = 0;
 
 /* Specify the patterns that you do not wish to log. The current logic uses
@@ -217,7 +217,7 @@ LIB_PRIVATE
 void initSyncAddresses()
 {
   int mapsFd = -1;
-  dmtcp::Util::ProcMapsArea area;
+  ProcMapsArea area;
 
   if (isProcessGDB()) {
     return;
