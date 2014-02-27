@@ -196,8 +196,7 @@ static bool shouldLogArea(char *area_name)
       dmtcp::Util::strEndsWith(area_name, "libdmtcp_ptrace.so") ||
       dmtcp::Util::strEndsWith(area_name, "libdmtcp_pid.so")      ||
       dmtcp::Util::strEndsWith(area_name, "fredhijack.so")   ||
-      dmtcp::Util::strEndsWith(area_name, "libdmtcp_ipc.so")   ||
-      strstr(area_name, "libmtcp.so.1") != NULL) {
+      dmtcp::Util::strEndsWith(area_name, "libdmtcp_ipc.so")){
     return false;
   }
 
