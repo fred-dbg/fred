@@ -27,6 +27,7 @@ import sys
 import pdb
 
 from .. import freddebugger
+from .. import debugger
 from .. import fredio
 from .. import fredutil
 

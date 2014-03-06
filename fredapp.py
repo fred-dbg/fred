@@ -278,6 +278,7 @@ def setup_debugger(s_debugger_name):
     elif s_debugger_name == "perl":
         fredutil.fred_debug("Using perl personality.")
         from fred.personality.personalityPerl import PersonalityPerl
+        fredutil.set_env_var_if_unset("PERLDB_OPTS", "ornaments=ue,me")
         g_debugger = freddebugger.ReversibleDebugger(PersonalityPerl())
         del PersonalityPerl
     elif s_debugger_name.endswith("MATLAB"):
