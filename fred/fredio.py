@@ -354,9 +354,15 @@ def setup(l_argv, b_spawn_child=True):
     #readline.set_completer(_fred_completer)
     if b_spawn_child:
         if l_argv[0] == 'python':
-            _spawn_child(["dmtcp_checkpoint", "--quiet"] + l_argv)
+            _spawn_child(["dmtcp_launch",
+                          "--quiet",
+                          "--disable-dl-plugin",
+                          "--disable-alloc-plugin",
+                          "--with-plugin",
+                          fredmanager.get_fredhijack_path()] +
+                         l_argv)
         else:
-            _spawn_child(["dmtcp_checkpoint",
+            _spawn_child(["dmtcp_launch",
                           "--quiet",
                           "--quiet",
                           "--ptrace",
