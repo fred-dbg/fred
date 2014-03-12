@@ -21,6 +21,7 @@ HEADERS = fred_interface.h fred_wrappers.h log.h fred_types.h \
 	  autogen/wrapper_util.h autogen/fred_read_log.h
 # As you add new files to your hijack library, add the object file names here.
 FREDHIJACK_OBJS = fred_signalwrappers.o fred_epollwrappers.o \
+	fstreamwrappers.o fred_waitwrappers.o \
 	fred_mallocwrappers.o fred_filewrappers.o fred_syscallsreal.o \
 	fred_socketwrappers.o pthreadwrappers.o netwrappers.o fred.o \
 	fred_miscwrappers.o syscallsreal_helper.o \
