@@ -46,6 +46,4 @@ else
 		It is not necessary to first build DMTCP.])
 fi
 
-AC_DEFINE([DMTCP],[],[Always enable this.])
-
 AC_OUTPUT

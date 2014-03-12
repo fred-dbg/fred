@@ -28,9 +28,6 @@
 #include "linux/version.h"
 #include "config.h"
 
-#ifndef DMTCP
-#define DMTCP
-#endif
 #define ENABLE_MEM_ACCURACY
 
 #define LIBC_FILENAME "libc.so.6"

@@ -3098,10 +3098,6 @@ else
 		It is not necessary to first build DMTCP." "$LINENO" 5
 fi
 
-
-$as_echo "#define DMTCP /**/" >>confdefs.h
-
-
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
 # tests run on this system so they can be shared between configure
@@ -3196,7 +3192,6 @@ DEFS=-DHAVE_CONFIG_H
 
 ac_libobjs=
 ac_ltlibobjs=
-U=
 for ac_i in : $LIBOBJS; do test "x$ac_i" = x: && continue
   # 1. Remove the extension, and $U if already installed.
   ac_script='s/\$U\././;s/\.o$//;s/\.obj$//'

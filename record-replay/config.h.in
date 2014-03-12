@@ -3,8 +3,6 @@
 /* Verbose debug output and log files in $DMTCP_TMPDIR */
 #undef DEBUG
 
-/* Always enable this. */
-/* #undef DMTCP */
 
 /* Enable Firefox specific tweaks */
 #undef FIREFOX_SUPPORT
