@@ -66,6 +66,26 @@ static inline bool isProcessGDB() {
   return isGDB;
 }
 
+static inline bool isProcessPython() {
+  static dmtcp::string progName = jalib::Filesystem::GetProgramName();
+  static bool isPython = dmtcp::Util::strStartsWith(progName, "python");
+  return isPython;
+}
+
+static inline int isPassthroughFd(int fd) {
+  if (dmtcp_is_protected_fd(fd)) return 1;
+
+  if (isProcessPython()) {
+    if (fd <= STDERR_FILENO) return 1;
+    dmtcp::string path = jalib::Filesystem::GetDeviceName(fd);
+    if (dmtcp::Util::strEndsWith(path, ".py") ||
+        dmtcp::Util::strStartsWith(path, "/usr")) {
+      return 1;
+    }
+  }
+  return 0;
+}
+
 #define MAX_LOG_LENGTH ((size_t)250 * 1024 * 1024)
 #define INVALID_LOG_OFFSET (~0U)
 #define SYNC_NOOP   0
