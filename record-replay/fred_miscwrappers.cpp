@@ -27,6 +27,8 @@
 #include "dmtcp.h"
 #include "threadinfo.h"
 
+#ifdef ENABLE_MEM_ACCURACY
+
 extern "C"
 int shmget(key_t key, size_t size, int shmflg)
 {
@@ -144,3 +146,5 @@ extern "C" long int syscall(long int sys_num, ... )
   va_end(ap);
   return ret;
 }
+
+#endif

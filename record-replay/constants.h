@@ -28,8 +28,6 @@
 #include "linux/version.h"
 #include "config.h"
 
-#define ENABLE_MEM_ACCURACY
-
 #define LIBC_FILENAME "libc.so.6"
 #define LIBPTHREAD_FILENAME "libpthread.so.0"
 

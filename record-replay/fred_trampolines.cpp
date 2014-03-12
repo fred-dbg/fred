@@ -37,6 +37,7 @@ static trampoline_info_t munmap_trampoline_info;
    Called from DmtcpWorker constructor. */
 void fred_setup_trampolines()
 {
+#ifdef ENABLE_MEM_ACCURACY
   dmtcp_setup_trampoline("mmap", (void*) &fred_mmap,
                          &mmap_trampoline_info);
   dmtcp_setup_trampoline("mmap64", (void*) &fred_mmap,
@@ -45,4 +46,5 @@ void fred_setup_trampolines()
                          &mremap_trampoline_info);
   dmtcp_setup_trampoline("munmap", (void*) &fred_munmap,
                          &munmap_trampoline_info);
+#endif
 }

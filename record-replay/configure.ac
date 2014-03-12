@@ -28,6 +28,18 @@ AC_ARG_ENABLE([firefox_support],
             [enable_firefox_support=$enableval],
             [enable_firefox_support=no])
 
+AC_ARG_ENABLE([memory_accuracy],
+              [AS_HELP_STRING([--disable-memory-accuracy],
+                              [disable memory accuracy related wrappers (for
+                               python and other high level language
+                               debuggers)])],
+            [enable_memory_accuracy=$enableval],
+            [enable_memory_accuracy=yes])
+
+if test "$enable_memory_accuracy" = "yes"; then
+  AC_DEFINE([ENABLE_MEM_ACCURACY],[],[memory accuracy for gdb])
+fi
+
 if test "$enable_firefox_support" = "yes"; then
   AC_DEFINE([FIREFOX_SUPPORT],[],[Enable Firefox specific tweaks])
 fi

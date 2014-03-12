@@ -66,15 +66,18 @@ static inline bool isProcessGDB() {
   return isGDB;
 }
 
+#ifndef ENABLE_MEM_ACCURACY
 static inline bool isProcessPython() {
   static dmtcp::string progName = jalib::Filesystem::GetProgramName();
   static bool isPython = dmtcp::Util::strStartsWith(progName, "python");
   return isPython;
 }
+#endif
 
 static inline int isPassthroughFd(int fd) {
   if (dmtcp_is_protected_fd(fd)) return 1;
 
+#ifndef ENABLE_MEM_ACCURACY
   if (isProcessPython()) {
     if (fd <= STDERR_FILENO) return 1;
     dmtcp::string path = jalib::Filesystem::GetDeviceName(fd);
@@ -83,6 +86,7 @@ static inline int isPassthroughFd(int fd) {
       return 1;
     }
   }
+#endif
   return 0;
 }
 

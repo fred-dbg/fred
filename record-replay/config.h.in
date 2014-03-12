@@ -3,6 +3,8 @@
 /* Verbose debug output and log files in $DMTCP_TMPDIR */
 #undef DEBUG
 
+/* memory accuracy for gdb */
+#undef ENABLE_MEM_ACCURACY
 
 /* Enable Firefox specific tweaks */
 #undef FIREFOX_SUPPORT

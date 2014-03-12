@@ -19,6 +19,7 @@
  * along with FReD.  If not, see <http://www.gnu.org/licenses/>.            *
  ****************************************************************************/
 
+
 #ifndef _GNU_SOURCE
 # define _GNU_SOURCE /* for sake of mremap */
 #endif
@@ -51,6 +52,8 @@
 #include "synchronizationlogging.h"
 #include "log.h"
 #include "threadinfo.h"
+
+#ifdef ENABLE_MEM_ACCURACY
 
 static pthread_mutex_t allocation_lock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t mmap_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -493,3 +496,4 @@ extern "C" void *mmap2(void *addr, size_t length, int prot,
 
 }
 */
+#endif

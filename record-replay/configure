@@ -638,6 +638,7 @@ ac_user_opts='
 enable_option_checking
 enable_debug
 enable_firefox_support
+enable_memory_accuracy
 with_dmtcp_root
 '
       ac_precious_vars='build_alias
@@ -1264,6 +1265,9 @@ Optional Features:
                           files to \$DMTCP_TMPDIR (default is disabled)
   --enable-firefox-support
                           enable Firefox specific tweaks)
+  --disable-memory-accuracy
+                          disable memory accuracy related wrappers (for python
+                          and other high level language debuggers)
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -3073,6 +3077,20 @@ else
   enable_firefox_support=no
 fi
 
+
+# Check whether --enable-memory_accuracy was given.
+if test "${enable_memory_accuracy+set}" = set; then :
+  enableval=$enable_memory_accuracy; enable_memory_accuracy=$enableval
+else
+  enable_memory_accuracy=yes
+fi
+
+
+if test "$enable_memory_accuracy" = "yes"; then
+
+$as_echo "#define ENABLE_MEM_ACCURACY /**/" >>confdefs.h
+
+fi
 
 if test "$enable_firefox_support" = "yes"; then
 
