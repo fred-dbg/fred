@@ -72,6 +72,12 @@ static inline bool isProcessPython() {
   static bool isPython = dmtcp::Util::strStartsWith(progName, "python");
   return isPython;
 }
+
+static inline bool isProcessPerl() {
+  static dmtcp::string progName = jalib::Filesystem::GetProgramName();
+  static bool isPerl = dmtcp::Util::strStartsWith(progName, "perl");
+  return isPerl;
+}
 #endif
 
 static inline int isPassthroughFd(int fd) {
@@ -86,6 +92,15 @@ static inline int isPassthroughFd(int fd) {
       return 1;
     }
   }
+  if (isProcessPerl()) {
+    if (fd <= STDERR_FILENO) return 1;
+    dmtcp::string path = jalib::Filesystem::GetDeviceName(fd);
+    if (dmtcp::Util::strEndsWith(path, ".pl") ||
+        dmtcp::Util::strStartsWith(path, "/usr") ||
+        dmtcp::Util::strStartsWith(path, "/dev")) {
+      return 1;
+    }
+  }  
 #endif
   return 0;
 }
