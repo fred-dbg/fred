@@ -62,7 +62,7 @@ class PersonalityPerl(personality.Personality):
   h q, h R or h o to get additional info."""
 
         self.GS_PROMPT = "DB"
-        self.gre_prompt = self.GS_PROMPT + "<\d+>"
+        self.gre_prompt = self.GS_PROMPT + "<\d+?>"
         self.gre_backtrace_frame = ". = (\w+::\w+)\(?.*?\)? called from file `(.+)\' line (\d+)"
         self.gre_breakpoint = "\s*(\d+):\s+.+$"
         # List of regexes that match debugger prompts for user input
@@ -86,12 +86,20 @@ class PersonalityPerl(personality.Personality):
         This is to normalize out things like gdb's print result:
           $XX = 16
         Where $XX changes with each command executed."""
-        exp = "\$[0-9]+ = (.+)"
-        m = re.search(exp, s_printed)
-        if m == None:
-            return s_printed
-        else:
-            return m.group(1)
+        # Strip the control characters and \r
+        s_printed = re.sub("\\x1b\[\d+?m", "", s_printed)
+        s_printed = s_printed.replace("\r", "")
+        # Perl gives us no print result formatting. We use the
+        # following heuristic: find the first instance of the prompt
+        # string, and take the output to be the text between the
+        # prompt string and the previous newline char.
+        # Ex: 'p $i < 3\n1\n DB<4>' should return '1'.
+        lines = s_printed.split("\n")
+        prevline = lines[0]
+        for line in lines[1:]:
+            if re.search(self.gre_prompt, line):
+                return prevline
+            prevline = line
 
     def _parse_backtrace_frame(self, match_obj):
         """Return a BacktraceFrame from the given re Match object.
@@ -102,6 +110,15 @@ class PersonalityPerl(personality.Personality):
         frame.n_line      = int(match_obj[2])
         return frame
 
+    def _parse_backtrace_internal(self, backtrace):
+        result = re.findall(self.gre_backtrace_frame, backtrace)
+        # Perl backtraces are empty at the top-level. The reverse-*
+        # algorithms assume that a top-level backtrace has depth
+        # 1. Therefore, we always prepend a dummy top-level backtrace
+        # frame, although it is not displayed to the user.
+        result = [("FReD::dummy", "fred-nofile", 0)] + result
+        return result
+
     def _parse_one_breakpoint(self, match_obj):
         """Return a Breakpoint from the given re Match object.
         The Match object should be a tuple (the result of gre_breakpoint)."""
@@ -110,10 +127,6 @@ class PersonalityPerl(personality.Personality):
         breakpoint.n_line     = int(match_obj[1])
         breakpoint.n_number   = int(match_obj[1])
         return breakpoint
-
-    def do_step(self, n):
-        """Perform n 'step' commands. Returns output."""
-        return self.execute_command(self.GS_STEP)
 
     def _parse_breakpoints(self, info_str):
         """Return a list of Breakpoint objects parsed from output of 'info
@@ -127,19 +140,3 @@ class PersonalityPerl(personality.Personality):
             ff = ff.replace("\x1b[m", "")
             l_breakpoints.append(self._parse_one_breakpoint((ff, m)))
         return l_breakpoints
-
-    def current_position(self):
-        """Return a BacktraceFrame representing current debugger position."""
-        position = self.execute_command(self.GS_CURRENT_POS + "\n")
-        m = re.search("(\w+::\w*)\((.+?):(\d+)\):", position)
-        if m != None:
-            frame = freddebugger.BacktraceFrame()
-            frame.s_function  = m.group(1)
-            frame.s_file      = m.group(2)
-            frame.n_line      = int(m.group(3))
-            return frame
-        print "ERROR"
-        return None
-
-    def _parse_backtrace_internal(self, backtrace):
-        return re.findall(self.gre_backtrace_frame, backtrace)
