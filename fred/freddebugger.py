@@ -532,7 +532,7 @@ class ReversibleDebugger(debugger.Debugger):
     def test_expression(self, s_expr, s_expr_val):
         global gn_time_evaluating, gn_total_evaluations
         ls_truths = ["1", "true"]
-        ls_falsehoods = ["0", "false"]
+        ls_falsehoods = ["0", "false", ""] # Empty string needed for Perl.
         fredutil.fred_timer_start("evaluation")
         s_result = self.evaluate_expression(s_expr)
         gn_time_evaluating += fredutil.fred_timer_stop("evaluation")
