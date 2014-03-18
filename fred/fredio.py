@@ -353,7 +353,7 @@ def setup(l_argv, b_spawn_child=True):
     #readline.parse_and_bind('tab: complete')
     #readline.set_completer(_fred_completer)
     if b_spawn_child:
-        if l_argv[0] == 'python':
+        if l_argv[0] in ("python", "perl"):
             _spawn_child(["dmtcp_launch",
                           "--quiet",
                           "--disable-dl-plugin",

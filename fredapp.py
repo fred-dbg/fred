@@ -164,10 +164,11 @@ def handle_fred_command(s_command):
         n_index = fredutil.to_int(s_command_args, 0)
         g_debugger.do_restart(n_index, b_clear_history=True)
     elif s_command_name in ["reverse-watch", "rw"]:
-        if g_debugger.personality_name() == 'Pdb':
-            reverse_watch.reverse_watch(g_debugger, s_command_args)
-        else:
+        if g_debugger.personality_name() == "gdb":
+            # Multithreaded reverse-watch only supported for gdb.
             reverse_watch.reverse_watch_for_mt(g_debugger, s_command_args)
+        else:
+            reverse_watch.reverse_watch(g_debugger, s_command_args)
     elif s_command_name == "source":
         source_from_file(s_command_args)
     elif s_command_name == "list":
@@ -410,7 +411,7 @@ def main_io_loop(b_skip_prompt=False):
             dispatch_command(s_command)
             s_last_command = s_command
         except KeyboardInterrupt:
-            if g_debugger.personality_name() != 'Pdb':
+            if g_debugger.personality_name() not in ("Pdb", "perl"):
                 g_debugger.interrupt_inferior()
             fredio.wait_for_prompt()
 
