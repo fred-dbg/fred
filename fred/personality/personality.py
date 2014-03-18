@@ -137,13 +137,17 @@ class Personality:
 
     def do_next(self, n, b_timeout_prompt):
         """Perform n 'next' commands. Returns output."""
-        return self.execute_command(self.GS_NEXT + " " + str(n),
-                                    b_timeout=b_timeout_prompt)
+        cmd = self.GS_NEXT
+        if self.b_has_count_commands:
+            cmd += " " + str(n)
+        return self.execute_command(cmd, b_timeout=b_timeout_prompt)
         
     def do_step(self, n, b_timeout_prompt):
         """Perform n 'step' commands. Returns output."""
-        return self.execute_command(self.GS_STEP + " " + str(n),
-                                    b_timeout=b_timeout_prompt)
+        cmd = self.GS_STEP
+        if self.b_has_count_commands:
+            cmd += " " + str(n)
+        return self.execute_command(cmd, b_timeout=b_timeout_prompt)
         
     def do_continue(self, b_wait_for_prompt):
         """Perform 'continue' command. Returns output."""
