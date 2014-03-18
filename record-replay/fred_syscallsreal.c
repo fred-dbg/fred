@@ -64,6 +64,7 @@ LIB_PRIVATE void *_real_func_addr[numTotalWrappers];
 
 static char wrapper_init_buf[1024];
 static trampoline_info_t pthread_getspecific_trampoline_info;
+static int pthread_getspecific_trampoline_installed = 0;
 void *_fred_pthread_getspecific(pthread_key_t key)
 {
   if (_wrappers_initialized) {
@@ -72,6 +73,7 @@ void *_fred_pthread_getspecific(pthread_key_t key)
   }
   pthread_setspecific(key, wrapper_init_buf);
   UNINSTALL_TRAMPOLINE(pthread_getspecific_trampoline_info);
+  pthread_getspecific_trampoline_installed = 0;
   return pthread_getspecific(key);
 }
 
@@ -80,6 +82,7 @@ static void _fred_PreparePthreadGetSpecific()
   dmtcp_setup_trampoline_by_addr(&pthread_getspecific,
                                  (void*) &_fred_pthread_getspecific,
                                  &pthread_getspecific_trampoline_info);
+  pthread_getspecific_trampoline_installed = 1;
 }
 
 LIB_PRIVATE
@@ -88,6 +91,9 @@ void initialize_wrappers()
   if (!_wrappers_initialized) {
     _fred_PreparePthreadGetSpecific();
     fred_get_libc_func_addr();
+    if (pthread_getspecific_trampoline_installed) {
+      UNINSTALL_TRAMPOLINE(pthread_getspecific_trampoline_info);
+    }
     _wrappers_initialized = 1;
   }
 }
