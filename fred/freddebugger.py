@@ -369,11 +369,16 @@ class ReversibleDebugger(debugger.Debugger):
         self.update_state()
         return output
 
-    def do_print(self, expr):
-        """Perform 'print expr' command. Returns output."""
+    def do_print(self, expr, b_drain_first=False):
+        """Perform 'print expr' command. Returns output.  Set the
+        b_drain_first flag to True if you need to ensure the correct
+        output is captured. Otherwise, the output captured from the
+        child may contain extraneous output not directly related to
+        the print command. Note that this introduces a small blocking
+        delay in the main thread."""
         # TODO: We should log some print statements, since they can contain
         # side effects. Example: "print var++"
-        return self._print(expr)
+        return self._print(expr, b_drain_first)
 
     def do_switch_to_thread(self, n_tid):
         """Switch debugger to given thread."""
@@ -542,7 +547,7 @@ class ReversibleDebugger(debugger.Debugger):
     def evaluate_expression(self, s_expr):
         """Returns sanitized value of expression in debugger."""
         global GS_NO_SYMBOL_ERROR
-        s_val = self.do_print(s_expr)
+        s_val = self.do_print(s_expr, b_drain_first=True)
         s_val = self._p.sanitize_print_result(s_val)
         if (re.search("No symbol .+ in current context", s_val) != None or
             re.search("You can't do that without a process to debug", s_val) != None):

@@ -60,9 +60,9 @@ class Debugger():
         """Perform 'info_breakpoints' command. Returns output."""
         return self._p.do_info_breakpoints()
 
-    def _print(self, expr):
+    def _print(self, expr, b_drain_first=False):
         """Perform 'print expr' command. Returns output."""
-        return self._p.do_print(expr)
+        return self._p.do_print(expr, b_drain_first)
 
     def _switch_to_thread(self, n_tid):
         """Perform thread switch command to given tid. No output returned."""

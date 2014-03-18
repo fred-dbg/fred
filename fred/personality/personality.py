@@ -128,12 +128,14 @@ class Personality:
         The Match object should be a tuple (result of gre_backtrace_frame.)"""
         fredutil.fred_assert(False, "Must be implemented in subclass.")
         
-    def execute_command(self, s_cmd, b_timeout=False, b_prompt=True):
+    def execute_command(self, s_cmd, b_timeout=False, b_prompt=True,
+                        b_drain_first=False):
         """Send the given string to debugger and return its output."""
         # Ensure it has strictly one newline:
         s_cmd = s_cmd.strip() + "\n"
         return fredio.get_child_response(s_cmd, b_timeout=b_timeout,
-                                         b_wait_for_prompt=b_prompt)
+                                         b_wait_for_prompt=b_prompt,
+                                         b_drain_first=b_drain_first)
 
     def do_next(self, n, b_timeout_prompt):
         """Perform n 'next' commands. Returns output."""
@@ -174,9 +176,10 @@ class Personality:
         """Perform 'info threads' command. Returns output."""
         return self.execute_command(self.GS_INFO_THREADS)
 
-    def do_print(self, expr):
+    def do_print(self, expr, b_drain_first=False):
         """Perform 'print expr' command. Returns output."""
-        return self.execute_command(self.GS_PRINT + " " + str(expr))
+        return self.execute_command(self.GS_PRINT + " " + str(expr),
+                                    b_drain_first=b_drain_first)
 
     def current_position(self):
         """Return a BacktraceFrame representing current debugger position."""

@@ -76,6 +76,8 @@ gb_output_thread_alive = False
 gs_captured_output = ""
 # Synchronization object used between output thread and main thread.
 g_capture_output_event = threading.Event()
+# Synchronization object used between output thread and main thread.
+g_read_child_event = threading.Event()
 # Regex (initialized at runtime) to match the debugger prompt.
 gre_prompt = ""
 # Function (initialized at runtime) to match the debugger prompt.
@@ -102,11 +104,16 @@ class ThreadedOutput(threading.Thread):
                g_capture_output_event, gb_capture_output_til_prompt, \
                gb_hide_output, gn_max_need_input_length, gb_need_user_input, \
                gb_capture_output_multi_page, gs_last_printed, \
-               gb_show_child_output
+               gb_show_child_output, g_read_child_event
         # Used to detect when debugger needs additional user input
         last_printed_need_input = ""
         while 1:
+            # Must own the lock to read from the child fd.
+            g_read_child_event.wait()
+            g_read_child_event.clear()
             output = _get_child_output()
+            g_read_child_event.set()
+
             if output != None:
                 gs_last_printed = fredutil.last_n(gs_last_printed, output,
                                                GN_MAX_PROMPT_LENGTH)
@@ -142,7 +149,9 @@ class ThreadedOutput(threading.Thread):
 def _start_output_thread():
     """Start the output thread in daemon mode.
     A thread in daemon mode will not be joined upon program exit."""
-    global gb_output_thread_alive
+    global gb_output_thread_alive, g_read_child_event
+    # Set this event so the output thread can immediately acquire it.
+    g_read_child_event.set()
     o = ThreadedOutput()
     o.daemon = True
     o.start()
@@ -152,6 +161,30 @@ def _reset_last_printed():
     """Reset the tracking of the debugger's last few printed characters."""
     global gs_last_printed
     gs_last_printed = ""
+
+def _synchronously_drain_child_output():
+    """When called from the main thread, ensure child has no pending output."""
+    global gn_child_fd, g_read_child_event
+    if gn_child_fd == None:
+        return
+    # Heuristically assume that if the child doesn't print anything
+    # for a few seconds, it has been drained.
+    n_timeout_secs = 1.0
+    while True:
+        # This lock is to protect against a race where the select
+        # would return indicating data available, but before the call
+        # to os.read() is made, the output thread would also call
+        # os.read(). Thus, when our call to os.read() was made, there
+        # was no more data and we blocked.
+        g_read_child_event.wait()
+        g_read_child_event.clear()
+        l_ready = select.select([gn_child_fd], [], [], n_timeout_secs)
+        if l_ready[0] == [gn_child_fd]:
+            os.read(gn_child_fd, 1000)
+            g_read_child_event.set()
+        else:
+            g_read_child_event.set()
+            break
 
 def _send_child_input(input):
     """Write the given input string to the child process."""
@@ -193,13 +226,18 @@ def wait_for_prompt():
     # Reset for next time
     g_prompt_ready_event.clear()
 
-def _start_output_capture(wait_for_prompt):
+def _start_output_capture(wait_for_prompt, b_drain_first):
     """Start recording output from child into global gs_captured_output.
     wait_for_prompt flag will cause all output until the next debugger prompt
     to be saved."""
     global gb_capture_output, gs_captured_output, g_capture_output_event, \
            gb_capture_output_til_prompt
     g_capture_output_event.clear()
+    if b_drain_first:
+        # Need to make sure child is done printing first. Otherwise, we
+        # may reset gs_last_printed only to have the child print more
+        # output immediately.
+        _synchronously_drain_child_output()
     _reset_last_printed()
     gb_capture_output_til_prompt = wait_for_prompt
     gb_capture_output = True
@@ -230,11 +268,14 @@ def _wait_for_captured_output(b_wait_for_prompt, b_timeout,
     return output
 
 def get_child_response(s_input, b_timeout=False, hide=True,
-                       b_wait_for_prompt=False, b_multi_page=True):
+                       b_wait_for_prompt=False, b_multi_page=True,
+                       b_drain_first=False):
     """Sends requested input to child, and returns any response made.
     If hide flag is True (default), suppresses echoing from child.  If
-    wait_for_prompt flag is True, collects output until the debugger prompt is
-    ready."""
+    wait_for_prompt flag is True, collects output until the debugger
+    prompt is ready. If b_drain_first flag is True, drain all output
+    from the child before issuing the input (this blocks the main
+    thread)."""
     global gb_hide_output
     global GB_FRED_DEMO, GS_FRED_DEMO_HIDE, GS_FRED_DEMO_UNHIDE_PREFIX
     global GB_FRED_DEMO_FROM_USER
@@ -247,7 +288,7 @@ def get_child_response(s_input, b_timeout=False, hide=True,
     GB_FRED_DEMO_FROM_USER = False # reset back to default, which is False
     b_orig_hide_state = gb_hide_output
     gb_hide_output = hide
-    _start_output_capture(b_wait_for_prompt)
+    _start_output_capture(b_wait_for_prompt, b_drain_first)
     _send_child_input(s_input)
     response = _wait_for_captured_output(b_wait_for_prompt, b_timeout,
                                          b_multi_page, b_orig_hide_state)
