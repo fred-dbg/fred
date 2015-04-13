@@ -121,7 +121,7 @@ void initializeJalib()
   INIT_JALIB_FPTR(pthread_mutex_trylock);
   INIT_JALIB_FPTR(pthread_mutex_unlock);
 
-  jalib_init(jalibFuncPtrs, STDERR_FILENO, -1, 99);
+  jalib_init(jalibFuncPtrs, ELF_INTERPRETER, STDERR_FILENO, -1, 99);
   JASSERT_INIT("");
 }
 
