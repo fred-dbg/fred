@@ -1,7 +1,6 @@
 To set this up, you'll want to do several things.
 
-1.  Configure a copy of DMTCP as:  ./configure --with-record-replay
-    Then compile as usual:  make  [ or maybe:  "make -j3" if you have 2 cores ]
+1.  Configure and build a copy of DMTCP.
 
 2.  ( cd record-replay; ./configure --with-dmtcp-root=DMTCP_ROOT )
       where DMTCP_ROOT is the root directory of DMTCP that you configured above
